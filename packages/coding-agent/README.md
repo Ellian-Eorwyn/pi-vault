@@ -10,6 +10,8 @@
 
 > New issues and PRs from new contributors are auto-closed by default. Maintainers review auto-closed issues daily. See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
+> This downstream package is distributed as `pi-vault`. It bundles the pi harness with Obsidian onboarding, vault-local skills, deterministic maintenance tools, and the Python vault engine. See the repository root README for pi-vault installation and automation commands. The remaining documentation describes the inherited pi harness.
+
 ---
 
 Pi is a minimal terminal coding harness. Adapt pi to your workflows, not the other way around, without having to fork and modify pi internals. Extend it with TypeScript [Extensions](#extensions), [Skills](#skills), [Prompt Templates](#prompt-templates), and [Themes](#themes). Put your extensions, skills, prompt templates, and themes in [Pi Packages](#pi-packages) and share them with others via npm or git.
@@ -78,13 +80,13 @@ Authenticate with an API key:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-pi
+pi-vault
 ```
 
 Or use your existing subscription:
 
 ```bash
-pi
+pi-vault
 /login  # Then select provider
 ```
 

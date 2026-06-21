@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Organization"
+  short_description: "Organize a vault through bounded proposals"
+  default_prompt: "Plan and organize this vault under its locked norms."

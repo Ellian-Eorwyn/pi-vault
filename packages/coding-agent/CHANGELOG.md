@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added the pi-vault application identity, bundled Obsidian vault skills and extension, interactive onboarding, vault-local context loading, validated vault tools, and namespaced automation commands.
+- Added deterministic pi-forge MCP client tools, proposal-first artifact import, and a restricted `pi-vault-mcp` server for pending vault handoffs.
+
 ### Fixed
 
 - Fixed bash commands through legacy WSL `bash.exe` to pass scripts over stdin so shell variables expand in the target bash ([#5893](https://github.com/earendil-works/pi/issues/5893)).

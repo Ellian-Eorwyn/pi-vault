@@ -1,13 +1,16 @@
 {
 	"name": "@earendil-works/pi-coding-agent",
 	"version": "0.79.8",
-	"description": "Coding agent CLI with read, bash, edit, write tools and session management",
+	"description": "Obsidian vault agent built on the pi interactive harness",
 	"type": "module",
 	"piConfig": {
-		"configDir": ".pi"
+		"name": "pi-vault",
+		"configDir": ".pi-vault",
+		"projectConfigDir": ".pi"
 	},
 	"bin": {
-		"pi": "dist/cli.js"
+		"pi-vault": "dist/cli.js",
+		"pi-vault-mcp": "dist/pi-vault/mcp-cli.js"
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -27,15 +30,16 @@
 	],
 	"scripts": {
 		"clean": "shx rm -rf dist",
-		"build": "tsgo -p tsconfig.build.json && shx chmod +x dist/cli.js && npm run copy-assets",
-		"build:binary": "npm --prefix ../tui run build && npm --prefix ../ai run build && npm --prefix ../agent run build && npm run build && bun build --compile ./dist/bun/cli.js ./src/utils/image-resize-worker.ts --outfile dist/pi && npm run copy-binary-assets",
-		"copy-assets": "shx mkdir -p dist/modes/interactive/theme && shx cp src/modes/interactive/theme/*.json dist/modes/interactive/theme/ && shx mkdir -p dist/modes/interactive/assets && shx cp src/modes/interactive/assets/*.png dist/modes/interactive/assets/ && shx mkdir -p dist/core/export-html/vendor && shx cp src/core/export-html/template.html src/core/export-html/template.css src/core/export-html/template.js dist/core/export-html/ && shx cp src/core/export-html/vendor/*.js dist/core/export-html/vendor/",
-		"copy-binary-assets": "shx cp package.json dist/ && shx cp README.md dist/ && shx cp CHANGELOG.md dist/ && shx mkdir -p dist/theme && shx cp src/modes/interactive/theme/*.json dist/theme/ && shx mkdir -p dist/assets && shx cp src/modes/interactive/assets/*.png dist/assets/ && shx mkdir -p dist/export-html/vendor && shx cp src/core/export-html/template.html dist/export-html/ && shx cp src/core/export-html/vendor/*.js dist/export-html/vendor/ && shx cp -r docs dist/ && shx cp -r examples dist/ && shx cp ../../node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm dist/",
+		"build": "tsgo -p tsconfig.build.json && shx chmod +x dist/cli.js dist/pi-vault/mcp-cli.js && npm run copy-assets",
+		"build:binary": "npm --prefix ../tui run build && npm --prefix ../ai run build && npm --prefix ../agent run build && npm run build && bun build --compile ./dist/bun/cli.js ./src/utils/image-resize-worker.ts --outfile dist/pi-vault && npm run copy-binary-assets",
+		"copy-assets": "shx mkdir -p dist/modes/interactive/theme && shx cp src/modes/interactive/theme/*.json dist/modes/interactive/theme/ && shx mkdir -p dist/modes/interactive/assets && shx cp src/modes/interactive/assets/*.png dist/modes/interactive/assets/ && shx mkdir -p dist/core/export-html/vendor && shx cp src/core/export-html/template.html src/core/export-html/template.css src/core/export-html/template.js dist/core/export-html/ && shx cp src/core/export-html/vendor/*.js dist/core/export-html/vendor/ && shx mkdir -p dist/pi-vault/vault-manager && shx cp -r src/pi-vault/skills dist/pi-vault/ && shx cp ../../vault-manager/pyproject.toml dist/pi-vault/vault-manager/ && shx cp -r ../../vault-manager/vault_agent dist/pi-vault/vault-manager/",
+		"copy-binary-assets": "shx cp package.json dist/ && shx cp README.md dist/ && shx cp CHANGELOG.md dist/ && shx mkdir -p dist/theme && shx cp src/modes/interactive/theme/*.json dist/theme/ && shx mkdir -p dist/assets && shx cp src/modes/interactive/assets/*.png dist/assets/ && shx mkdir -p dist/export-html/vendor && shx cp src/core/export-html/template.html dist/export-html/ && shx cp src/core/export-html/vendor/*.js dist/export-html/vendor/ && shx cp -r docs dist/ && shx cp -r examples dist/ && shx mkdir -p dist/pi-vault/vault-manager && shx cp -r src/pi-vault/skills dist/pi-vault/ && shx cp ../../vault-manager/pyproject.toml dist/pi-vault/vault-manager/ && shx cp -r ../../vault-manager/vault_agent dist/pi-vault/vault-manager/ && shx cp ../../node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm dist/",
 		"test": "vitest --run",
 		"shrinkwrap": "node ../../scripts/generate-coding-agent-shrinkwrap.mjs",
 		"prepublishOnly": "npm run clean && npm run build && npm run shrinkwrap"
 	},
 	"dependencies": {
+		"@modelcontextprotocol/sdk": "1.29.0",
 		"@earendil-works/pi-agent-core": "^0.79.8",
 		"@earendil-works/pi-ai": "^0.79.8",
 		"@earendil-works/pi-tui": "^0.79.8",

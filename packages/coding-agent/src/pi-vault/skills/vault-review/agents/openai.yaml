@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Review"
+  short_description: "Review and apply pending vault proposals"
+  default_prompt: "Review pending pi-vault proposals and explain the changes."

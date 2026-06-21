@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Schema"
+  short_description: "Revise schema and norms through proposals"
+  default_prompt: "Propose a safe revision to this vault schema or norms."

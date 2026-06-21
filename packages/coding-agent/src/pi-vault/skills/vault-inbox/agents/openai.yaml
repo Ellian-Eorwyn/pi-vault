@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Inbox"
+  short_description: "Process inbox notes with bounded maintenance"
+  default_prompt: "Review and process this vault inbox safely."

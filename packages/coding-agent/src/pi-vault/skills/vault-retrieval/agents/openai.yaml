@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Retrieval"
+  short_description: "Retrieve vault context before reading broadly"
+  default_prompt: "Find the relevant notes using vault-local retrieval context."

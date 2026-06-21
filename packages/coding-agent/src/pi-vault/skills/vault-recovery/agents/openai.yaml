@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Recovery"
+  short_description: "Inspect and undo versioned vault changes"
+  default_prompt: "Inspect or undo a pi-vault maintenance run."

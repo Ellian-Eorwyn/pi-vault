@@ -33,8 +33,8 @@ describe("shouldRunFirstTimeSetup", () => {
 		}
 	});
 
-	it("returns true when experimental, default agent dir, and no settings.json", () => {
-		expect(shouldRunFirstTimeSetup(settingsPath)).toBe(true);
+	it("does not run the upstream-only setup in a downstream distribution", () => {
+		expect(shouldRunFirstTimeSetup(settingsPath)).toBe(false);
 	});
 
 	it("returns false when experimental features are disabled", () => {

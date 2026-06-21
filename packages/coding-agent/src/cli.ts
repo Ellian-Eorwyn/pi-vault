@@ -8,6 +8,8 @@
 import { APP_NAME } from "./config.ts";
 import { configureHttpDispatcher } from "./core/http-dispatcher.ts";
 import { main } from "./main.ts";
+import piVaultExtension from "./pi-vault/extension.ts";
+import { dispatchVaultCommand } from "./pi-vault/vault-command.ts";
 
 process.title = APP_NAME;
 process.env.PI_CODING_AGENT = "true";
@@ -17,4 +19,9 @@ process.emitWarning = (() => {}) as typeof process.emitWarning;
 // Runtime settings are applied once SettingsManager has loaded global/project settings.
 configureHttpDispatcher();
 
-main(process.argv.slice(2));
+const args = process.argv.slice(2);
+if (args[0] === "vault") {
+	process.exitCode = dispatchVaultCommand(args.slice(1), process.cwd());
+} else {
+	main(args, { extensionFactories: [piVaultExtension] });
+}

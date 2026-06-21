@@ -459,6 +459,7 @@ interface PackageJson {
 	piConfig?: {
 		name?: string;
 		configDir?: string;
+		projectConfigDir?: string;
 	};
 }
 
@@ -474,12 +475,14 @@ const piConfigName: string | undefined = pkg.piConfig?.name;
 export const PACKAGE_NAME: string = pkg.name || "@earendil-works/pi-coding-agent";
 export const APP_NAME: string = piConfigName || "pi";
 export const APP_TITLE: string = piConfigName ? APP_NAME : "π";
-export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".pi";
+export const USER_CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".pi";
+export const CONFIG_DIR_NAME: string = pkg.piConfig?.projectConfigDir || ".pi";
 export const VERSION: string = pkg.version || "0.0.0";
 
-// e.g., PI_CODING_AGENT_DIR or TAU_CODING_AGENT_DIR
-export const ENV_AGENT_DIR = `${APP_NAME.toUpperCase()}_CODING_AGENT_DIR`;
-export const ENV_SESSION_DIR = `${APP_NAME.toUpperCase()}_CODING_AGENT_SESSION_DIR`;
+// e.g., PI_CODING_AGENT_DIR, TAU_CODING_AGENT_DIR, or PI_VAULT_CODING_AGENT_DIR
+const envAppName = APP_NAME.toUpperCase().replaceAll(/[^A-Z0-9_]/g, "_");
+export const ENV_AGENT_DIR = `${envAppName}_CODING_AGENT_DIR`;
+export const ENV_SESSION_DIR = `${envAppName}_CODING_AGENT_SESSION_DIR`;
 
 export function expandTildePath(path: string): string {
 	return normalizePath(path);
@@ -503,7 +506,7 @@ export function getAgentDir(): string {
 	if (envDir) {
 		return expandTildePath(envDir);
 	}
-	return join(homedir(), CONFIG_DIR_NAME, "agent");
+	return join(homedir(), USER_CONFIG_DIR_NAME, "agent");
 }
 
 /** Get path to user's custom themes directory */

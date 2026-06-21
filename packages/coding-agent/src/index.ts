@@ -10,6 +10,7 @@ export {
 	getExamplesPath,
 	getPackageDir,
 	getReadmePath,
+	USER_CONFIG_DIR_NAME,
 	VERSION,
 } from "./config.ts";
 export {

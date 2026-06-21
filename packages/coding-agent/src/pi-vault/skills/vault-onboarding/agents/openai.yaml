@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Onboarding"
+  short_description: "Initialize a vault through user-approved norms"
+  default_prompt: "Plan and initialize this Obsidian vault with pi-vault."
