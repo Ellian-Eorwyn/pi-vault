@@ -4,13 +4,27 @@ pi-vault is an Obsidian vault agent built on the [pi agent harness](https://gith
 
 ## Install
 
-macOS and Linux:
+macOS and Linux, from a checkout:
 
 ```bash
-./scripts/install-pi-vault.sh
+./install.sh
 ```
 
-The installer builds the Node harness, installs the `pi-vault` executable, and creates a managed Python environment under `~/.pi-vault/runtime/venv`.
+Or bootstrap without a checkout (clones into `~/.local/share/pi-vault/repository`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Ellian-Eorwyn/pi-vault/main/install.sh | bash
+```
+
+The installer builds the Node harness, creates a managed Python environment under `~/.pi-vault/runtime/venv`, and symlinks `pi-vault`, `pi-vault-mcp`, and `pi-vault-update` into `~/.local/bin`. Add that directory to `PATH` if it is not already present.
+
+## Update
+
+```bash
+pi-vault-update
+```
+
+Updates pull the latest revision and rebuild the CLI or Python engine only when their sources changed.
 
 ## First launch
 
