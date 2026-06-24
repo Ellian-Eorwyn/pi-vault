@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .dashboard_layout import dashboard_shell_contents
+from .paths import DEFAULT_CONTENT_DIRS, DEFAULT_DASHBOARDS_DIR, VaultPaths
 from .schema import (
     default_schema_json,
     folder_norms_markdown,
@@ -118,14 +120,18 @@ DASHBOARD_APPEARANCE_JSON = json.dumps({"enabledCssSnippets": ["dashboard"]}, in
 
 
 def starter_file_contents(
-    *, system_dir: Path = Path("00 System"), inbox_dir: Path = Path("01 Inbox")
+    *,
+    system_dir: Path = Path("99 System"),
+    inbox_dir: Path = Path("00 Inbox"),
+    dashboards_dir: Path = DEFAULT_DASHBOARDS_DIR,
+    content_dirs: dict[str, Path] | None = None,
 ) -> dict[str, str]:
     contents = {
-        "00 System/0.01 agent/config.yaml": """# vault-agent configuration
+        "99 System/0.01 agent/config.yaml": """# vault-agent configuration
 version: 1
 auto_process:
   # Inbox and whole-vault processing are both bounded by these limits.
-  # Folder placement is advisory outside 00 System and 01 Inbox.
+  # Folder placement is advisory outside 99 System and 00 Inbox.
   max_notes: 5
   max_runtime_minutes: 10
 versioning:
@@ -194,7 +200,7 @@ legacy_metadata:
     topic: related
     topics: related
 """,
-        "00 System/0.01 agent/vault-purpose.md": """# Vault Purpose
+        "99 System/0.01 agent/vault-purpose.md": """# Vault Purpose
 
 This file is durable, user-maintained policy. pi-vault may create it but must not overwrite it.
 
@@ -215,7 +221,7 @@ Describe what this vault is for and which information matters most.
 - `.git`
 - `.obsidian`
 """,
-        "00 System/0.01 agent/vault-conventions.md": """# Vault Conventions
+        "99 System/0.01 agent/vault-conventions.md": """# Vault Conventions
 
 This file is durable, user-maintained policy. Until `norms-lock.json` is written, the defaults below are a provisional starting point for onboarding rather than approved rules. After locking, changes require a reviewed proposal and a replacement lock.
 
@@ -228,15 +234,17 @@ This file is durable, user-maintained policy. Until `norms-lock.json` is written
 - Tags: use only for lightweight cross-cutting labels not represented by properties
 - Links: use wikilinks for conceptual, source, parent, peer, decision, and dependency relationships
 - Folders: use broad durable locations; prefer shallow branches unless the user approves deeper structure
-- Navigation: use curated indexes for orientation and focused Bases for filtering and sorting
+- Navigation: treat nested dashboards as the primary user-facing structure; combine curated Markdown orientation and child-dashboard links with embedded Bases for live filtering and sorting
+- Default dashboard topology: start from Home -> Domains -> domain dashboards -> project/topic dashboards -> notes, with parallel Projects, People, Sources, and Vault maintenance branches; adapt or omit branches based on approved properties and vault purpose
+- Dashboard regeneration: preserve curated sections, allow notes in multiple relevant views, and prune empty generated sections
 
 ## Observed Inventory
 
 Generated scans may refresh this section without changing the provisional or locked norms above.
 """,
-        "00 System/0.01 agent/AGENT_HANDOFF.md": """# Agent Handoff
+        "99 System/0.01 agent/AGENT_HANDOFF.md": """# Agent Handoff
 
-This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and the agent loads the `vault-*` skills (onboarding, retrieval, inbox, schema, organization, review, recovery) and the `vault_status` / `vault_manage` tools on startup — use those first. They drive `vault-agent`, a local-first engine that keeps generated state under `00 System/0.01 agent/` and human-editable templates under `00 System/0.02 templates/`. The `vault-agent` commands below are the engine layer beneath the skills and tools.
+This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and the agent loads the `vault-*` skills (onboarding, retrieval, inbox, schema, organization, review, recovery) and the `vault_status` / `vault_manage` tools on startup — use those first. They drive `vault-agent`, a local-first engine that keeps generated state under `99 System/0.01 agent/` and human-editable templates under `99 System/0.02 templates/`. The `vault-agent` commands below are the engine layer beneath the skills and tools.
 
 ## Operating Order
 
@@ -252,12 +260,12 @@ This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and
 ## Safety Rules
 
 - Move or rename notes only through validated `move_note` proposals with collision checks, link rewrites, backups, and versioned rollback.
-- Do not edit files in `00 System` except managed agent/template files.
-- Treat `01 Inbox` as the capture queue; other folders are advisory, not semantic truth.
+- Do not edit files in `99 System` except managed agent/template files.
+- Treat `00 Inbox` as the capture queue; other folders are advisory, not semantic truth.
 - Keep frontmatter sparse: `type`, `status`, `domain`, `parent`, `related`, `cover`, `source_kind`, and `capture_type`.
 - Preserve unknown legacy metadata unless `legacy_metadata.preserve_unknown_properties` is explicitly `false`.
 - LLMs propose structured JSON only; deterministic code validates and applies changes.
-- Generated reports live under `00 System/0.01 agent/reports/`; use them to explain what was done and what remains.
+- Generated reports live under `99 System/0.01 agent/reports/`; use them to explain what was done and what remains.
 - Startup assessment is read-only. It may offer to process inbox files or continue prior work, but it does not authorize mutations.
 
 ## Local LLM Monitoring
@@ -268,17 +276,17 @@ When using the local LLM, monitor `http://llms:8077/`: open Logs, select `Backen
 
 Vault-agent uses local Git as a safety and audit layer for write commands. Before editing, run `vault-agent --vault-root <vault> version status`. After a write, inspect `vault-agent --vault-root <vault> version log`, then use `version changed-files <run-id>` or `version diff <run-id>` to inspect the change set. Restore one path with `version restore <run-id> --path <path>` or undo only the affected paths with `version undo-run <run-id>`.
 
-Backups live in `00 System/0.01 agent/backups/`. Daily command logs live in `00 System/0.01 agent/logs/`. Version change-set metadata lives in `00 System/0.01 agent/versioning/`.
+Backups live in `99 System/0.01 agent/backups/`. Daily command logs live in `99 System/0.01 agent/logs/`. Version change-set metadata lives in `99 System/0.01 agent/versioning/`.
 """,
-        "00 System/0.01 agent/AGENT_CONTRACT.md": """# Agent Contract
+        "99 System/0.01 agent/AGENT_CONTRACT.md": """# Agent Contract
 
 pi is the primary driver of this vault: launch `pi-vault` and the agent loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, which drive the `vault-agent` engine. These rules still apply to any other runner (a scheduler, a cron job, or another agent framework), but pi is the default front end.
 
 ## Source Of Truth
 
-- Canonical machine state lives in `00 System/0.01 agent/`.
-- Human-editable schema and templates live in `00 System/0.02 templates/`.
-- Ordinary notes may live anywhere except `00 System`; folder placement is advisory outside `00 System` and `01 Inbox`.
+- Canonical machine state lives in `99 System/0.01 agent/`.
+- Human-editable schema and templates live in `99 System/0.02 templates/`.
+- Ordinary notes may live anywhere except `99 System`; folder placement is advisory outside `99 System` and `00 Inbox`.
 - Managed frontmatter is sparse: `type`, `status`, `domain`, `parent`, `related`, `cover`, `source_kind`, and `capture_type`.
 - Before the first norms lock, the bundled schema and templates are provisional defaults for discussion, not rules to impose on existing notes.
 
@@ -297,6 +305,8 @@ pi is the primary driver of this vault: launch `pi-vault` and the agent loads th
 ## User Request Routing
 
 - Organize this vault: lock norms first, run `organization-readiness --json`, dry-run maintenance, cleanup proposals, then tiny bounded `organize-vault-pass` runs with reports.
+- Process the inbox: classify one note/stage at a time, then use `propose-inbox-sort`; only safe-only proposals with current confidence and norms evidence may be approved unattended.
+- Adopt the default layout: use `propose-vault-layout` and apply only after explicit review; never move existing notes automatically during migration.
 - Change canonical properties: update schema, templates, validators, and docs together.
 - Build an index for a type/project/topic: create or update an `index` note using sparse properties, Bases, links, and retrieval files.
 - Organize one folder/project: use `propose-folder-organization` to generate a pending proposal with sparse metadata cleanup and a dashboard, then apply only through `review-proposals`.
@@ -307,6 +317,42 @@ pi is the primary driver of this vault: launch `pi-vault` and the agent loads th
 - Clean up notes: prefer `reconcile`, `propose-cleanup-queue`, `process-inbox`, `process-vault`, and `organize-vault-pass` in small batches.
 - Run recurring maintenance: use `hermes-run` or a scheduler around the CLI with bounded `--max-notes`.
 - Propose changes safely: use `propose-index`, `propose-property`, `propose-template`, `propose-cleanup`, `propose-base-hierarchy`, or `propose-folder-organization` when possible; otherwise write JSON proposals under `review/proposals/`, run `review-proposals --dry-run`, then apply only after status is changed to `approved`.
+
+## Default Dashboard Navigation Model
+
+Dashboards are the primary user-facing navigation layer, not optional reports. Use this adaptable starting topology:
+
+```text
+00 Inbox
+01 Dashboards
+├── Home
+├── Domains
+├── Projects
+├── People
+├── Organizations
+├── Sources
+└── Vault Maintenance
+02 People
+├── 02.01 Contacts
+└── 02.02 Authors
+03 Organizations
+04 Work
+05 Administrative
+├── 05.01 Health
+├── 05.02 Home
+├── 05.03 Finance
+├── 05.04 Travel
+└── 05.05 General
+06 Thoughts
+07 Sources
+99 System
+```
+
+This is a planning model, not a fixed taxonomy. Derive actual branches from the vault's purpose and approved `domain`, `parent`, `type`, `status`, `source_kind`, and `capture_type` values. Omit empty or irrelevant branches and propose intermediate dashboards when a populated branch becomes difficult to navigate.
+
+Each dashboard should combine curated Markdown orientation, coverage prose, and child-dashboard links with generated embedded Bases. Preserve curated sections during regeneration. Notes may appear in multiple relevant dashboards without duplication or relocation. Surface missing metadata, orphaned notes, pending review, and other useful maintenance state through dashboards when appropriate.
+
+Use `propose-inbox-sort` for bounded deterministic destination proposals and `propose-vault-layout` for existing-vault migration. Safe unattended inbox moves require a current norms lock plus completed warning-free `classify-type` and `property-values` stages above the configured confidence threshold.
 
 ## Versioning Protocol
 
@@ -422,7 +468,7 @@ vault-agent --vault-root <vault> validate --dry-run
 vault-agent --vault-root <vault> rebuild-retrieval
 ```
 
-The pass records the `norms_lock_hash` in `processing-state.json` and writes Markdown/JSON reports under `00 System/0.01 agent/reports/`. For LLM-backed batches, pass one explicit semantic stage such as `--stage classify-type` or `--stage property-values`; the command prompts queue item 1, validates/records the result, then prompts queue item 2. Warning-bearing or near-threshold valid model output is persisted under `00 System/0.01 agent/review/model-blocked-proposals.*`; inspect it with `review-model-blocks --dry-run`, convert safe items with `review-model-blocks --approve-safe`, then apply only through `review-proposals`. If schema, templates, or legacy alias rules change, notes processed under an older lock are considered stale and should be revisited in bounded passes.
+The pass records the `norms_lock_hash` in `processing-state.json` and writes Markdown/JSON reports under `99 System/0.01 agent/reports/`. For LLM-backed batches, pass one explicit semantic stage such as `--stage classify-type` or `--stage property-values`; the command prompts queue item 1, validates/records the result, then prompts queue item 2. Warning-bearing or near-threshold valid model output is persisted under `99 System/0.01 agent/review/model-blocked-proposals.*`; inspect it with `review-model-blocks --dry-run`, convert safe items with `review-model-blocks --approve-safe`, then apply only through `review-proposals`. If schema, templates, or legacy alias rules change, notes processed under an older lock are considered stale and should be revisited in bounded passes.
 
 ## Scheduled Maintenance Workflow
 
@@ -450,22 +496,22 @@ If the model returns non-JSON or thinking text, record the failure, fall back de
 - Preserve unknown legacy metadata unless explicitly configured otherwise.
 - LLM output must be validated structured proposals, not direct file edits.
 """,
-        "00 System/0.01 agent/schema.json": default_schema_json(),
-        "00 System/0.01 agent/manifest.json": json.dumps(
+        "99 System/0.01 agent/schema.json": default_schema_json(),
+        "99 System/0.01 agent/manifest.json": json.dumps(
             {"generated_by": "vault-agent", "notes": []}, indent=2, sort_keys=True
         )
         + "\n",
-        "00 System/0.01 agent/state.json": json.dumps(
+        "99 System/0.01 agent/state.json": json.dumps(
             {"generated_by": "vault-agent", "last_scan": None, "processed_notes": {}},
             indent=2,
             sort_keys=True,
         )
         + "\n",
-        "00 System/0.01 agent/review/needs-review.md": "# Needs Review\n\n",
-        "00 System/0.01 agent/review/proposed-values.md": "# Proposed Values\n\n",
-        "00 System/0.01 agent/review/proposed-changes.md": "# Proposed Changes\n\nNo proposal files found.\n",
-        "00 System/0.01 agent/review/processing-errors.md": "# Processing Errors\n\n",
-        "00 System/0.01 agent/retrieval/00 retrieval-readme.md": """# Retrieval Instructions for Agents
+        "99 System/0.01 agent/review/needs-review.md": "# Needs Review\n\n",
+        "99 System/0.01 agent/review/proposed-values.md": "# Proposed Values\n\n",
+        "99 System/0.01 agent/review/proposed-changes.md": "# Proposed Changes\n\nNo proposal files found.\n",
+        "99 System/0.01 agent/review/processing-errors.md": "# Processing Errors\n\n",
+        "99 System/0.01 agent/retrieval/00 retrieval-readme.md": """# Retrieval Instructions for Agents
 
 Start with generated retrieval files before opening full notes.
 
@@ -476,38 +522,48 @@ Start with generated retrieval files before opening full notes.
 
 Open full notes only after selecting likely candidates. Do not edit notes during retrieval.
 """,
-        "00 System/0.01 agent/retrieval/01 vault-map.md": "# Vault Map\n\nNot scanned yet.\n",
-        "00 System/0.01 agent/retrieval/02 note-catalog.md": "# Note Catalog\n\nNot scanned yet.\n",
-        "00 System/0.01 agent/retrieval/03 property-index.md": "# Property Index\n\nNot scanned yet.\n",
-        "00 System/0.01 agent/retrieval/04 summary-brief.md": "# Summary Brief\n\nNot scanned yet.\n",
-        "00 System/0.01 agent/retrieval/stale-summaries.md": "# Stale Summaries\n\n",
-        "00 System/0.01 agent/retrieval/retrieval-log.md": "# Retrieval Log\n\n",
-        "00 System/0.02 templates/0.020 vault schema.md": schema_markdown(),
-        "00 System/0.02 templates/0.021 property values.md": property_values_markdown(),
-        "00 System/0.02 templates/0.022 folder norms.md": folder_norms_markdown(),
-        "00 System/0.02 templates/0.023 topic hubs.md": topic_hubs_markdown(),
+        "99 System/0.01 agent/retrieval/01 vault-map.md": "# Vault Map\n\nNot scanned yet.\n",
+        "99 System/0.01 agent/retrieval/02 note-catalog.md": "# Note Catalog\n\nNot scanned yet.\n",
+        "99 System/0.01 agent/retrieval/03 property-index.md": "# Property Index\n\nNot scanned yet.\n",
+        "99 System/0.01 agent/retrieval/04 summary-brief.md": "# Summary Brief\n\nNot scanned yet.\n",
+        "99 System/0.01 agent/retrieval/stale-summaries.md": "# Stale Summaries\n\n",
+        "99 System/0.01 agent/retrieval/retrieval-log.md": "# Retrieval Log\n\n",
+        "99 System/0.02 templates/0.020 vault schema.md": schema_markdown(),
+        "99 System/0.02 templates/0.021 property values.md": property_values_markdown(),
+        "99 System/0.02 templates/0.022 folder norms.md": folder_norms_markdown(),
+        "99 System/0.02 templates/0.023 topic hubs.md": topic_hubs_markdown(),
         ".obsidian/snippets/dashboard.css": DASHBOARD_SNIPPET_CSS,
         ".obsidian/appearance.json": DASHBOARD_APPEARANCE_JSON,
     }
     contents.update(starter_templates())
     contents.update(index_base_templates())
+    contents.update(
+        dashboard_shell_contents(
+            VaultPaths(
+                system_dir=system_dir,
+                inbox_dir=inbox_dir,
+                dashboards_dir=dashboards_dir,
+                content_dirs=dict(content_dirs or DEFAULT_CONTENT_DIRS),
+            )
+        )
+    )
     system_text = system_dir.as_posix()
     inbox_text = inbox_dir.as_posix()
     remapped: dict[str, str] = {}
     for path, content in contents.items():
         mapped_path = _remap_default_path(path, system_dir=system_dir, inbox_dir=inbox_dir)
-        remapped[mapped_path] = content.replace("00 System", system_text).replace(
-            "01 Inbox", inbox_text
+        remapped[mapped_path] = content.replace("99 System", system_text).replace(
+            "00 Inbox", inbox_text
         )
     return remapped
 
 
 def _remap_default_path(path: str, *, system_dir: Path, inbox_dir: Path) -> str:
     relative = Path(path)
-    if relative.is_relative_to(Path("00 System")):
-        suffix = relative.relative_to(Path("00 System"))
+    if relative.is_relative_to(Path("99 System")):
+        suffix = relative.relative_to(Path("99 System"))
         return (system_dir / suffix).as_posix()
-    if relative.is_relative_to(Path("01 Inbox")):
-        suffix = relative.relative_to(Path("01 Inbox"))
+    if relative.is_relative_to(Path("00 Inbox")):
+        suffix = relative.relative_to(Path("00 Inbox"))
         return (inbox_dir / suffix).as_posix()
     return relative.as_posix()

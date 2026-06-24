@@ -572,7 +572,9 @@ Proposal JSON files live under `00 System/0.01 agent/review/proposals/`. `vault-
 - [x] Add proposal templates/examples for common request types. Evidence: `AGENT_CONTRACT.md`, vault-local `AGENT_CONTRACT.md`, and README include proposal examples and generator commands.
 - [x] Add dedicated commands that generate proposal JSON for index notes and canonical property changes. Evidence: `propose-index` and `propose-property` write pending proposal JSON validated by `review-proposals`.
 - [x] Add dedicated commands that generate proposal JSON for template-change and cleanup requests. Evidence: `propose-template` and `propose-cleanup` generate pending proposals validated by `review-proposals`; verified with `python3 -m unittest discover -s tests`.
-- [x] Add a dedicated command for hierarchical Bases dashboards. Evidence: `propose-base-hierarchy` writes a pending `base-hierarchy` proposal with domain and parent/project dashboard `write_file` operations; Memex smoke validation passed through `review-proposals --dry-run`.
+- [x] Add a dedicated command and model-facing default for hierarchical Bases dashboards. Evidence: `propose-base-hierarchy` writes a pending `base-hierarchy` proposal with domain and parent/project dashboard `write_file` operations; the bundled organization/schema skills and initialized vault contract now treat an adaptable Home/Domain/Project/People/Source/Maintenance hierarchy as the primary navigation layer; Memex smoke validation passed through `review-proposals --dry-run`.
+- [x] Initialize a dashboard-first physical layout and preserve curated dashboard sections. Evidence: new vaults create the configured dashboard/content tree, managed marker replacement preserves orientation prose, and generated domain/project dashboards target `01 Dashboards`.
+- [x] Add deterministic inbox destinations and reviewed existing-vault migration. Evidence: added `propose-inbox-sort`, `propose-vault-layout`, `inbox-sort`/`vault-layout` validation, purpose-based routing, confidence/norms gates, collision handling, and migration/apply regressions.
 
 ### Acceptance Criteria
 

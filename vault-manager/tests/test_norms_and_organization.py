@@ -58,7 +58,7 @@ class NormsAndOrganizationTests(unittest.TestCase):
     def test_norms_lock_hash_is_stable_and_changes_with_template(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            templates = root / "00 System" / "0.02 templates" / "note-types"
+            templates = root / "99 System" / "0.02 templates" / "note-types"
             templates.mkdir(parents=True)
             template = templates / "note.md"
             template.write_text("---\ntype: template\n---\n# Note\n", encoding="utf-8")
@@ -99,7 +99,7 @@ class NormsAndOrganizationTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertIn("norms-lock dry run", output)
             self.assertFalse(
-                (Path(directory) / "00 System" / "0.01 agent" / "norms-lock.json").exists()
+                (Path(directory) / "99 System" / "0.01 agent" / "norms-lock.json").exists()
             )
 
     def test_organize_vault_pass_dry_run_does_not_write(self):
@@ -125,7 +125,7 @@ class NormsAndOrganizationTests(unittest.TestCase):
             self.assertIn("organize-vault-pass dry run", output)
             self.assertIn("Would process: 1", output)
             self.assertEqual(note.read_text(encoding="utf-8"), "# Note\n")
-            self.assertFalse((root / "00 System").exists())
+            self.assertFalse((root / "99 System").exists())
 
     def test_organize_vault_pass_writes_report_and_lock_aware_state(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -147,16 +147,16 @@ class NormsAndOrganizationTests(unittest.TestCase):
                 ]
             )
             state = json.loads(
-                (root / "00 System" / "0.01 agent" / "processing-state.json").read_text(
+                (root / "99 System" / "0.01 agent" / "processing-state.json").read_text(
                     encoding="utf-8"
                 )
             )
             lock = json.loads(
-                (root / "00 System" / "0.01 agent" / "norms-lock.json").read_text(
+                (root / "99 System" / "0.01 agent" / "norms-lock.json").read_text(
                     encoding="utf-8"
                 )
             )
-            reports = list((root / "00 System" / "0.01 agent" / "reports").glob("organization-run-*.json"))
+            reports = list((root / "99 System" / "0.01 agent" / "reports").glob("organization-run-*.json"))
 
         self.assertEqual(exit_code, 0)
         self.assertIn("organize-vault-pass complete", output)
@@ -187,7 +187,7 @@ class NormsAndOrganizationTests(unittest.TestCase):
                 create_lock=True,
             )
             reports = sorted(
-                (root / "00 System" / "0.01 agent" / "reports").glob(
+                (root / "99 System" / "0.01 agent" / "reports").glob(
                     "organization-run-*.json"
                 )
             )
@@ -280,7 +280,7 @@ class NormsAndOrganizationTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"

@@ -87,7 +87,7 @@ class ArtifactImportTests(unittest.TestCase):
             proposal = json.loads((vault / result["proposalPath"]).read_text(encoding="utf-8"))
 
             self.assertEqual(code, 0)
-            self.assertEqual(result["destinationPath"], "01 Inbox/notes.md")
+            self.assertEqual(result["destinationPath"], "00 Inbox/notes.md")
             self.assertEqual(proposal["operations"][0]["content"], "plain text\n")
 
     def test_binary_format_is_rejected_without_proposal(self):
@@ -106,7 +106,7 @@ class ArtifactImportTests(unittest.TestCase):
 
             self.assertEqual(code, 1)
             self.assertEqual(result["error"]["code"], "unsupported_artifact_format")
-            self.assertEqual(list((vault / "00 System/0.01 agent/review/proposals").glob("import-*.json")), [])
+            self.assertEqual(list((vault / "99 System/0.01 agent/review/proposals").glob("import-*.json")), [])
 
     def test_source_outside_root_and_symlink_escape_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -139,7 +139,7 @@ class ArtifactImportTests(unittest.TestCase):
             vault.mkdir()
             artifacts.mkdir()
             self.initialized_vault(vault)
-            destination = vault / "01 Inbox" / "same.md"
+            destination = vault / "00 Inbox" / "same.md"
             destination.write_text("existing\n", encoding="utf-8")
             source = artifacts / "same.md"
             source.write_text("incoming\n", encoding="utf-8")

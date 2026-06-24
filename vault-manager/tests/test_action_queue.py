@@ -250,7 +250,7 @@ class ActionQueueTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -484,7 +484,7 @@ class ActionQueueTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"

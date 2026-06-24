@@ -387,3 +387,17 @@ Implications:
 - Startup may report and offer work but cannot authorize inbox processing, proposal application, or other mutations.
 - First-launch sessions stay vault-local and migrate from bootstrap storage after initialization.
 - Recommendations based on observed vault practice remain proposal-first and should preserve the intended purpose of the approved schema.
+
+## 2026-06-24: New Vaults Are Dashboard-First And Inbox Sorting Is Confidence-Gated
+
+Decision: New vaults default to `00 Inbox`, `01 Dashboards`, purpose-based content folders, and `99 System`. Dashboards are the primary navigation layer; folders are secondary storage. Existing vaults migrate only through reviewed proposals.
+
+Reason: The normal user workflow is capture into Inbox, automatic bounded organization, and navigation through property-driven dashboards without exposing infrastructure as a primary folder.
+
+Implications:
+
+- Dashboard and content paths are stored in `.pi-vault/config.yaml` and validated as vault-relative layout paths.
+- Dashboard regeneration replaces only marked generated sections and preserves curated Markdown.
+- Person notes use Contacts or Authors as `parent`; Contacts wins physical placement for dual-role people and Authors remains a related view.
+- Safe unattended moves require a current norms lock plus completed warning-free model stages above the confidence threshold.
+- Ambiguous routes, missing metadata, collisions, and existing-vault restructuring remain proposal-first.

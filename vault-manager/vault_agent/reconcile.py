@@ -177,7 +177,7 @@ def _canonical_frontmatter(
 
 
 def infer_type_from_content(
-    relative: Path, body: str, *, inbox_dir: Path = Path("01 Inbox")
+    relative: Path, body: str, *, inbox_dir: Path = Path("00 Inbox")
 ) -> str | None:
     """Infer a note type from title/body content using conservative signals."""
     text = f"{relative.stem}\n{body}".lower()

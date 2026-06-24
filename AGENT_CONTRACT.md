@@ -4,7 +4,7 @@ This document defines the operating contract for working in a vault managed by p
 
 ## Source Of Truth
 
-- Bootstrap paths live in `.pi-vault/config.yaml`; examples below use the defaults `00 System` and `01 Inbox`.
+- Bootstrap paths live in `.pi-vault/config.yaml`; examples below use the defaults `99 System` and `00 Inbox`.
 - Canonical machine state lives under the configured system folder at `0.01 agent/`.
 - Interactive session transcripts and debug logs live under the configured system folder at `0.01 agent/`; they are never shared between vaults through the global pi-vault profile.
 - Human-editable schema and templates live under the configured system folder at `0.02 templates/`.
@@ -15,15 +15,15 @@ This document defines the operating contract for working in a vault managed by p
 
 1. On launch from the vault root or any descendant, pi-vault resolves the vault root, resumes the latest vault-local session unless explicitly overridden, loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, and injects purpose, conventions, contract, schema, norms lock, template norms, and retrieval context into the system prompt; start there.
 2. Treat the automatic startup assessment as read-only context. Summarize prior work, health, schema state, inbox changes, and pending review, then offer specific next actions without treating it as mutation approval.
-3. Read `00 System/0.01 agent/AGENT_HANDOFF.md` and `00 System/0.01 agent/AGENT_CONTRACT.md` if present.
+3. Read `99 System/0.01 agent/AGENT_HANDOFF.md` and `99 System/0.01 agent/AGENT_CONTRACT.md` if present.
 4. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status` and `vault-agent --vault-root <vault> version status`).
 5. Interpret schema state before processing: `provisional` means defaults are discussion aids only; `locked` means follow the current schema exactly; `drifted` blocks broad processing until review and re-locking.
 6. Run `vault-agent --vault-root <vault> organization-readiness --json` before any broad organization pass.
 7. Consult generated retrieval files before opening many notes:
-   - `00 System/0.01 agent/retrieval/01 vault-map.md`
-   - `00 System/0.01 agent/retrieval/02 note-catalog.md`
-   - `00 System/0.01 agent/retrieval/03 property-index.md`
-   - `00 System/0.01 agent/retrieval/04 summary-brief.md`
+   - `99 System/0.01 agent/retrieval/01 vault-map.md`
+   - `99 System/0.01 agent/retrieval/02 note-catalog.md`
+   - `99 System/0.01 agent/retrieval/03 property-index.md`
+   - `99 System/0.01 agent/retrieval/04 summary-brief.md`
 
 ## User Request Routing
 
@@ -32,17 +32,18 @@ Each request routes to a pi skill, which drives the engine commands beneath it:
 - "Onboard / initialize this vault" → **vault-onboarding** skill: bootstrap `.pi-vault/config.yaml`, scan existing conventions, plan norms with the user (engine: `init`, `scan`, `validate`).
 - "Find / retrieve notes" → **vault-retrieval** skill: read the generated vault map, catalog, property index, and summary brief (engine: `status`, retrieval files).
 - "Organize this vault" → **vault-organization** skill: lock norms first, run readiness, then bounded stage-scoped passes with reports (engine: `norms-lock`, `organization-readiness --json`, `autonomous-run`, `organize-vault-pass`).
-- "Process the inbox" → **vault-inbox** skill: bounded, safe inbox maintenance (engine: `autonomous-run --apply-safe`, `process-inbox`, `rebuild-retrieval`).
+- "Process the inbox" → **vault-inbox** skill: bounded classification followed by deterministic destination proposals; apply only current, warning-free, high-confidence routes automatically (engine: `process-inbox`, `propose-inbox-sort`, `autonomous-run --apply-safe`).
+- "Adopt the default layout" → **vault-organization** skill: generate and review a dashboard-first migration without moving existing notes automatically (engine: `propose-vault-layout`).
 - "Change canonical properties / plan schema / templates" → **vault-schema** skill: update schema, templates, validators, and docs together, then validate (engine: `propose-property`, `propose-template`, `validate`).
 - "Build an index for a type/project/topic" → **vault-schema** / **vault-organization**: create or update an `index` note using sparse properties, Bases, links, and retrieval files; do not add new YAML fields unless the user approves a schema change (engine: `propose-index`).
 - "Build a hierarchy of Bases" → **vault-organization** skill: generate pending domain and parent/project dashboards with embedded Bases; keep coverage prose in Markdown dashboard bodies, not frontmatter (engine: `propose-base-hierarchy`).
-- "Organize one project/folder" → **vault-organization** skill: generate a pending proposal with sparse metadata cleanup and a dashboard; keep mutation inside the target folder plus `00 System` review/log/backup files (engine: `propose-folder-organization`).
+- "Organize one project/folder" → **vault-organization** skill: generate a pending proposal with sparse metadata cleanup and a dashboard; keep mutation inside the target folder plus `99 System` review/log/backup files (engine: `propose-folder-organization`).
 - "What can be done here?" → **vault-review** skill: list the machine-readable queue of transcript cleanup, people extraction, and categorization actions (engine: `action-plan --json`).
 - "Run queued maintenance" → **vault-inbox** / **vault-organization**: generate pending action proposals; for fuzzy categorization use `--use-llm --llm-limit 1 --max-items 1` first, then increase only after review (engine: `propose-action-queue`).
 - "Extract people" → **vault-organization** skill: keep sparse person frontmatter and put relationship details in the note body. Treat author and `Key thinkers` lists as referenced people; treat meeting, call, speaker, and direct interaction contexts as direct contacts with contact-detail scaffolding.
 - "Clean up notes" → **vault-inbox** / **vault-organization**: prefer `autonomous-run`, `reconcile`, `propose-cleanup-queue`, `process-inbox`, `process-vault`, and `organize-vault-pass` in small batches with backups.
 - "Run recurring maintenance" → schedule pi (or a scheduler around `pi-vault vault maintain` / `hermes-run`) with bounded `--max-notes`.
-- "Inspect / approve / apply a change" → **vault-review** skill via the `vault_manage` tool: prefer the `propose-*` generators, otherwise write proposal JSON under `00 System/0.01 agent/review/proposals/`, run `review-proposals --dry-run`, optionally `review-proposals --agent-review --approve-safe`, then `review-proposals --apply-approved`.
+- "Inspect / approve / apply a change" → **vault-review** skill via the `vault_manage` tool: prefer the `propose-*` generators, otherwise write proposal JSON under `99 System/0.01 agent/review/proposals/`, run `review-proposals --dry-run`, optionally `review-proposals --agent-review --approve-safe`, then `review-proposals --apply-approved`.
 - "Undo / recover a change" → **vault-recovery** skill: inspect and roll back versioned runs (engine: `version status`, `version diff`, `version undo-run`).
 
 ## Versioning Protocol
@@ -155,6 +156,38 @@ The apply step only applies proposals with `status: approved`; after success, it
 
 ## Base Hierarchy Workflow
 
+Dashboards are the primary user-facing navigation layer, not optional reports. Use this as an adaptable starting topology:
+
+```text
+00 Inbox
+01 Dashboards
+├── Home
+├── Domains
+├── Projects
+├── People
+├── Organizations
+├── Sources
+└── Vault Maintenance
+02 People
+├── 02.01 Contacts
+└── 02.02 Authors
+03 Organizations
+04 Work
+05 Administrative
+├── 05.01 Health
+├── 05.02 Home
+├── 05.03 Finance
+├── 05.04 Travel
+└── 05.05 General
+06 Thoughts
+07 Sources
+99 System
+```
+
+This is a planning model, not a fixed taxonomy. Derive actual branches from the vault's purpose and approved `domain`, `parent`, `type`, `status`, `source_kind`, and `capture_type` values. Omit empty or irrelevant branches and propose new intermediate dashboards when a populated branch becomes difficult to navigate.
+
+Each dashboard should combine curated Markdown orientation, coverage prose, and child-dashboard links with generated embedded Bases. Preserve curated sections during regeneration. Notes may appear in multiple relevant dashboards without being duplicated or moved. Dashboard proposals should also surface missing metadata, orphaned notes, pending review, or other maintenance state when useful.
+
 1. Run `scan` or rely on the generator's fresh scan.
 2. Run `vault-agent --vault-root <vault> propose-base-hierarchy --dry-run`.
 3. If the preview is acceptable, run `vault-agent --vault-root <vault> propose-base-hierarchy`.
@@ -162,6 +195,8 @@ The apply step only applies proposals with `status: approved`; after success, it
 5. Approve and apply only through `review-proposals --apply-approved`.
 
 The generator writes dashboard notes with embedded Bases. It does not change note metadata, create new schema fields, move notes, or treat blank/invalid domains as real domains.
+
+Use `propose-inbox-sort` for bounded deterministic destination proposals and `propose-vault-layout` for existing-vault migration. Safe unattended inbox moves require a current norms lock plus completed warning-free `classify-type` and `property-values` stages above the configured confidence threshold.
 
 ## Locked Norms And Organization Reports
 
@@ -184,7 +219,7 @@ vault-agent --vault-root <vault> validate --dry-run
 vault-agent --vault-root <vault> rebuild-retrieval
 ```
 
-The pass records the `norms_lock_hash` in `processing-state.json` and writes Markdown/JSON reports under `00 System/0.01 agent/reports/`. For LLM-backed batches, pass one explicit semantic stage such as `--stage classify-type` or `--stage property-values`; the command prompts queue item 1, validates/records the result, then prompts queue item 2. Warning-bearing or near-threshold valid model output is persisted under `00 System/0.01 agent/review/model-blocked-proposals.*`; inspect it with `review-model-blocks --dry-run`, convert safe items with `review-model-blocks --approve-safe`, then apply only through `review-proposals`. If schema, templates, or legacy alias rules change, notes processed under an older lock are considered stale and should be revisited in bounded passes.
+The pass records the `norms_lock_hash` in `processing-state.json` and writes Markdown/JSON reports under `99 System/0.01 agent/reports/`. For LLM-backed batches, pass one explicit semantic stage such as `--stage classify-type` or `--stage property-values`; the command prompts queue item 1, validates/records the result, then prompts queue item 2. Warning-bearing or near-threshold valid model output is persisted under `99 System/0.01 agent/review/model-blocked-proposals.*`; inspect it with `review-model-blocks --dry-run`, convert safe items with `review-model-blocks --approve-safe`, then apply only through `review-proposals`. If schema, templates, or legacy alias rules change, notes processed under an older lock are considered stale and should be revisited in bounded passes.
 
 ## Scheduled Maintenance Workflow
 

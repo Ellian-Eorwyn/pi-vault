@@ -54,7 +54,7 @@ class VersioningTests(unittest.TestCase):
         self.assertTrue(info.initialized)
         self.assertIn("Custom.md", gitignore)
         self.assertIn("BEGIN vault-agent managed ignores", gitignore)
-        self.assertIn("00 System/0.01 agent/versioning/run.lock", gitignore)
+        self.assertIn("99 System/0.01 agent/versioning/run.lock", gitignore)
 
     def test_separate_git_dir_initialization(self):
         with tempfile.TemporaryDirectory() as directory:

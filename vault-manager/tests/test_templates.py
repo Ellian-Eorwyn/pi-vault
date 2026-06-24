@@ -16,7 +16,7 @@ class TemplateTests(unittest.TestCase):
     def test_starter_templates_exist_for_current_note_types_only(self):
         templates = starter_templates()
         expected_paths = {
-            f"00 System/0.02 templates/note-types/{note_type}.md"
+            f"99 System/0.02 templates/note-types/{note_type}.md"
             for note_type in NOTE_TYPES
         }
 
@@ -41,11 +41,11 @@ class TemplateTests(unittest.TestCase):
     def test_templates_include_type_specific_work_surfaces(self):
         templates = starter_templates()
 
-        self.assertIn("## Milestones", templates["00 System/0.02 templates/note-types/project.md"])
-        self.assertIn("## Citation", templates["00 System/0.02 templates/note-types/source.md"])
-        self.assertIn("## Contact And Context", templates["00 System/0.02 templates/note-types/person.md"])
-        self.assertIn("## Action Items", templates["00 System/0.02 templates/note-types/meeting.md"])
-        self.assertIn("## Start Here", templates["00 System/0.02 templates/note-types/index.md"])
+        self.assertIn("## Milestones", templates["99 System/0.02 templates/note-types/project.md"])
+        self.assertIn("## Citation", templates["99 System/0.02 templates/note-types/source.md"])
+        self.assertIn("## Contact And Context", templates["99 System/0.02 templates/note-types/person.md"])
+        self.assertIn("## Action Items", templates["99 System/0.02 templates/note-types/meeting.md"])
+        self.assertIn("## Start Here", templates["99 System/0.02 templates/note-types/index.md"])
 
     def test_index_base_templates_are_sparse_and_parseable(self):
         allowed_properties = set(CORE_PROPERTY_ORDER)
@@ -84,10 +84,10 @@ class TemplateTests(unittest.TestCase):
     def test_index_base_templates_cover_requested_patterns(self):
         templates = index_base_templates()
 
-        self.assertIn("domain == this.domain", templates["00 System/0.02 templates/indexes/domain-index.md"])
-        self.assertIn("parent == this.file.asLink()", templates["00 System/0.02 templates/indexes/parent-dashboard.md"])
-        self.assertIn('type == "source"', templates["00 System/0.02 templates/indexes/object-collections.md"])
-        self.assertIn('cover != ""', templates["00 System/0.02 templates/indexes/cover-gallery.md"])
+        self.assertIn("domain == this.domain", templates["99 System/0.02 templates/indexes/domain-index.md"])
+        self.assertIn("parent == this.file.asLink()", templates["99 System/0.02 templates/indexes/parent-dashboard.md"])
+        self.assertIn('type == "source"', templates["99 System/0.02 templates/indexes/object-collections.md"])
+        self.assertIn('cover != ""', templates["99 System/0.02 templates/indexes/cover-gallery.md"])
 
     def test_template_application_appends_full_missing_sections(self):
         body = "# Source\n\nExisting body stays.\n\n## Summary\n\nAlready summarized.\n"

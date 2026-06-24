@@ -16,9 +16,12 @@ from .base_hierarchy import (
     normalize_hierarchy_llm_response,
 )
 from .config import AgentConfig
+from .dashboard_layout import dashboard_directories, dashboard_shell_contents
 from .frontmatter import parse_note
 from .legacy import apply_legacy_mappings
 from .llm import ProposalProvider, validate_stage_proposal
+from .layout_routing import build_inbox_sort_proposal, route_note
+from .paths import BOOTSTRAP_FILE, render_bootstrap
 from .reconcile import infer_type_from_content
 from .safety import atomic_write_text
 from .scanner import scan_vault
@@ -34,7 +37,7 @@ from .schema import (
 from .validation import validate_entries
 
 
-PROPOSAL_DIR = Path("00 System") / "0.01 agent" / "review" / "proposals"
+PROPOSAL_DIR = Path("99 System") / "0.01 agent" / "review" / "proposals"
 
 
 def run_propose_index(
@@ -94,6 +97,7 @@ def run_propose_topic_hubs(
         schema=schema,
         domains=[domain] if domain else None,
         min_cluster=min_cluster,
+        system_dir=config.paths.system_dir,
     )
     if not added:
         return (
@@ -178,10 +182,114 @@ def run_propose_cleanup_queue(
     )
 
 
+def run_propose_inbox_sort(
+    config: AgentConfig,
+    *,
+    max_notes: int = 5,
+    safe_only: bool = False,
+    overwrite_proposal: bool = False,
+) -> tuple[int, str]:
+    if max_notes < 1:
+        return 1, "vault-agent propose-inbox-sort failed\nError: max-notes must be positive"
+    proposal, warnings = build_inbox_sort_proposal(
+        config, max_notes=max_notes, safe_only=safe_only
+    )
+    if not proposal["operations"]:
+        detail = "\n".join(f"Warning: {warning}" for warning in warnings)
+        return 0, "vault-agent propose-inbox-sort\nNo routable inbox notes found." + (
+            "\n" + detail if detail else ""
+        )
+    code, output = _write_proposal(
+        config,
+        proposal,
+        dry_run=config.dry_run,
+        overwrite_existing=overwrite_proposal,
+    )
+    if warnings:
+        output += "\n" + "\n".join(f"Warning: {warning}" for warning in warnings)
+    return code, output
+
+
+def run_propose_vault_layout(
+    config: AgentConfig, *, overwrite_proposal: bool = False
+) -> tuple[int, str]:
+    operations: list[dict[str, Any]] = []
+    planned_directories = set(dashboard_directories(config.paths))
+    for directory in dashboard_directories(config.paths):
+        operations.append(
+            {"op": "create_directory", "path": directory.as_posix(), "if_exists": "preserve"}
+        )
+    for path, content in dashboard_shell_contents(config.paths).items():
+        if (config.vault_root / path).exists():
+            continue
+        operations.append(
+            {"op": "write_file", "path": path, "if_exists": "fail", "content": content}
+        )
+    operations.append(
+        {
+            "op": "write_file",
+            "path": BOOTSTRAP_FILE.as_posix(),
+            "if_exists": "overwrite",
+            "content": render_bootstrap(config.paths),
+        }
+    )
+    dashboard_paths = set(dashboard_shell_contents(config.paths))
+    planned_destinations: set[Path] = set()
+    for note_path in sorted(config.vault_root.rglob("*.md")):
+        relative = note_path.relative_to(config.vault_root)
+        if (
+            relative.is_relative_to(config.paths.system_dir)
+            or relative.is_relative_to(config.paths.inbox_dir)
+            or relative.is_relative_to(config.paths.dashboards_dir)
+            or relative.as_posix() in dashboard_paths
+        ):
+            continue
+        parsed = parse_note(note_path.read_text(encoding="utf-8"))
+        if parsed.error:
+            continue
+        decision = route_note(config, note_path, parsed.frontmatter)
+        if decision.destination_dir is None or relative.parent == decision.destination_dir:
+            continue
+        destination = decision.destination_dir / note_path.name
+        if destination in planned_destinations or (config.vault_root / destination).exists():
+            continue
+        planned_destinations.add(destination)
+        if decision.destination_dir not in planned_directories:
+            planned_directories.add(decision.destination_dir)
+            operations.append(
+                {
+                    "op": "create_directory",
+                    "path": decision.destination_dir.as_posix(),
+                    "if_exists": "preserve",
+                }
+            )
+        operations.append(
+            {
+                "op": "move_note",
+                "path": relative.as_posix(),
+                "destination": destination.as_posix(),
+                "update_links": True,
+            }
+        )
+    proposal = {
+        "id": "vault-layout",
+        "title": "Adopt dashboard-first vault layout",
+        "kind": "vault-layout",
+        "status": "pending",
+        "automation_safe": False,
+        "summary": "Create dashboard-first navigation and record deterministic content destinations without moving existing notes automatically.",
+        "operations": operations,
+    }
+    return _write_proposal(
+        config,
+        proposal,
+        dry_run=config.dry_run,
+        overwrite_existing=overwrite_proposal,
+    )
 def run_propose_base_hierarchy(
     config: AgentConfig,
     *,
-    output_root: str = "Indexes/Base Hierarchy",
+    output_root: str | None = None,
     min_child_notes: int = 2,
     proposal_provider: ProposalProvider | None = None,
     llm_limit: int = 0,
@@ -189,7 +297,7 @@ def run_propose_base_hierarchy(
 ) -> tuple[int, str]:
     proposal, errors, stats = generate_base_hierarchy(
         config=config,
-        output_root=output_root,
+        output_root=output_root or config.paths.dashboards_dir.as_posix(),
         min_child_notes=min_child_notes,
         proposal_provider=proposal_provider,
         llm_limit=llm_limit,
@@ -351,7 +459,7 @@ def generate_property_proposal(
                 "path": (
                     config.paths.agent_dir / "schema.json"
                     if config
-                    else Path("00 System/0.01 agent/schema.json")
+                    else Path("99 System/0.01 agent/schema.json")
                 ).as_posix(),
                 "if_exists": "overwrite" if overwrite else "fail",
                 "content": json.dumps(schema, indent=2) + "\n",
@@ -361,7 +469,7 @@ def generate_property_proposal(
                 "path": (
                     config.paths.template_dir / "0.021 property values.md"
                     if config
-                    else Path("00 System/0.02 templates/0.021 property values.md")
+                    else Path("99 System/0.02 templates/0.021 property values.md")
                 ).as_posix(),
                 "if_exists": "overwrite" if overwrite else "fail",
                 "content": definition_text,
@@ -392,7 +500,7 @@ def generate_template_proposal(
             {
                 "op": "write_file",
                 "path": (
-                    (config.paths.template_dir if config else Path("00 System/0.02 templates"))
+                    (config.paths.template_dir if config else Path("99 System/0.02 templates"))
                     / "note-types"
                     / f"{note_type}.md"
                 ).as_posix(),
@@ -495,12 +603,13 @@ def generate_cleanup_queue_proposal(
 def generate_base_hierarchy(
     *,
     config: AgentConfig,
-    output_root: str = "Indexes/Base Hierarchy",
+    output_root: str | None = None,
     min_child_notes: int = 2,
     proposal_provider: ProposalProvider | None = None,
     llm_limit: int = 0,
 ) -> tuple[dict[str, Any], list[str], dict[str, int | bool]]:
-    output_path = Path(output_root.strip().strip("/"))
+    resolved_output = output_root or config.paths.dashboards_dir.as_posix()
+    output_path = Path(resolved_output.strip().strip("/"))
     if output_path.is_relative_to(config.paths.agent_dir):
         return (
             {},
@@ -520,7 +629,7 @@ def generate_base_hierarchy(
         if proposal_provider and llm_limit > 0:
             deterministic_proposal, deterministic_plan = generate_base_hierarchy_proposal(
                 entries=result.entries,
-                output_root=output_root,
+                output_root=resolved_output,
                 min_child_notes=min_child_notes,
                 system_dir=config.paths.system_dir,
             )
@@ -536,7 +645,7 @@ def generate_base_hierarchy(
             )
         proposal, plan = generate_base_hierarchy_proposal(
             entries=result.entries,
-            output_root=output_root,
+            output_root=resolved_output,
             min_child_notes=min_child_notes,
             llm_overrides=llm_overrides,
             system_dir=config.paths.system_dir,

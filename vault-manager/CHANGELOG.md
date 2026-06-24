@@ -2,6 +2,11 @@
 
 ## 2026-06-24
 
+- Replaced the new-vault defaults with `00 Inbox`, `01 Dashboards`, purpose-based content folders, and `99 System`; bootstrap/status output now includes validated dashboard and content paths.
+- Added preserved-curation dashboard shells, dashboard-root hierarchy generation, deterministic destination routing, `inbox-sort` and `vault-layout` proposal kinds, `propose-inbox-sort`, and `propose-vault-layout`.
+- Added safe unattended inbox routing gates requiring a current norms lock and completed warning-free high-confidence classification/property stages; ambiguous and colliding routes remain pending.
+- Added dashboard-first routing/migration regressions and clean external-vault smoke verification with 0 validation issues and `obsidian-check --json` at 0 errors and 0 warnings.
+- Added dashboard-first starter conventions and vault-local agent instructions with an adaptable nested Home/Domain/Project/People/Source/Maintenance topology, curated Markdown plus embedded Bases, multi-dashboard note membership, and curated-section preservation.
 - Expanded read-only status output with provisional/locked/drifted schema state, previous scan time, new and changed inbox files, grouped validation issues, generated-state details, pending proposals, blocked/stale processing, and the latest organization report.
 - Clarified initialized-vault guidance so bundled schema/templates remain provisional until approved and captured by `norms-lock.json`.
 - Added status regressions for lock lifecycle, manifest deltas, pending proposals, and missing or corrupt prior state.

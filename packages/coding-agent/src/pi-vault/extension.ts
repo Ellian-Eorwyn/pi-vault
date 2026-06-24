@@ -12,6 +12,8 @@ export interface BootstrapConfig {
 	version: 1;
 	systemDir: string;
 	inboxDir: string;
+	dashboardsDir?: string;
+	contentDirs?: Record<string, string>;
 }
 
 const extensionDirectory = dirname(fileURLToPath(import.meta.url));
@@ -38,7 +40,23 @@ export function readBootstrap(vaultRoot: string): BootstrapConfig | undefined {
 	if (record.version !== 1 || typeof record.system_dir !== "string" || typeof record.inbox_dir !== "string") {
 		return undefined;
 	}
-	for (const folder of [record.system_dir, record.inbox_dir]) {
+	const dashboardsDir = typeof record.dashboards_dir === "string" ? record.dashboards_dir : undefined;
+	const contentDirs = record.content_dirs;
+	if (
+		contentDirs !== undefined &&
+		(typeof contentDirs !== "object" || contentDirs === null || Array.isArray(contentDirs))
+	) {
+		return undefined;
+	}
+	const contentValues = contentDirs === undefined ? [] : Object.values(contentDirs as Record<string, unknown>);
+	if (contentValues.some((value) => typeof value !== "string")) return undefined;
+	for (const folder of [
+		record.system_dir,
+		record.inbox_dir,
+		...(dashboardsDir ? [dashboardsDir] : []),
+		...contentValues,
+	]) {
+		if (typeof folder !== "string") return undefined;
 		const normalized = folder.replaceAll("\\", "/");
 		const parts = normalized.split("/");
 		if (
@@ -50,7 +68,13 @@ export function readBootstrap(vaultRoot: string): BootstrapConfig | undefined {
 			return undefined;
 		}
 	}
-	return { version: 1, systemDir: record.system_dir, inboxDir: record.inbox_dir };
+	return {
+		version: 1,
+		systemDir: record.system_dir,
+		inboxDir: record.inbox_dir,
+		...(dashboardsDir ? { dashboardsDir } : {}),
+		...(contentDirs ? { contentDirs: contentDirs as Record<string, string> } : {}),
+	};
 }
 
 function readContextFile(path: string, limit = 20_000): string | undefined {
@@ -312,13 +336,13 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 		let newlyInitialized = false;
 		if (!readBootstrap(vaultRoot)) {
 			const choice = await ctx.ui.select(`Initialize ${vaultRoot}`, [
-				"Use defaults: 00 System and 01 Inbox",
+				"Use dashboard-first defaults: 00 Inbox, 01 Dashboards, and 99 System",
 				"Customize folders",
 				"Cancel",
 			]);
 			if (!choice || choice === "Cancel") return;
-			let systemDir = "00 System";
-			let inboxDir = "01 Inbox";
+			let systemDir = "99 System";
+			let inboxDir = "00 Inbox";
 			if (choice === "Customize folders") {
 				const selectedSystemDir = await ctx.ui.input("System folder", systemDir);
 				if (selectedSystemDir === undefined) return;

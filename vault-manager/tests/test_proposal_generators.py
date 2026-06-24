@@ -85,7 +85,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposals = (
                 Path(directory)
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -114,7 +114,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -152,7 +152,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -179,7 +179,7 @@ class ProposalGeneratorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             property_values = (
-                root / "00 System" / "0.02 templates" / "0.021 property values.md"
+                root / "99 System" / "0.02 templates" / "0.021 property values.md"
             )
             property_values.parent.mkdir(parents=True)
             property_values.write_text(
@@ -200,7 +200,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -243,7 +243,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -259,7 +259,7 @@ class ProposalGeneratorTests(unittest.TestCase):
         self.assertEqual(proposal["kind"], "template-change")
         self.assertEqual(
             proposal["operations"][0]["path"],
-            "00 System/0.02 templates/note-types/meeting.md",
+            "99 System/0.02 templates/note-types/meeting.md",
         )
         self.assertIn("## Agenda", proposal["operations"][0]["content"])
         self.assertEqual(review_exit, 0)
@@ -286,7 +286,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -357,7 +357,7 @@ class ProposalGeneratorTests(unittest.TestCase):
                 "system_template": False,
             },
             {
-                "path": "00 System/0.02 templates/note-types/note.md",
+                "path": "99 System/0.02 templates/note-types/note.md",
                 "title": "Template",
                 "type": "template",
                 "status": "active",
@@ -394,7 +394,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -428,7 +428,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -445,7 +445,7 @@ class ProposalGeneratorTests(unittest.TestCase):
         self.assertIn("Needs metadata: 1", output)
         self.assertEqual(proposal["kind"], "base-hierarchy")
         self.assertEqual(proposal["status"], "pending")
-        self.assertEqual(proposal["operations"][0]["path"], "Indexes/Base Hierarchy/Vault Domains.md")
+        self.assertEqual(proposal["operations"][0]["path"], "01 Dashboards/Domains.md")
         self.assertTrue(all(operation["op"] == "write_file" for operation in proposal["operations"]))
         self.assertEqual(review_exit, 0)
         self.assertIn("Validation: passed", review_output)
@@ -466,7 +466,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             self.run_cli(["--vault-root", directory, "propose-base-hierarchy"])
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -479,8 +479,8 @@ class ProposalGeneratorTests(unittest.TestCase):
             exit_code, output = self.run_cli(
                 ["--vault-root", directory, "review-proposals", "--apply-approved"]
             )
-            primary_exists = (root / "Indexes" / "Base Hierarchy" / "Vault Domains.md").exists()
-            domain_exists = (root / "Indexes" / "Base Hierarchy" / "Work.md").exists()
+            primary_exists = (root / "01 Dashboards" / "Domains.md").exists()
+            domain_exists = (root / "01 Dashboards" / "Domains" / "Work.md").exists()
 
         self.assertEqual(exit_code, 0)
         self.assertIn("Applied: 1", output)
@@ -542,7 +542,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -591,7 +591,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -664,7 +664,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -701,7 +701,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -724,7 +724,7 @@ class ProposalGeneratorTests(unittest.TestCase):
             folder.mkdir(parents=True)
             (folder / "A.md").write_text("---\ntype: note\n---\n# A\n", encoding="utf-8")
             (folder / "B.md").write_text("---\ntype: note\n---\n# B\n", encoding="utf-8")
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "folder-organization-example.json").write_text(
                 json.dumps(

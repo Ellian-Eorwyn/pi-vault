@@ -221,7 +221,7 @@ def transcript_candidates_for_entries(
     vault_root: Path,
     entries: list[dict[str, Any]],
     *,
-    system_dir: Path = Path("00 System"),
+    system_dir: Path = Path("99 System"),
 ) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     for entry in entries:
@@ -249,7 +249,7 @@ def person_candidates_for_entries(
     vault_root: Path,
     entries: list[dict[str, Any]],
     *,
-    system_dir: Path = Path("00 System"),
+    system_dir: Path = Path("99 System"),
 ) -> list[dict[str, Any]]:
     existing = _existing_people(vault_root)
     by_name: dict[str, dict[str, Any]] = {}
@@ -373,7 +373,7 @@ def normalize_person_name(name: str) -> str:
 
 
 def categorization_failures_for_entries(
-    entries: list[dict[str, Any]], *, system_dir: Path = Path("00 System")
+    entries: list[dict[str, Any]], *, system_dir: Path = Path("99 System")
 ) -> list[dict[str, Any]]:
     failures: list[dict[str, Any]] = []
     for entry in entries:

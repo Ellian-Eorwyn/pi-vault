@@ -96,38 +96,44 @@ CORE_PROPERTY_ORDER = (
 
 NOTE_TYPES = {
     "project": {
-        "folder": "Projects",
+        "folder": "04 Work/<project> or a domain project folder",
         "description": "Temporary effort with a defined outcome.",
     },
     "source": {
-        "folder": "Sources",
+        "folder": "07 Sources",
         "description": "Book, paper, article, video, podcast, dataset, or website.",
     },
-    "person": {"folder": "People", "description": "Individual human being."},
+    "person": {
+        "folder": "02 People/02.01 Contacts or 02 People/02.02 Authors",
+        "description": "Individual human being.",
+    },
     "organization": {
-        "folder": "Organizations",
+        "folder": "03 Organizations",
         "description": "Institution, company, group, lab, or department.",
     },
     "meeting": {
-        "folder": "Meetings",
+        "folder": "Owning project or purpose-based domain folder",
         "description": "Notes from a meeting, interview, conversation, or call.",
     },
-    "task": {"folder": "Tasks", "description": "Standalone actionable item."},
+    "task": {
+        "folder": "Owning project or purpose-based domain folder",
+        "description": "Standalone actionable item.",
+    },
     "note": {
-        "folder": "Notes",
+        "folder": "Purpose-based domain folder or 06 Thoughts",
         "description": "General knowledge, reference, or idea note.",
     },
     "index": {
-        "folder": "Indexes",
+        "folder": "01 Dashboards",
         "description": "Dashboard, MOC, hub, or navigation page.",
     },
-    "daily": {"folder": "Daily", "description": "Daily note."},
+    "daily": {"folder": "06 Thoughts", "description": "Daily note."},
     "template": {
-        "folder": "00 System/0.02 templates",
+        "folder": "99 System/0.02 templates",
         "description": "Reusable note template.",
     },
     "system": {
-        "folder": "00 System",
+        "folder": "99 System",
         "description": "Vault infrastructure, workflows, schemas, and agent memory.",
     },
 }
@@ -301,7 +307,7 @@ def schema_markdown() -> str:
         "",
         "# Obsidian Vault Metadata Schema",
         "",
-        "Human-readable mirror of `00 System/0.01 agent/schema.json`.",
+        "Human-readable mirror of `99 System/0.01 agent/schema.json`.",
         "",
         "This vault uses a small, controlled metadata schema intended to support Obsidian Bases, dashboards, retrieval, and agent-based maintenance.",
         "",
@@ -521,7 +527,7 @@ def folder_norms_markdown() -> str:
         "",
         "# Folder Norms",
         "",
-        "Folder names are suggestions, not schema. The agent may suggest these locations, but v1 does not automatically move notes.",
+        "Dashboards are the primary navigation layer and folders are secondary storage. Inbox sorting may move only high-confidence, warning-free notes through validated proposals.",
         "",
     ]
     for note_type, spec in NOTE_TYPES.items():
@@ -977,7 +983,7 @@ capture_type:
 
 def starter_templates() -> dict[str, str]:
     return {
-        f"00 System/0.02 templates/note-types/{note_type}.md": template_for(
+        f"99 System/0.02 templates/note-types/{note_type}.md": template_for(
             note_type, spec["description"]
         )
         for note_type, spec in NOTE_TYPES.items()
@@ -986,10 +992,10 @@ def starter_templates() -> dict[str, str]:
 
 def index_base_templates() -> dict[str, str]:
     return {
-        "00 System/0.02 templates/indexes/domain-index.md": _domain_index_template(),
-        "00 System/0.02 templates/indexes/parent-dashboard.md": _parent_dashboard_template(),
-        "00 System/0.02 templates/indexes/object-collections.md": _object_collections_template(),
-        "00 System/0.02 templates/indexes/cover-gallery.md": _cover_gallery_template(),
+        "99 System/0.02 templates/indexes/domain-index.md": _domain_index_template(),
+        "99 System/0.02 templates/indexes/parent-dashboard.md": _parent_dashboard_template(),
+        "99 System/0.02 templates/indexes/object-collections.md": _object_collections_template(),
+        "99 System/0.02 templates/indexes/cover-gallery.md": _cover_gallery_template(),
     }
 
 

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import AgentConfig
+from .dashboard_layout import dashboard_directories
 from .logging_utils import append_log
 from .safety import CreationItem, apply_creation_plan, plan_creation
 from .starter_files import starter_file_contents
@@ -74,57 +75,57 @@ SYSTEM_DIRECTORY_SPECS = (
 )
 
 FILE_SPECS = (
-    ("00 System/0.01 agent/config.yaml", "human-editable agent config"),
-    ("00 System/0.01 agent/AGENT_HANDOFF.md", "agent handoff instructions"),
-    ("00 System/0.01 agent/AGENT_CONTRACT.md", "framework-agnostic agent contract"),
-    ("00 System/0.01 agent/schema.json", "machine-readable vault schema"),
-    ("00 System/0.01 agent/manifest.json", "generated note manifest"),
-    ("00 System/0.01 agent/state.json", "agent processing state"),
-    ("00 System/0.01 agent/review/needs-review.md", "notes needing user review"),
+    ("99 System/0.01 agent/config.yaml", "human-editable agent config"),
+    ("99 System/0.01 agent/AGENT_HANDOFF.md", "agent handoff instructions"),
+    ("99 System/0.01 agent/AGENT_CONTRACT.md", "framework-agnostic agent contract"),
+    ("99 System/0.01 agent/schema.json", "machine-readable vault schema"),
+    ("99 System/0.01 agent/manifest.json", "generated note manifest"),
+    ("99 System/0.01 agent/state.json", "agent processing state"),
+    ("99 System/0.01 agent/review/needs-review.md", "notes needing user review"),
     (
-        "00 System/0.01 agent/review/proposed-values.md",
+        "99 System/0.01 agent/review/proposed-values.md",
         "schema values proposed for review",
     ),
     (
-        "00 System/0.01 agent/review/proposed-changes.md",
+        "99 System/0.01 agent/review/proposed-changes.md",
         "deterministic proposals pending review",
     ),
     (
-        "00 System/0.01 agent/review/processing-errors.md",
+        "99 System/0.01 agent/review/processing-errors.md",
         "validation and processing errors",
     ),
     (
-        "00 System/0.01 agent/retrieval/00 retrieval-readme.md",
+        "99 System/0.01 agent/retrieval/00 retrieval-readme.md",
         "instructions for retrieval-first vault use",
     ),
-    ("00 System/0.01 agent/retrieval/01 vault-map.md", "generated vault map"),
-    ("00 System/0.01 agent/retrieval/02 note-catalog.md", "generated note catalog"),
+    ("99 System/0.01 agent/retrieval/01 vault-map.md", "generated vault map"),
+    ("99 System/0.01 agent/retrieval/02 note-catalog.md", "generated note catalog"),
     (
-        "00 System/0.01 agent/retrieval/03 property-index.md",
+        "99 System/0.01 agent/retrieval/03 property-index.md",
         "generated property index",
     ),
     (
-        "00 System/0.01 agent/retrieval/04 summary-brief.md",
+        "99 System/0.01 agent/retrieval/04 summary-brief.md",
         "generated summary brief",
     ),
     (
-        "00 System/0.01 agent/retrieval/stale-summaries.md",
+        "99 System/0.01 agent/retrieval/stale-summaries.md",
         "summary refresh queue",
     ),
     (
-        "00 System/0.01 agent/retrieval/retrieval-log.md",
+        "99 System/0.01 agent/retrieval/retrieval-log.md",
         "retrieval rebuild log",
     ),
     (
-        "00 System/0.02 templates/0.020 vault schema.md",
+        "99 System/0.02 templates/0.020 vault schema.md",
         "human-readable vault schema",
     ),
     (
-        "00 System/0.02 templates/0.021 property values.md",
+        "99 System/0.02 templates/0.021 property values.md",
         "human-readable property values",
     ),
     (
-        "00 System/0.02 templates/0.022 folder norms.md",
+        "99 System/0.02 templates/0.022 folder norms.md",
         "human-readable folder norms",
     ),
 )
@@ -141,7 +142,10 @@ def build_init_plan(config: AgentConfig) -> list[InitItem]:
 def build_init_creation_items(config: AgentConfig) -> list[CreationItem]:
     items: list[CreationItem] = []
     contents = starter_file_contents(
-        system_dir=config.paths.system_dir, inbox_dir=config.paths.inbox_dir
+        system_dir=config.paths.system_dir,
+        inbox_dir=config.paths.inbox_dir,
+        dashboards_dir=config.paths.dashboards_dir,
+        content_dirs=config.paths.content_dirs,
     )
     for path, description in _directory_specs(config):
         items.append(CreationItem("directory", config.vault_root / path, description))
@@ -239,19 +243,26 @@ def _directory_specs(config: AgentConfig) -> tuple[tuple[str, str], ...]:
         for path, description in SYSTEM_DIRECTORY_SPECS
     )
     specs.append((config.paths.inbox_dir.as_posix(), "intake folder for unprocessed notes"))
+    specs.extend(
+        (path.as_posix(), "dashboard-first user-facing vault structure")
+        for path in dashboard_directories(config.paths)
+    )
     return tuple(specs)
 
 
 def _file_specs(config: AgentConfig) -> tuple[tuple[str, str], ...]:
     contents = starter_file_contents(
-        system_dir=config.paths.system_dir, inbox_dir=config.paths.inbox_dir
+        system_dir=config.paths.system_dir,
+        inbox_dir=config.paths.inbox_dir,
+        dashboards_dir=config.paths.dashboards_dir,
+        content_dirs=config.paths.content_dirs,
     )
     descriptions = dict(FILE_SPECS)
     specs: list[tuple[str, str]] = [
         (BOOTSTRAP_FILE.as_posix(), "vault-local system and inbox folder selection")
     ]
     for path in contents:
-        default_path = path.replace(config.paths.system_dir.as_posix(), "00 System", 1)
+        default_path = path.replace(config.paths.system_dir.as_posix(), "99 System", 1)
         description = descriptions.get(default_path)
         if description is None and "/note-types/" in path:
             description = "starter note-type template"

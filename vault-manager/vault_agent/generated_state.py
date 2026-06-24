@@ -111,7 +111,7 @@ def template_schema_issues(config: AgentConfig) -> list[GeneratedStateIssue]:
             )
     for relative_text in sorted(index_base_templates()):
         relative = config.paths.template_dir / Path(relative_text).relative_to(
-            Path("00 System/0.02 templates")
+            Path("99 System/0.02 templates")
         )
         if not (vault_root / relative).exists():
             issues.append(

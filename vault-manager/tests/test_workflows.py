@@ -19,23 +19,23 @@ class WorkflowTests(unittest.TestCase):
     def test_scan_writes_manifest_and_excludes_agent_trash_and_obsidian(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            (root / "01 Inbox" / "note.md").write_text("# Hello\n", encoding="utf-8")
+            (root / "00 Inbox").mkdir()
+            (root / "00 Inbox" / "note.md").write_text("# Hello\n", encoding="utf-8")
             (root / ".obsidian").mkdir()
             (root / ".obsidian" / "ignored.md").write_text("# Ignore\n", encoding="utf-8")
-            (root / "00 System" / "0.99 trash").mkdir(parents=True)
-            (root / "00 System" / "0.99 trash" / "old.md").write_text("# Old\n", encoding="utf-8")
+            (root / "99 System" / "0.99 trash").mkdir(parents=True)
+            (root / "99 System" / "0.99 trash" / "old.md").write_text("# Old\n", encoding="utf-8")
 
             exit_code, output = self.run_cli(["--vault-root", directory, "scan"])
             manifest = json.loads(
-                (root / "00 System" / "0.01 agent" / "manifest.json").read_text(
+                (root / "99 System" / "0.01 agent" / "manifest.json").read_text(
                     encoding="utf-8"
                 )
             )
 
         self.assertEqual(exit_code, 0)
         self.assertIn("Discovered notes: 1", output)
-        self.assertEqual([note["path"] for note in manifest["notes"]], ["01 Inbox/note.md"])
+        self.assertEqual([note["path"] for note in manifest["notes"]], ["00 Inbox/note.md"])
 
     def test_scan_serializes_yaml_date_frontmatter(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -48,7 +48,7 @@ class WorkflowTests(unittest.TestCase):
 
             exit_code, output = self.run_cli(["--vault-root", directory, "scan"])
             manifest = json.loads(
-                (root / "00 System" / "0.01 agent" / "manifest.json").read_text(
+                (root / "99 System" / "0.01 agent" / "manifest.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -60,8 +60,8 @@ class WorkflowTests(unittest.TestCase):
     def test_validate_reports_malformed_frontmatter_and_unknown_values(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            (root / "01 Inbox" / "bad.md").write_text(
+            (root / "00 Inbox").mkdir()
+            (root / "00 Inbox" / "bad.md").write_text(
                 "---\ntype: mystery\nstatus: strange\nsource_kind: zine\ncapture_type: email\nunknown: yes\n---\n# Bad\n",
                 encoding="utf-8",
             )
@@ -69,7 +69,7 @@ class WorkflowTests(unittest.TestCase):
             exit_code, output = self.run_cli(["--vault-root", directory, "validate"])
             review = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "needs-review.md"
@@ -86,9 +86,9 @@ class WorkflowTests(unittest.TestCase):
     def test_validate_dry_run_groups_legacy_alias_issues(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
+            (root / "00 Inbox").mkdir()
             for index in range(2):
-                (root / "01 Inbox" / f"legacy-{index}.md").write_text(
+                (root / "00 Inbox" / f"legacy-{index}.md").write_text(
                     "---\ntype: journal\nstatus: raw\ndomains: [personal]\n---\n# Legacy\n",
                     encoding="utf-8",
                 )
@@ -129,21 +129,21 @@ class WorkflowTests(unittest.TestCase):
     def test_process_next_updates_only_inbox_frontmatter_and_backs_up(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "new.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "new.md"
             note.write_text("# New\n\nBody stays.\n", encoding="utf-8")
 
             exit_code, output = self.run_cli(["--vault-root", directory, "process-next"])
             text = note.read_text(encoding="utf-8")
-            backups = list((root / "00 System" / "0.01 agent" / "backups").glob("new.md.*.bak"))
+            backups = list((root / "99 System" / "0.01 agent" / "backups").glob("new.md.*.bak"))
             state = json.loads(
-                (root / "00 System" / "0.01 agent" / "processing-state.json").read_text(
+                (root / "99 System" / "0.01 agent" / "processing-state.json").read_text(
                     encoding="utf-8"
                 )
             )
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("Processed: 01 Inbox/new.md", output)
+        self.assertIn("Processed: 00 Inbox/new.md", output)
         self.assertIn("Stage: frontmatter-shape", output)
         self.assertIn("type:", text)
         self.assertIn("domain:", text)
@@ -154,7 +154,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("Body stays.", text)
         self.assertEqual(len(backups), 1)
         self.assertEqual(
-            state["notes"]["01 Inbox/new.md"]["stages"]["frontmatter-shape"]["status"],
+            state["notes"]["00 Inbox/new.md"]["stages"]["frontmatter-shape"]["status"],
             "complete",
         )
 
@@ -164,7 +164,7 @@ class WorkflowTests(unittest.TestCase):
             (root / "Loose").mkdir()
             note = root / "Loose" / "new.md"
             note.write_text("# New\n\nBody stays.\n", encoding="utf-8")
-            system_note = root / "00 System" / "0.02 templates" / "note-types" / "note.md"
+            system_note = root / "99 System" / "0.02 templates" / "note-types" / "note.md"
             system_note.parent.mkdir(parents=True)
             system_note.write_text("# Template\n", encoding="utf-8")
 
@@ -182,7 +182,7 @@ class WorkflowTests(unittest.TestCase):
             text = note.read_text(encoding="utf-8")
             system_text = system_note.read_text(encoding="utf-8")
             state = json.loads(
-                (root / "00 System" / "0.01 agent" / "processing-state.json").read_text(
+                (root / "99 System" / "0.01 agent" / "processing-state.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -260,8 +260,8 @@ class WorkflowTests(unittest.TestCase):
     def test_blank_core_values_count_as_processed_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "done.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "done.md"
             note.write_text(
                 "---\ntype: note\nstatus: active\ndomain:\nparent:\nrelated: []\ncover:\nsource_kind:\ncapture_type:\n---\n# Done\n",
                 encoding="utf-8",
@@ -275,8 +275,8 @@ class WorkflowTests(unittest.TestCase):
     def test_process_next_dry_run_reports_next_stage(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            (root / "01 Inbox" / "new.md").write_text("# New\n", encoding="utf-8")
+            (root / "00 Inbox").mkdir()
+            (root / "00 Inbox" / "new.md").write_text("# New\n", encoding="utf-8")
 
             exit_code, output = self.run_cli(
                 ["--vault-root", directory, "process-next", "--dry-run"]
@@ -288,8 +288,8 @@ class WorkflowTests(unittest.TestCase):
     def test_rebuild_retrieval_writes_property_index_and_summary_brief(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            (root / "01 Inbox" / "note.md").write_text(
+            (root / "00 Inbox").mkdir()
+            (root / "00 Inbox" / "note.md").write_text(
                 "---\ntype: note\ndomain: meta\n---\n# Hello\n",
                 encoding="utf-8",
             )
@@ -297,7 +297,7 @@ class WorkflowTests(unittest.TestCase):
             exit_code, output = self.run_cli(["--vault-root", directory, "rebuild-retrieval"])
             property_index = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "retrieval"
                 / "03 property-index.md"
@@ -312,14 +312,14 @@ class WorkflowTests(unittest.TestCase):
             hermes = Path(directory)
             vault = hermes / "vault-a"
             vault.mkdir()
-            (vault / "01 Inbox").mkdir()
-            (vault / "01 Inbox" / "note.md").write_text("# Hello\n", encoding="utf-8")
+            (vault / "00 Inbox").mkdir()
+            (vault / "00 Inbox" / "note.md").write_text("# Hello\n", encoding="utf-8")
 
             exit_code, output = self.run_cli(
                 ["hermes-run", "--hermes-root", directory, "--dry-run"]
             )
 
-            self.assertFalse((vault / "00 System").exists())
+            self.assertFalse((vault / "99 System").exists())
 
         self.assertEqual(exit_code, 0)
         self.assertIn("vault-a", output)
@@ -330,23 +330,23 @@ class WorkflowTests(unittest.TestCase):
             hermes = Path(directory)
             vault = hermes / "vault-a"
             vault.mkdir()
-            (vault / "01 Inbox").mkdir()
-            (vault / "01 Inbox" / "capture.md").write_text("# Capture\n", encoding="utf-8")
+            (vault / "00 Inbox").mkdir()
+            (vault / "00 Inbox" / "capture.md").write_text("# Capture\n", encoding="utf-8")
             loose = vault / "Loose"
             loose.mkdir()
             (loose / "note.md").write_text("# Loose\n\nBody stays.\n", encoding="utf-8")
-            system_note = vault / "00 System" / "existing.md"
+            system_note = vault / "99 System" / "existing.md"
             system_note.parent.mkdir()
             system_note.write_text("# System\n", encoding="utf-8")
 
             exit_code, output = self.run_cli(
                 ["hermes-run", "--hermes-root", directory, "--max-notes", "2"]
             )
-            inbox_text = (vault / "01 Inbox" / "capture.md").read_text(encoding="utf-8")
+            inbox_text = (vault / "00 Inbox" / "capture.md").read_text(encoding="utf-8")
             loose_text = (loose / "note.md").read_text(encoding="utf-8")
             system_text = system_note.read_text(encoding="utf-8")
             state = json.loads(
-                (vault / "00 System" / "0.01 agent" / "processing-state.json").read_text(
+                (vault / "99 System" / "0.01 agent" / "processing-state.json").read_text(
                     encoding="utf-8"
                 )
             )
@@ -359,7 +359,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("type:", loose_text)
         self.assertEqual(system_text, "# System\n")
         self.assertEqual(
-            state["notes"]["01 Inbox/capture.md"]["stages"]["frontmatter-shape"]["status"],
+            state["notes"]["00 Inbox/capture.md"]["stages"]["frontmatter-shape"]["status"],
             "complete",
         )
         self.assertEqual(

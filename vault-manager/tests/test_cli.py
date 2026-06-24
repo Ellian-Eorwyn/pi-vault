@@ -59,16 +59,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(created_paths, [])
         self.assertIn("vault-agent init dry run", output)
         self.assertIn("No files were changed", output)
-        self.assertIn("[create] 00 System/0.01 agent", output)
-        self.assertIn("[create] 00 System/0.02 templates", output)
-        self.assertIn("[create] 00 System/0.99 trash", output)
-        self.assertIn("[create] 01 Inbox", output)
-        self.assertIn("[create] 00 System/0.01 agent/config.yaml", output)
-        self.assertIn("[create] 00 System/0.01 agent/retrieval/00 retrieval-readme.md", output)
+        self.assertIn("[create] 99 System/0.01 agent", output)
+        self.assertIn("[create] 99 System/0.02 templates", output)
+        self.assertIn("[create] 99 System/0.99 trash", output)
+        self.assertIn("[create] 00 Inbox", output)
+        self.assertIn("[create] 99 System/0.01 agent/config.yaml", output)
+        self.assertIn("[create] 99 System/0.01 agent/retrieval/00 retrieval-readme.md", output)
 
     def test_init_dry_run_reports_existing_paths_without_mutating(self):
         with tempfile.TemporaryDirectory() as directory:
-            existing_path = Path(directory) / "00 System" / "0.01 agent"
+            existing_path = Path(directory) / "99 System" / "0.01 agent"
             existing_path.mkdir(parents=True)
 
             exit_code, output = self.run_cli(
@@ -78,13 +78,13 @@ class CliTests(unittest.TestCase):
             self.assertTrue(existing_path.exists())
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("[exists] 00 System", output)
-        self.assertIn("[exists] 00 System/0.01 agent", output)
+        self.assertIn("[exists] 99 System", output)
+        self.assertIn("[exists] 99 System/0.01 agent", output)
         self.assertIn("No files were changed", output)
 
     def test_init_dry_run_reports_existing_files_with_backup_plan(self):
         with tempfile.TemporaryDirectory() as directory:
-            existing_file = Path(directory) / "00 System" / "0.01 agent" / "config.yaml"
+            existing_file = Path(directory) / "99 System" / "0.01 agent" / "config.yaml"
             existing_file.parent.mkdir(parents=True)
             existing_file.write_text("user config\n", encoding="utf-8")
 
@@ -95,7 +95,7 @@ class CliTests(unittest.TestCase):
             self.assertEqual(existing_file.read_text(encoding="utf-8"), "user config\n")
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("[exists] 00 System/0.01 agent/config.yaml", output)
+        self.assertIn("[exists] 99 System/0.01 agent/config.yaml", output)
         self.assertIn("preserve existing", output)
         self.assertIn("backups/config.yaml.bak", output)
 
@@ -103,22 +103,26 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             exit_code, output = self.run_cli(["--vault-root", directory, "init"])
             root = Path(directory)
-            self.assertTrue((root / "00 System" / "0.01 agent" / "config.yaml").is_file())
-            handoff = root / "00 System" / "0.01 agent" / "AGENT_HANDOFF.md"
+            self.assertTrue((root / "99 System" / "0.01 agent" / "config.yaml").is_file())
+            handoff = root / "99 System" / "0.01 agent" / "AGENT_HANDOFF.md"
             self.assertTrue(handoff.is_file())
             self.assertIn(
                 "Move or rename notes only through validated `move_note` proposals",
                 handoff.read_text(encoding="utf-8"),
             )
-            contract = root / "00 System" / "0.01 agent" / "AGENT_CONTRACT.md"
+            contract = root / "99 System" / "0.01 agent" / "AGENT_CONTRACT.md"
             self.assertTrue(contract.is_file())
             contract_text = contract.read_text(encoding="utf-8")
             self.assertIn("pi is the primary driver", contract_text)
             self.assertIn("Canonical Property Change Workflow", contract_text)
             self.assertIn("Index Note Workflow", contract_text)
+            self.assertIn("Default Dashboard Navigation Model", contract_text)
+            self.assertIn("04 Work", contract_text)
+            self.assertIn("02.01 Contacts", contract_text)
+            self.assertIn("02.02 Authors", contract_text)
             self.assertIn("Scheduled Maintenance Workflow", contract_text)
-            self.assertTrue((root / "00 System" / "0.01 agent" / "schema.json").is_file())
-            self.assertTrue((root / "00 System" / "0.02 templates" / "note-types" / "note.md").is_file())
+            self.assertTrue((root / "99 System" / "0.01 agent" / "schema.json").is_file())
+            self.assertTrue((root / "99 System" / "0.02 templates" / "note-types" / "note.md").is_file())
 
         self.assertEqual(exit_code, 0)
         self.assertIn("vault-agent init complete", output)
@@ -128,15 +132,15 @@ class CliTests(unittest.TestCase):
             exit_code, _output = self.run_cli(["--vault-root", directory, "init"])
             root = Path(directory)
             schema = json.loads(
-                (root / "00 System" / "0.01 agent" / "schema.json").read_text(
+                (root / "99 System" / "0.01 agent" / "schema.json").read_text(
                     encoding="utf-8"
                 )
             )
             property_values = (
-                root / "00 System" / "0.02 templates" / "0.021 property values.md"
+                root / "99 System" / "0.02 templates" / "0.021 property values.md"
             ).read_text(encoding="utf-8")
             folder_norms = (
-                root / "00 System" / "0.02 templates" / "0.022 folder norms.md"
+                root / "99 System" / "0.02 templates" / "0.022 folder norms.md"
             ).read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 0)

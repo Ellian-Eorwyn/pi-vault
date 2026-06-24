@@ -25,8 +25,8 @@ class LlmProposalTests(unittest.TestCase):
     def test_type_stage_only_classifies_note_type(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "idea.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "idea.md"
             note.write_text(
                 "---\ntype:\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\n---\n# Idea\n\nThis is about retrieval indexes.\n",
                 encoding="utf-8",
@@ -70,8 +70,8 @@ class LlmProposalTests(unittest.TestCase):
     def test_property_values_stage_preserves_unknown_existing_frontmatter(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "idea.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "idea.md"
             note.write_text(
                 "---\ntype: note\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\ncreated: 2026-01-01\nlegacy: true\n---\n# Idea\n\nBody.\n",
                 encoding="utf-8",
@@ -114,9 +114,9 @@ class LlmProposalTests(unittest.TestCase):
     def test_note_target_processes_specific_file(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            first = root / "01 Inbox" / "a.md"
-            second = root / "01 Inbox" / "b.md"
+            (root / "00 Inbox").mkdir()
+            first = root / "00 Inbox" / "a.md"
+            second = root / "00 Inbox" / "b.md"
             first.write_text("---\ntype:\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\nsource_kind:\ncapture_type:\n---\n# A\n", encoding="utf-8")
             second.write_text("---\ntype:\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\nsource_kind:\ncapture_type:\n---\n# B\n", encoding="utf-8")
             proposal = root / "proposal.json"
@@ -131,7 +131,7 @@ class LlmProposalTests(unittest.TestCase):
                     directory,
                     "process-next",
                     "--note",
-                    "01 Inbox/b.md",
+                    "00 Inbox/b.md",
                     "--stage",
                     "classify-type",
                     "--proposal-file",
@@ -142,15 +142,15 @@ class LlmProposalTests(unittest.TestCase):
             second_text = second.read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("Processed: 01 Inbox/b.md", output)
+        self.assertIn("Processed: 00 Inbox/b.md", output)
         self.assertIn("type:\n", first_text)
         self.assertIn("type: note\n", second_text)
 
     def test_warning_proposal_requires_review_without_editing(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "idea.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "idea.md"
             original = "---\ntype:\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\nsource_kind:\ncapture_type:\n---\n# Idea\n"
             note.write_text(original, encoding="utf-8")
             proposal = root / "proposal.json"
@@ -185,10 +185,10 @@ class LlmProposalTests(unittest.TestCase):
     def test_completed_property_stage_still_runs_when_core_key_missing(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            state_dir = root / "00 System" / "0.01 agent"
+            (root / "00 Inbox").mkdir()
+            state_dir = root / "99 System" / "0.01 agent"
             state_dir.mkdir(parents=True)
-            note = root / "01 Inbox" / "idea.md"
+            note = root / "00 Inbox" / "idea.md"
             note.write_text(
                 "---\ntype: note\nstatus: active\ndomain: meta\nparent:\nrelated: []\ncover:\nsource_kind:\n---\n# Idea\n",
                 encoding="utf-8",
@@ -198,7 +198,7 @@ class LlmProposalTests(unittest.TestCase):
                     {
                         "generated_by": "vault-agent",
                         "notes": {
-                            "01 Inbox/idea.md": {
+                            "00 Inbox/idea.md": {
                                 "hash": "old",
                                 "stages": {
                                     "property-values": {"status": "complete"}
@@ -232,7 +232,7 @@ class LlmProposalTests(unittest.TestCase):
                     directory,
                     "process-next",
                     "--note",
-                    "01 Inbox/idea.md",
+                    "00 Inbox/idea.md",
                     "--stage",
                     "property-values",
                     "--proposal-file",
@@ -249,8 +249,8 @@ class LlmProposalTests(unittest.TestCase):
     def test_summary_stage_only_writes_summary(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "idea.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "idea.md"
             note.write_text(
                 "---\ntype: note\nstatus: active\ndomain: meta\nparent:\nrelated: []\ncover:\n---\n# Idea\n\nBody.\n",
                 encoding="utf-8",
@@ -288,8 +288,8 @@ class LlmProposalTests(unittest.TestCase):
     def test_invalid_proposal_does_not_edit_note(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "idea.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "idea.md"
             original = "# Idea\n\nBody stays untouched.\n"
             note.write_text(
                 "---\ntype:\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\n---\n" + original,
@@ -321,8 +321,8 @@ class LlmProposalTests(unittest.TestCase):
     def test_low_confidence_proposal_does_not_edit_note(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            note = root / "01 Inbox" / "idea.md"
+            (root / "00 Inbox").mkdir()
+            note = root / "00 Inbox" / "idea.md"
             original = "# Idea\n\nBody stays untouched.\n"
             note.write_text(
                 "---\ntype:\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\n---\n" + original,
@@ -360,8 +360,8 @@ class LlmProposalTests(unittest.TestCase):
     def test_proposal_file_batch_requires_single_note_limit(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "01 Inbox").mkdir()
-            (root / "01 Inbox" / "one.md").write_text("# One\n", encoding="utf-8")
+            (root / "00 Inbox").mkdir()
+            (root / "00 Inbox" / "one.md").write_text("# One\n", encoding="utf-8")
             proposal = root / "proposal.json"
             proposal.write_text(
                 json.dumps({"note_type": "note", "summary": "One."}),
@@ -488,7 +488,7 @@ class LlmProposalTests(unittest.TestCase):
 
         with patch("urllib.request.urlopen", fake_urlopen):
             proposal = provider.propose(
-                note_path=Path("01 Inbox/idea.md"),
+                note_path=Path("00 Inbox/idea.md"),
                 note_text="# Idea\n\nA test note.\n",
             )
 

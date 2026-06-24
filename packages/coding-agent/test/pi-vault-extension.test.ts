@@ -156,7 +156,7 @@ describe("pi-vault extension", () => {
 				hasUI: true,
 				mode: "tui",
 				ui: {
-					select: async () => "Use defaults: 00 System and 01 Inbox",
+					select: async () => "Use dashboard-first defaults: 00 Inbox, 01 Dashboards, and 99 System",
 					input: async () => {
 						inputCalls++;
 						return undefined;
@@ -167,7 +167,14 @@ describe("pi-vault extension", () => {
 		);
 
 		expect(inputCalls).toBe(0);
-		expect(readBootstrap(root)).toEqual({ version: 1, systemDir: "00 System", inboxDir: "01 Inbox" });
+		expect(readBootstrap(root)).toEqual(
+			expect.objectContaining({
+				version: 1,
+				systemDir: "99 System",
+				inboxDir: "00 Inbox",
+				dashboardsDir: "01 Dashboards",
+			}),
+		);
 		expect(messageContents).toHaveLength(1);
 		expect(messageContents[0]).toContain("Begin onboarding now");
 	});

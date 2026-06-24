@@ -62,10 +62,10 @@ class ModelBlockTests(unittest.TestCase):
                 stage="classify-type",
                 create_lock=True,
             )
-            blocks_path = root / "00 System" / "0.01 agent" / "review" / "model-blocked-proposals.json"
+            blocks_path = root / "99 System" / "0.01 agent" / "review" / "model-blocked-proposals.json"
             blocks = json.loads(blocks_path.read_text(encoding="utf-8"))
             reports = sorted(
-                (root / "00 System" / "0.01 agent" / "reports").glob(
+                (root / "99 System" / "0.01 agent" / "reports").glob(
                     "organization-run-*.json"
                 )
             )
@@ -113,7 +113,7 @@ class ModelBlockTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
@@ -175,13 +175,13 @@ class ModelBlockTests(unittest.TestCase):
             )
             proposal_path = (
                 root
-                / "00 System"
+                / "99 System"
                 / "0.01 agent"
                 / "review"
                 / "proposals"
                 / "model-block-loose-unclear-md-classify-type.json"
             )
-            blocks_path = root / "00 System" / "0.01 agent" / "review" / "model-blocked-proposals.json"
+            blocks_path = root / "99 System" / "0.01 agent" / "review" / "model-blocked-proposals.json"
             blocks = json.loads(blocks_path.read_text(encoding="utf-8"))
 
             self.assertEqual(convert_exit, 0)

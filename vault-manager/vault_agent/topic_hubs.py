@@ -128,6 +128,7 @@ def build_topic_hubs_proposal(
     hub_folder: str = "Indexes/Topics",
     overwrite_hub_notes: bool = False,
     llm_overrides: dict[str, list[str]] | None = None,
+    system_dir: Path = Path("99 System"),
 ) -> tuple[dict[str, Any], dict[str, list[dict[str, str]]], list[str]]:
     """Build a schema-change proposal that adds surfaced hubs to the approved registry.
 
@@ -161,13 +162,13 @@ def build_topic_hubs_proposal(
     operations: list[dict[str, Any]] = [
         {
             "op": "write_file",
-            "path": "00 System/0.01 agent/schema.json",
+            "path": (system_dir / "0.01 agent/schema.json").as_posix(),
             "if_exists": "overwrite",
             "content": json.dumps(schema_out, indent=2) + "\n",
         },
         {
             "op": "write_file",
-            "path": "00 System/0.02 templates/0.023 topic hubs.md",
+            "path": (system_dir / "0.02 templates/0.023 topic hubs.md").as_posix(),
             "if_exists": "overwrite",
             "content": topic_hubs_markdown(registry),
         },

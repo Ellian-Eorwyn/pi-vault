@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import AgentConfig
+from .dashboard_layout import GENERATED_END, GENERATED_START
 from .frontmatter import parse_note, render_note
 from .logging_utils import append_log
 from .paths import REVIEW_DIR
@@ -30,6 +31,8 @@ ALLOWED_KINDS = {
     "cleanup",
     "folder-organization",
     "base-hierarchy",
+    "inbox-sort",
+    "vault-layout",
 }
 ALLOWED_WRITE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".base"}
 
@@ -358,7 +361,7 @@ def _validate_proposal(proposal: Proposal) -> list[str]:
         errors.append("status must be pending, approved, rejected, or applied")
     if data.get("kind") not in ALLOWED_KINDS:
         errors.append(
-            "kind must be action-queue, artifact-import, schema-change, index-note, template-change, cleanup, folder-organization, or base-hierarchy"
+            "kind must be action-queue, artifact-import, schema-change, index-note, template-change, cleanup, folder-organization, base-hierarchy, inbox-sort, or vault-layout"
         )
     if data.get("kind") == "artifact-import":
         errors.extend(_validate_artifact_provenance(data.get("provenance")))
@@ -418,6 +421,8 @@ def _validate_write_file(operation: dict[str, Any], index: int) -> list[str]:
         errors.append(f"operation {index} content must be a string")
     if operation.get("if_exists", "fail") not in {"fail", "overwrite"}:
         errors.append(f"operation {index} if_exists must be fail or overwrite")
+    if not isinstance(operation.get("merge_generated", False), bool):
+        errors.append(f"operation {index} merge_generated must be boolean")
     return errors
 
 
@@ -478,8 +483,6 @@ def _validate_create_directory(operation: dict[str, Any], index: int) -> list[st
     path_error = _validate_relative_path(path, index)
     if path_error:
         return [path_error]
-    if Path(path).suffix:
-        return [f"operation {index} create_directory path must not have a suffix"]
     if operation.get("if_exists", "preserve") not in {"fail", "preserve"}:
         return [f"operation {index} if_exists must be fail or preserve"]
     return []
@@ -515,9 +518,23 @@ def _apply_write_file(config: AgentConfig, operation: dict[str, Any]) -> list[st
         return [allowed_error]
     if path.exists() and operation.get("if_exists", "fail") == "fail":
         return [f"target already exists: {operation['path']}"]
+    content = operation["content"]
+    if path.exists() and operation.get("merge_generated", False):
+        content = _merge_generated_section(path.read_text(encoding="utf-8"), content)
     backup_root = config.vault_root / config.paths.agent_dir / "backups"
-    write_text_safely(path, operation["content"], backup_root=backup_root)
+    write_text_safely(path, content, backup_root=backup_root)
     return []
+
+
+def _merge_generated_section(existing: str, generated: str) -> str:
+    if GENERATED_START not in existing or GENERATED_END not in existing:
+        return generated
+    if GENERATED_START not in generated or GENERATED_END not in generated:
+        return generated
+    replacement = generated.split(GENERATED_START, 1)[1].split(GENERATED_END, 1)[0]
+    before, remainder = existing.split(GENERATED_START, 1)
+    _old, after = remainder.split(GENERATED_END, 1)
+    return before + GENERATED_START + replacement + GENERATED_END + after
 
 
 def _apply_update_frontmatter(config: AgentConfig, operation: dict[str, Any]) -> list[str]:

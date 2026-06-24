@@ -62,6 +62,10 @@ def build_status(config: AgentConfig) -> dict[str, object]:
         "vault_root": config.vault_root.as_posix(),
         "system_dir": config.paths.system_dir.as_posix(),
         "inbox_dir": config.paths.inbox_dir.as_posix(),
+        "dashboards_dir": config.paths.dashboards_dir.as_posix(),
+        "content_dirs": {
+            key: value.as_posix() for key, value in config.paths.content_dirs.items()
+        },
         "notes": len(result.entries),
         "inbox_needing_attention": sum(
             1 for entry in inbox_entries if not _has_core_metadata(entry)
@@ -95,6 +99,7 @@ def run_status(config: AgentConfig, *, json_output: bool = False) -> tuple[int, 
         f"Vault root: {status['vault_root']}",
         f"System folder: {status['system_dir']}",
         f"Inbox folder: {status['inbox_dir']}",
+        f"Dashboards folder: {status['dashboards_dir']}",
         f"Notes: {status['notes']}",
         f"Inbox needing attention: {status['inbox_needing_attention']}",
         f"New inbox files: {len(status['inbox_changes']['new'])}",

@@ -52,12 +52,27 @@ Open a terminal at an Obsidian vault root and run:
 pi-vault
 ```
 
-When `.pi-vault/config.yaml` is missing, the interactive extension offers one choice to use `00 System` and `01 Inbox`, customize both folders, or cancel. It then initializes, scans, and starts the schema/purpose onboarding conversation. The bootstrap remains inside the vault:
+When `.pi-vault/config.yaml` is missing, the interactive extension offers the dashboard-first defaults, customization, or cancellation. It creates `00 Inbox`, `01 Dashboards`, the default content folders, and `99 System`, then scans and starts schema/purpose onboarding. The bootstrap remains inside the vault:
 
 ```yaml
 version: 1
-system_dir: "00 System"
-inbox_dir: "01 Inbox"
+system_dir: "99 System"
+inbox_dir: "00 Inbox"
+dashboards_dir: "01 Dashboards"
+content_dirs:
+  people: "02 People"
+  contacts: "02 People/02.01 Contacts"
+  authors: "02 People/02.02 Authors"
+  organizations: "03 Organizations"
+  work: "04 Work"
+  administrative: "05 Administrative"
+  health: "05 Administrative/05.01 Health"
+  home: "05 Administrative/05.02 Home"
+  finance: "05 Administrative/05.03 Finance"
+  travel: "05 Administrative/05.04 Travel"
+  administrative_general: "05 Administrative/05.05 General"
+  thoughts: "06 Thoughts"
+  sources: "07 Sources"
 integrations:
   pi_forge:
     command: "/Users/you/.local/bin/pi-forge-mcp"
@@ -67,6 +82,8 @@ integrations:
 ```
 
 Detailed purpose, conventions, schema, templates, generated retrieval data, reports, proposals, and versioning metadata live under the selected system folder.
+
+`01 Dashboards/Home.md` is the primary navigation surface. Dashboard notes combine preserved curated Markdown with managed embedded Bases. Folder placement remains secondary, while bounded inbox sorting proposes deterministic destinations and may apply only current, warning-free, high-confidence moves.
 
 Interactive launches from the vault root or any descendant resolve to the same vault root and resume the latest vault-local session unless an explicit session option is supplied. Session transcripts and debug logs are stored under `<system folder>/0.01 agent/`; first-launch transcripts use `.pi-vault/onboarding-sessions/` until the selected system folder is available, then migrate on the next launch. Each startup runs a read-only assessment and asks the model to summarize prior work, health, schema state, inbox changes, pending review, and concrete next actions. pi-vault ignores project `.pi` prompt/config overlays and loads the bundled vault skills plus purpose, conventions, contract, schema, norms lock, template norms, and retrieval context directly from the configured system folder. `~/.pi-vault/agent` remains a vault-neutral hub for model credentials, model definitions, UI settings, and reusable resources.
 
@@ -79,8 +96,10 @@ The optional pi-forge integration exposes sequential transcription and conversio
 ## Automation
 
 ```bash
-pi-vault vault init --system-dir "00 System" --inbox-dir "01 Inbox"
+pi-vault vault init --system-dir "99 System" --inbox-dir "00 Inbox"
 pi-vault vault status --json
+pi-vault vault propose-inbox-sort --max-notes 2 --safe-only
+pi-vault vault propose-vault-layout --dry-run
 pi-vault vault maintain --max-notes 2
 pi-vault vault review
 pi-vault vault undo <run-id>

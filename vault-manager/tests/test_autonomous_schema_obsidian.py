@@ -36,7 +36,7 @@ class AutonomousSchemaObsidianTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn("vault-agent autonomous-run dry run", output)
         self.assertIn("No files were changed.", output)
-        self.assertFalse((root / "00 System").exists())
+        self.assertFalse((root / "99 System").exists())
 
     def test_autonomous_run_writes_versioned_report_with_rollback_hint(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -59,7 +59,7 @@ class AutonomousSchemaObsidianTests(unittest.TestCase):
                 ]
             )
             reports = sorted(
-                (root / "00 System" / "0.01 agent" / "reports").glob(
+                (root / "99 System" / "0.01 agent" / "reports").glob(
                     "autonomous-run-*.json"
                 )
             )
@@ -76,7 +76,7 @@ class AutonomousSchemaObsidianTests(unittest.TestCase):
     def test_autonomous_run_applies_safe_proposals_but_defers_schema_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "index-note.json").write_text(
                 json.dumps(
@@ -107,7 +107,7 @@ class AutonomousSchemaObsidianTests(unittest.TestCase):
                         "operations": [
                             {
                                 "op": "write_file",
-                                "path": "00 System/0.01 agent/schema.json",
+                                "path": "99 System/0.01 agent/schema.json",
                                 "if_exists": "overwrite",
                                 "content": "{}\n",
                             }
@@ -160,12 +160,12 @@ class AutonomousSchemaObsidianTests(unittest.TestCase):
                     "--include-current-schema-summary",
                 ]
             )
-            proposal_dir = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposal_dir = root / "99 System" / "0.01 agent" / "review" / "proposals"
             property_exists = (proposal_dir / "property-domain-legal.json").exists()
             index_exists = (proposal_dir / "index-legal-domain.json").exists()
             template_exists = (proposal_dir / "template-meeting.json").exists()
             summary_exists = (
-                root / "00 System" / "0.01 agent" / "review" / "schema-conversation-summary.md"
+                root / "99 System" / "0.01 agent" / "review" / "schema-conversation-summary.md"
             ).exists()
 
             self.assertEqual(exit_code, 0)

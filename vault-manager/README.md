@@ -12,10 +12,10 @@ startup and calls the commands below on your behalf. The `vault-agent` CLI and t
 and tools — useful for automation, scripting, and development. See the repo-root
 `START_HERE.md` and `AGENT_CONTRACT.md` for the pi-first operating contract.
 
-The system and inbox folders are selected in vault-local `.pi-vault/config.yaml`; `00 System` and `01 Inbox` are defaults only. Folder placement is advisory outside those configured areas. Approved proposals may create directories and move or rename notes with collision checks, wikilink updates, backups, and rollback; notes are never deleted automatically.
+The system, inbox, dashboard, and content folders are selected in vault-local `.pi-vault/config.yaml`. New vaults default to `00 Inbox`, `01 Dashboards`, purpose-based content folders, and `99 System`. Dashboards are the primary navigation layer; folder placement is secondary. Approved proposals may create directories and move or rename notes with collision checks, wikilink updates, backups, and rollback; notes are never deleted automatically.
 
 The engine itself stays runner-agnostic: every operating rule is discoverable in
-`00 System/0.01 agent/`, so a scheduler, cron job, or another agent framework can drive it
+`99 System/0.01 agent/`, so a scheduler, cron job, or another agent framework can drive it
 too — but pi is the default front end.
 
 ## Install
@@ -40,7 +40,7 @@ Always start with a copied or versioned vault for broad processing.
 
 ```bash
 vault-agent --vault-root /path/to/vault init --dry-run
-vault-agent --vault-root /path/to/vault init --system-dir "00 System" --inbox-dir "01 Inbox"
+vault-agent --vault-root /path/to/vault init --system-dir "99 System" --inbox-dir "00 Inbox"
 vault-agent --vault-root /path/to/vault scan
 vault-agent --vault-root /path/to/vault validate --dry-run
 vault-agent --vault-root /path/to/vault norms-lock --dry-run
@@ -56,6 +56,8 @@ vault-agent --vault-root /path/to/vault version status
 vault-agent --vault-root /path/to/vault norms-lock --write
 vault-agent --vault-root /path/to/vault organization-readiness --json
 vault-agent --vault-root /path/to/vault propose-cleanup-queue --max-items 10
+vault-agent --vault-root /path/to/vault propose-inbox-sort --max-notes 5 --safe-only
+vault-agent --vault-root /path/to/vault propose-vault-layout --dry-run
 vault-agent --vault-root /path/to/vault review-proposals --dry-run
 vault-agent --vault-root /path/to/vault autonomous-run --create-lock --apply-safe --stage classify-type --max-notes 2 --use-llm
 vault-agent --vault-root /path/to/vault review-model-blocks --dry-run
@@ -85,6 +87,8 @@ For model-backed test batches, pass one explicit semantic stage such as `--stage
 - `propose-action-queue`: generates pending proposals for transcript cleanup, people notes, and categorization queues; use `--use-llm --llm-limit 1 --max-items 1` for serialized model-backed categorization.
 - `propose-folder-organization`: generates a pending proposal to organize one folder and create/update a dashboard.
 - `propose-base-hierarchy`: generates a pending proposal for domain and parent/project dashboards with embedded Bases.
+- `propose-inbox-sort`: generates bounded deterministic move proposals for processed inbox notes; `--safe-only` requires current, warning-free, high-confidence processing evidence.
+- `propose-vault-layout`: generates a pending migration proposal for the dashboard-first folders and navigation shells without moving existing notes automatically.
 - `review-proposals`: validates proposal JSON files, can render `--agent-review`, can mark bounded safe proposals with `--approve-safe`, and applies proposals marked `approved`.
 - `review-model-blocks`: renders warning-bearing or near-threshold model stage outputs and can convert selected safe items into normal pending review proposals.
 - `process-next`: processes one eligible inbox note stage.
@@ -103,8 +107,8 @@ People action proposals distinguish direct contacts from referenced people in no
 
 New vaults include:
 
-- `00 System/0.01 agent/AGENT_HANDOFF.md`
-- `00 System/0.01 agent/AGENT_CONTRACT.md`
+- `99 System/0.01 agent/AGENT_HANDOFF.md`
+- `99 System/0.01 agent/AGENT_CONTRACT.md`
 
 Any agent framework should start by reading those files, then `status`, then generated retrieval files. The contract defines how to route common user requests:
 
@@ -117,7 +121,7 @@ Any agent framework should start by reading those files, then `status`, then gen
 For changes that need review, agents write JSON files under:
 
 ```text
-00 System/0.01 agent/review/proposals/
+99 System/0.01 agent/review/proposals/
 ```
 
 Then validate:
@@ -174,21 +178,21 @@ Specific topics should be ordinary notes and links, not new frontmatter fields.
 
 - Dry-run exists for risky operations.
 - Git-backed versioning is enabled by default as a local safety, audit, rollback, and change-management layer. It does not replace external sync and does not push by default.
-- Mutating `vault-agent` commands automatically create pre/post snapshots, record change-set JSONL, and expose rollback hints under `00 System/0.01 agent/versioning/`.
+- Mutating `vault-agent` commands automatically create pre/post snapshots, record change-set JSONL, and expose rollback hints under `99 System/0.01 agent/versioning/`.
 - Mass edits over configured thresholds require an explicit `--mass-edit` flag.
-- Writes use backups under `00 System/0.01 agent/backups/`.
-- Command logs live under `00 System/0.01 agent/logs/`.
+- Writes use backups under `99 System/0.01 agent/backups/`.
+- Command logs live under `99 System/0.01 agent/logs/`.
 - Malformed YAML blocks edits to that note.
 - Unknown legacy metadata is preserved by default.
 - LLMs return structured JSON proposals only; deterministic code validates and applies approved fields.
 - Invalid LLM JSON is retried once through a repair prompt; persistent failures are recorded with structured attempt details.
 - Warning-bearing or near-threshold model proposals are review-gated by default.
-- Valid model proposals blocked by warning/threshold gates are persisted under `00 System/0.01 agent/review/model-blocked-proposals.*`; use `review-model-blocks --dry-run` before converting them into normal proposal JSON.
-- Broad organization passes record the active `norms-lock.json` hash in `processing-state.json` and write reports under `00 System/0.01 agent/reports/`.
+- Valid model proposals blocked by warning/threshold gates are persisted under `99 System/0.01 agent/review/model-blocked-proposals.*`; use `review-model-blocks --dry-run` before converting them into normal proposal JSON.
+- Broad organization passes record the active `norms-lock.json` hash in `processing-state.json` and write reports under `99 System/0.01 agent/reports/`.
 
 ## LLM Setup
 
-LLM processing is disabled by default in `00 System/0.01 agent/config.yaml`.
+LLM processing is disabled by default in `99 System/0.01 agent/config.yaml`.
 
 For an OpenAI-compatible local backend:
 
@@ -234,13 +238,13 @@ vault-agent --vault-root /path/to/vault version undo-run <run-id>
 Backups are still kept for file-level inspection. To recover from an unwanted write manually, inspect the matching backup in:
 
 ```text
-00 System/0.01 agent/backups/
+99 System/0.01 agent/backups/
 ```
 
 Use the daily log in:
 
 ```text
-00 System/0.01 agent/logs/
+99 System/0.01 agent/logs/
 ```
 
 to identify which command made the change.

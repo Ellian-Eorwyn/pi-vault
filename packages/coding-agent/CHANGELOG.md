@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added dashboard-first bootstrap metadata to the vault extension, including configured dashboard/content paths and the new `00 Inbox` / `99 System` startup defaults.
 - Added a read-only model startup assessment that surfaces resumed work, schema state, vault health, inbox changes, pending review, and concrete next actions.
 - Added the pi-vault application identity, bundled Obsidian vault skills and extension, interactive onboarding, vault-local context loading, validated vault tools, and namespaced automation commands.
 - Added deterministic pi-forge MCP client tools, proposal-first artifact import, and a restricted `pi-vault-mcp` server for pending vault handoffs.
@@ -12,6 +13,7 @@
 
 ### Changed
 
+- Made nested dashboards the default model-facing navigation strategy, with initialized Home/Domain/Project/People/Organization/Source/Maintenance surfaces and purpose-based content folders driven by approved sparse properties.
 - Normal vault launches now resume the latest vault-local session unless explicitly overridden; first launch uses one default-or-custom folder choice, preserves its session under `.pi-vault` until migration, and begins onboarding automatically.
 - Clarified that schema/templates are provisional until norms are locked, exact when the lock is current, and blocked from broad processing when the lock has drifted.
 - Excluded `.claude` and `.codex` configuration from the repository and removed checkout-local copies during installation and updates so they cannot influence the bundled local model.

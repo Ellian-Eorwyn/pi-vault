@@ -11,14 +11,32 @@ import yaml
 
 BOOTSTRAP_DIR = Path(".pi-vault")
 BOOTSTRAP_FILE = BOOTSTRAP_DIR / "config.yaml"
-DEFAULT_SYSTEM_DIR = Path("00 System")
-DEFAULT_INBOX_DIR = Path("01 Inbox")
+DEFAULT_SYSTEM_DIR = Path("99 System")
+DEFAULT_INBOX_DIR = Path("00 Inbox")
+DEFAULT_DASHBOARDS_DIR = Path("01 Dashboards")
+DEFAULT_CONTENT_DIRS = {
+    "people": Path("02 People"),
+    "contacts": Path("02 People/02.01 Contacts"),
+    "authors": Path("02 People/02.02 Authors"),
+    "organizations": Path("03 Organizations"),
+    "work": Path("04 Work"),
+    "administrative": Path("05 Administrative"),
+    "health": Path("05 Administrative/05.01 Health"),
+    "home": Path("05 Administrative/05.02 Home"),
+    "finance": Path("05 Administrative/05.03 Finance"),
+    "travel": Path("05 Administrative/05.04 Travel"),
+    "administrative_general": Path("05 Administrative/05.05 General"),
+    "thoughts": Path("06 Thoughts"),
+    "sources": Path("07 Sources"),
+}
 
 
 @dataclass(frozen=True)
 class VaultPaths:
     system_dir: Path
     inbox_dir: Path
+    dashboards_dir: Path
+    content_dirs: dict[str, Path]
 
     @property
     def agent_dir(self) -> Path:
@@ -44,7 +62,12 @@ class VaultPaths:
         return vault_root / relative
 
 
-DEFAULT_PATHS = VaultPaths(DEFAULT_SYSTEM_DIR, DEFAULT_INBOX_DIR)
+DEFAULT_PATHS = VaultPaths(
+    DEFAULT_SYSTEM_DIR,
+    DEFAULT_INBOX_DIR,
+    DEFAULT_DASHBOARDS_DIR,
+    dict(DEFAULT_CONTENT_DIRS),
+)
 
 # Backward-compatible defaults for public helpers and callers that do not yet have a
 # vault root. Runtime code should use AgentConfig.paths or paths_for(vault_root).
@@ -69,12 +92,51 @@ def validate_vault_relative_path(value: str | Path, *, label: str) -> Path:
     return Path(*path.parts)
 
 
-def build_paths(system_dir: str | Path, inbox_dir: str | Path) -> VaultPaths:
+def build_paths(
+    system_dir: str | Path,
+    inbox_dir: str | Path,
+    dashboards_dir: str | Path = DEFAULT_DASHBOARDS_DIR,
+    content_dirs: dict[str, str | Path] | None = None,
+) -> VaultPaths:
     system = validate_vault_relative_path(system_dir, label="system_dir")
     inbox = validate_vault_relative_path(inbox_dir, label="inbox_dir")
-    if system == inbox or system.is_relative_to(inbox) or inbox.is_relative_to(system):
-        raise ValueError("system_dir and inbox_dir must be distinct, non-nested folders")
-    return VaultPaths(system, inbox)
+    dashboards = validate_vault_relative_path(dashboards_dir, label="dashboards_dir")
+    roots = (system, inbox, dashboards)
+    for index, left in enumerate(roots):
+        for right in roots[index + 1 :]:
+            if left == right or left.is_relative_to(right) or right.is_relative_to(left):
+                raise ValueError(
+                    "system_dir, inbox_dir, and dashboards_dir must be distinct, non-nested folders"
+                )
+    if content_dirs is not None and not isinstance(content_dirs, dict):
+        raise ValueError("content_dirs must be a mapping")
+    configured = dict(DEFAULT_CONTENT_DIRS)
+    for key, value in (content_dirs or {}).items():
+        if key not in DEFAULT_CONTENT_DIRS:
+            raise ValueError(f"unknown content directory key: {key}")
+        configured[key] = validate_vault_relative_path(value, label=f"content_dirs.{key}")
+    for key, value in configured.items():
+        protected_roots = (system, inbox, dashboards)
+        if any(
+            value == root or value.is_relative_to(root) or root.is_relative_to(value)
+            for root in protected_roots
+        ):
+            raise ValueError(
+                f"content_dirs.{key} cannot be inside the system, inbox, or dashboards folder"
+            )
+    top_level_keys = ("people", "organizations", "work", "administrative", "thoughts", "sources")
+    top_level = [configured[key] for key in top_level_keys]
+    for index, left in enumerate(top_level):
+        for right in top_level[index + 1 :]:
+            if left == right or left.is_relative_to(right) or right.is_relative_to(left):
+                raise ValueError("top-level content directories must be distinct and non-nested")
+    for key in ("contacts", "authors"):
+        if not configured[key].is_relative_to(configured["people"]):
+            raise ValueError(f"content_dirs.{key} must be inside content_dirs.people")
+    for key in ("health", "home", "finance", "travel", "administrative_general"):
+        if not configured[key].is_relative_to(configured["administrative"]):
+            raise ValueError(f"content_dirs.{key} must be inside content_dirs.administrative")
+    return VaultPaths(system, inbox, dashboards, configured)
 
 
 def paths_for(
@@ -94,6 +156,8 @@ def paths_for(
     return build_paths(
         bootstrap.get("system_dir", DEFAULT_SYSTEM_DIR.as_posix()),
         bootstrap.get("inbox_dir", DEFAULT_INBOX_DIR.as_posix()),
+        bootstrap.get("dashboards_dir", DEFAULT_DASHBOARDS_DIR.as_posix()),
+        bootstrap.get("content_dirs"),
     )
 
 
@@ -119,6 +183,10 @@ def render_bootstrap(paths: VaultPaths) -> str:
             "version": 1,
             "system_dir": paths.system_dir.as_posix(),
             "inbox_dir": paths.inbox_dir.as_posix(),
+            "dashboards_dir": paths.dashboards_dir.as_posix(),
+            "content_dirs": {
+                key: value.as_posix() for key, value in paths.content_dirs.items()
+            },
         },
         sort_keys=False,
     )

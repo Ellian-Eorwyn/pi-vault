@@ -17,6 +17,7 @@
 
 ## Completed
 
+- [x] Implement the dashboard-first default layout. Evidence: fresh vaults create `00 Inbox`, `01 Dashboards`, People/Organizations/Work/Administrative/Thoughts/Sources branches, and `99 System`; `propose-inbox-sort` and `propose-vault-layout` preserve review/versioning boundaries; clean external smoke validation reports 0 issues and Obsidian check reports 0 errors/0 warnings.
 - [x] Streamline vault startup and onboarding. Evidence: normal launches continue the latest vault-local session unless explicitly overridden; first launch offers one default/custom folder choice, initializes and scans, then starts onboarding; `vault_status` reports schema lifecycle, prior scan, inbox deltas, issue groups, pending review, and prior reports; startup assessment remains read-only.
 - [x] Add bidirectional pi-forge/pi-vault MCP integration. Evidence: pi-vault exposes sequential forge client tools and `vault_submit_artifact`; `pi-vault-mcp` exposes only status and pending artifact submission; pi-forge includes the reverse client and `vault-handoff` skill; 172 Python tests and both full checks pass; isolated installed launchers completed live sequential local-model handoffs, pending-only verification, explicit temporary-vault review/apply, Git change-set inspection, and a clean static Obsidian check.
 

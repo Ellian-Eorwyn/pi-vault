@@ -368,7 +368,7 @@ Return JSON with exactly these keys:
 - warnings: list of short strings for ambiguity
 
 Do not propose note_type, summary, headings, or body edits.
-Prefer existing domain values. For project, source, meeting, and task notes, provide a clear parent wikilink when one exists; prefer empty related over invented links.
+Prefer existing domain values. For project, source, meeting, and task notes, provide a clear parent wikilink when one exists. For person notes, use `[[Contacts]]` for a direct contact or conversation participant and `[[Authors]]` for an author or cited thinker. If both apply, use `[[Contacts]]` as parent and include `[[Authors]]` in related. Prefer empty related over other invented links.
 
 {common}"""
     if stage == "summary":

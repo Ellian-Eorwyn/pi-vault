@@ -21,7 +21,7 @@ from .safety import atomic_write_text
 from .schema import COMMON_PROPERTIES, NOTE_TYPES
 
 
-SUMMARY_PATH = Path("00 System") / "0.01 agent" / "review" / "schema-conversation-summary.md"
+SUMMARY_PATH = Path("99 System") / "0.01 agent" / "review" / "schema-conversation-summary.md"
 
 
 @dataclass(frozen=True)

@@ -52,8 +52,8 @@ class PiVaultBootstrapTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            default_system_exists = (root / "00 System").exists()
-            default_inbox_exists = (root / "01 Inbox").exists()
+            default_system_exists = (root / "99 System").exists()
+            default_inbox_exists = (root / "00 Inbox").exists()
             purpose_exists = (root / "System" / "0.01 agent" / "vault-purpose.md").is_file()
             conventions_exists = (
                 root / "System" / "0.01 agent" / "vault-conventions.md"
@@ -68,12 +68,8 @@ class PiVaultBootstrapTests(unittest.TestCase):
         self.assertEqual(status["inbox_dir"], "Capture")
         manifest_paths = [item["path"] for item in manifest["notes"]]
         self.assertIn("Capture/note.md", manifest_paths)
-        self.assertTrue(
-            all(
-                path == "Capture/note.md" or path.startswith("System/0.02 templates/")
-                for path in manifest_paths
-            )
-        )
+        self.assertIn("01 Dashboards/Home.md", manifest_paths)
+        self.assertFalse(any(path.startswith("System/0.01 agent/") for path in manifest_paths))
         self.assertFalse(default_system_exists)
         self.assertFalse(default_inbox_exists)
         self.assertTrue(purpose_exists)
@@ -102,11 +98,11 @@ class PiVaultBootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.run_cli(["--vault-root", directory, "init"])
-            inbox = root / "01 Inbox"
+            inbox = root / "00 Inbox"
             (inbox / "changed.md").write_text("# Before\n", encoding="utf-8")
             self.run_cli(["--vault-root", directory, "scan"])
-            state_path = root / "00 System" / "0.01 agent" / "state.json"
-            manifest_path = root / "00 System" / "0.01 agent" / "manifest.json"
+            state_path = root / "99 System" / "0.01 agent" / "state.json"
+            manifest_path = root / "99 System" / "0.01 agent" / "manifest.json"
             state_before = state_path.read_text(encoding="utf-8")
             manifest_before = manifest_path.read_text(encoding="utf-8")
             previous_scan = json.loads(state_before)["last_scan"]
@@ -119,7 +115,7 @@ class PiVaultBootstrapTests(unittest.TestCase):
             config = self.load_test_config(root)
             run_norms_lock(config, write=True)
             locked = build_status(config)
-            schema_path = root / "00 System" / "0.01 agent" / "schema.json"
+            schema_path = root / "99 System" / "0.01 agent" / "schema.json"
             schema = json.loads(schema_path.read_text(encoding="utf-8"))
             schema["test_drift"] = True
             schema_path.write_text(json.dumps(schema), encoding="utf-8")
@@ -129,9 +125,9 @@ class PiVaultBootstrapTests(unittest.TestCase):
         self.assertEqual(state_after, state_before)
         self.assertEqual(manifest_after, manifest_before)
         self.assertEqual(provisional["previous_scan"], previous_scan)
-        self.assertEqual(provisional["inbox_changes"]["new"], ["01 Inbox/new.md"])
+        self.assertEqual(provisional["inbox_changes"]["new"], ["00 Inbox/new.md"])
         self.assertEqual(
-            provisional["inbox_changes"]["changed"], ["01 Inbox/changed.md"]
+            provisional["inbox_changes"]["changed"], ["00 Inbox/changed.md"]
         )
         self.assertEqual(locked["schema_state"], "locked")
         self.assertEqual(drifted["schema_state"], "drifted")
@@ -140,7 +136,7 @@ class PiVaultBootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.run_cli(["--vault-root", directory, "init"])
-            agent_dir = root / "00 System" / "0.01 agent"
+            agent_dir = root / "99 System" / "0.01 agent"
             (agent_dir / "manifest.json").write_text("not json", encoding="utf-8")
             (agent_dir / "state.json").write_text("not json", encoding="utf-8")
             proposal = agent_dir / "review" / "proposals" / "pending.json"
@@ -162,16 +158,16 @@ class MoveProposalTests(unittest.TestCase):
         return exit_code, stdout.getvalue()
 
     def write_proposal(self, root: Path, data: dict):
-        path = root / "00 System" / "0.01 agent" / "review" / "proposals" / "move.json"
+        path = root / "99 System" / "0.01 agent" / "review" / "proposals" / "move.json"
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
     def test_move_note_creates_destination_and_rewrites_inbound_wikilinks(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.run_cli(["--vault-root", directory, "init"])
-            (root / "01 Inbox" / "Old.md").write_text("# Old\n", encoding="utf-8")
+            (root / "00 Inbox" / "Old.md").write_text("# Old\n", encoding="utf-8")
             (root / "Reference.md").write_text(
-                "[[Old]] [[01 Inbox/Old#Section|Alias]] ![[Old]]\n",
+                "[[Old]] [[00 Inbox/Old#Section|Alias]] ![[Old]]\n",
                 encoding="utf-8",
             )
             self.write_proposal(
@@ -185,7 +181,7 @@ class MoveProposalTests(unittest.TestCase):
                         {"op": "create_directory", "path": "Notes"},
                         {
                             "op": "move_note",
-                            "path": "01 Inbox/Old.md",
+                            "path": "00 Inbox/Old.md",
                             "destination": "Notes/New.md",
                             "update_links": True,
                         },
@@ -196,7 +192,7 @@ class MoveProposalTests(unittest.TestCase):
                 ["--vault-root", directory, "review-proposals", "--apply-approved"]
             )
             reference = (root / "Reference.md").read_text(encoding="utf-8")
-            source_exists = (root / "01 Inbox" / "Old.md").exists()
+            source_exists = (root / "00 Inbox" / "Old.md").exists()
             destination_exists = (root / "Notes" / "New.md").exists()
 
         self.assertEqual(code, 0, output)
@@ -210,8 +206,8 @@ class MoveProposalTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.run_cli(["--vault-root", directory, "init"])
-            (root / "01 Inbox" / "One.md").write_text("# One\n", encoding="utf-8")
-            (root / "01 Inbox" / "Two.md").write_text("# Two\n", encoding="utf-8")
+            (root / "00 Inbox" / "One.md").write_text("# One\n", encoding="utf-8")
+            (root / "00 Inbox" / "Two.md").write_text("# Two\n", encoding="utf-8")
             (root / "Existing.md").write_text("# Existing\n", encoding="utf-8")
             self.write_proposal(
                 root,
@@ -223,12 +219,12 @@ class MoveProposalTests(unittest.TestCase):
                     "operations": [
                         {
                             "op": "move_note",
-                            "path": "01 Inbox/One.md",
+                            "path": "00 Inbox/One.md",
                             "destination": "One.md",
                         },
                         {
                             "op": "move_note",
-                            "path": "01 Inbox/Two.md",
+                            "path": "00 Inbox/Two.md",
                             "destination": "Existing.md",
                         },
                     ],
@@ -237,8 +233,8 @@ class MoveProposalTests(unittest.TestCase):
             code, output = self.run_cli(
                 ["--vault-root", directory, "review-proposals", "--apply-approved"]
             )
-            one_exists = (root / "01 Inbox" / "One.md").exists()
-            two_exists = (root / "01 Inbox" / "Two.md").exists()
+            one_exists = (root / "00 Inbox" / "One.md").exists()
+            two_exists = (root / "00 Inbox" / "Two.md").exists()
             moved_exists = (root / "One.md").exists()
 
         self.assertEqual(code, 1)

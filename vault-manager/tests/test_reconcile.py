@@ -106,7 +106,7 @@ class ReconcileTests(unittest.TestCase):
             exit_code, output = self.run_cli(["--vault-root", directory, "reconcile"])
             text = note.read_text(encoding="utf-8")
             backups = list(
-                (root / "00 System" / "0.01 agent" / "backups").glob("note.md.*.bak")
+                (root / "99 System" / "0.01 agent" / "backups").glob("note.md.*.bak")
             )
 
         self.assertEqual(exit_code, 0)

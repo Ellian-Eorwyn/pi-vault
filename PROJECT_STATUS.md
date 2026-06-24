@@ -4,10 +4,11 @@ Last updated: 2026-06-24
 
 ## Current Focus
 
-Startup and onboarding are now vault-state-aware: ordinary launches resume the latest vault-local session, run a read-only assessment, and offer to continue prior work or address current inbox/health issues. First launch uses one default-or-custom folder choice and begins onboarding automatically. Schema state is explicit: provisional without a lock, exact with a current lock, and blocked for broad processing when drifted. Vault-local paths, proposal review, and Git-backed rollback remain authoritative.
+New vaults are dashboard-first: capture begins in `00 Inbox`, navigation begins in `01 Dashboards`, content uses purpose-based folders, and infrastructure lives under `99 System`. Inbox moves remain deterministic, confidence-gated, proposal-backed, and reversible. Existing vaults receive reviewed layout migrations rather than automatic restructuring.
 
 ## Completed
 
+- Implemented the complete dashboard-first default layout, configurable bootstrap paths, preserved-curation dashboard shells, domain hierarchy output under `01 Dashboards`, deterministic purpose-based routing, safe-only inbox sorting, and proposal-first existing-vault migration. Clean external initialization reports 0 validation issues and `obsidian-check --json` reports 0 errors/0 warnings.
 - Added streamlined startup/onboarding: automatic vault-local continuation with explicit flag precedence, bootstrap session persistence/migration, one-step default/custom folder selection, automatic read-only model briefs, expanded status/inbox deltas, and provisional/locked/drifted schema semantics.
 - Added deterministic bidirectional pi-forge/pi-vault MCP integration: sequential native forge tools, proposal-first `.md`/`.txt` artifact import with SHA-256 provenance, restricted `pi-vault-mcp`, reverse pi-forge client, and delegation/handoff skills. External submissions remain pending and never auto-approve or apply. Verified with 172 Python tests, focused MCP tests, both repositories' full checks, isolated installs, live sequential local-model calls in both directions, explicit review/apply in a temporary vault, Git change-set evidence, and `obsidian-check --json` with 0 errors and 0 warnings.
 - Fixed vault-manager package discovery so the isolated pi-vault installer excludes test and copied-vault directories and successfully builds the bundled Python wheel.

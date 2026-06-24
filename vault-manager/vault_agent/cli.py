@@ -32,9 +32,11 @@ from .proposals import (
     run_propose_cleanup,
     run_propose_folder_organization,
     run_propose_index,
+    run_propose_inbox_sort,
     run_propose_property,
     run_propose_template,
     run_propose_topic_hubs,
+    run_propose_vault_layout,
 )
 from .readiness import run_organization_readiness
 from .reconcile import build_reconcile_plan, run_reconcile
@@ -75,6 +77,8 @@ MAIN_COMMANDS = (
     "propose-topic-hubs",
     "propose-cleanup",
     "propose-cleanup-queue",
+    "propose-inbox-sort",
+    "propose-vault-layout",
     "propose-base-hierarchy",
     "propose-action-queue",
     "propose-folder-organization",
@@ -93,8 +97,8 @@ MAIN_COMMAND_HELP = {
     "init": "Preview or initialize vault-agent folders and starter files.",
     "scan": "Scan Markdown notes and update generated manifest/catalog files.",
     "validate": "Validate notes and write review queues.",
-    "process-next": "Process one eligible note from 01 Inbox.",
-    "process-inbox": "Process a bounded batch of 01 Inbox notes.",
+    "process-next": "Process one eligible note from the configured inbox.",
+    "process-inbox": "Process a bounded batch from the configured inbox.",
     "process-vault": "Process a bounded batch of eligible non-system, non-inbox notes.",
     "reconcile": "Apply approved property defaults and template sections across the vault.",
     "norms-lock": "Create or preview the generated vault norms lock.",
@@ -108,6 +112,8 @@ MAIN_COMMAND_HELP = {
     "propose-topic-hubs": "Surface candidate topic hubs from vault notes into the approved registry.",
     "propose-cleanup": "Generate a pending proposal for one note frontmatter cleanup.",
     "propose-cleanup-queue": "Generate bounded cleanup proposals from validation groups.",
+    "propose-inbox-sort": "Generate bounded deterministic inbox move proposals.",
+    "propose-vault-layout": "Generate a reviewed dashboard-first layout migration proposal.",
     "propose-base-hierarchy": "Generate hierarchical Bases dashboard proposals.",
     "propose-action-queue": "Generate a pending proposal for queued maintenance actions.",
     "propose-folder-organization": "Generate a pending proposal to organize one folder and dashboard.",
@@ -471,8 +477,7 @@ def build_parser() -> argparse.ArgumentParser:
         elif command == "propose-base-hierarchy":
             command_parser.add_argument(
                 "--output-root",
-                default="Indexes/Base Hierarchy",
-                help="Dashboard output folder relative to the vault root.",
+                help="Dashboard output folder relative to the vault root (default: configured dashboards folder).",
             )
             command_parser.add_argument(
                 "--min-child-notes",
@@ -497,6 +502,18 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Replace an existing base hierarchy proposal with the same id.",
             )
             command_parser.set_defaults(handler=_handle_propose_base_hierarchy)
+        elif command == "propose-inbox-sort":
+            command_parser.add_argument("--max-notes", type=int, default=5)
+            command_parser.add_argument(
+                "--safe-only",
+                action="store_true",
+                help="Include only notes with current norms and high-confidence completed model stages.",
+            )
+            command_parser.add_argument("--overwrite-proposal", action="store_true")
+            command_parser.set_defaults(handler=_handle_propose_inbox_sort)
+        elif command == "propose-vault-layout":
+            command_parser.add_argument("--overwrite-proposal", action="store_true")
+            command_parser.set_defaults(handler=_handle_propose_vault_layout)
         elif command == "propose-action-queue":
             command_parser.add_argument(
                 "--mass-edit",
@@ -644,7 +661,7 @@ def build_parser() -> argparse.ArgumentParser:
             )
             command_parser.add_argument(
                 "--proposal-dir",
-                help="Proposal directory. Defaults to 00 System/0.01 agent/review/proposals.",
+                help="Proposal directory. Defaults to the configured system review/proposals folder.",
             )
             command_parser.set_defaults(handler=_handle_review_proposals)
         elif command == "submit-artifact":
@@ -1137,10 +1154,32 @@ def _handle_propose_base_hierarchy(args: argparse.Namespace, config: AgentConfig
             return 1
     exit_code, output = run_propose_base_hierarchy(
         config,
-        output_root=getattr(args, "output_root", "Indexes/Base Hierarchy"),
+        output_root=getattr(args, "output_root", None),
         min_child_notes=int(getattr(args, "min_child_notes", 2)),
         proposal_provider=proposal_provider,
         llm_limit=int(getattr(args, "llm_limit", 0)) if proposal_provider else 0,
+        overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_propose_inbox_sort(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    exit_code, output = run_propose_inbox_sort(
+        config,
+        max_notes=int(getattr(args, "max_notes", 5)),
+        safe_only=bool(getattr(args, "safe_only", False)),
+        overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_propose_vault_layout(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    exit_code, output = run_propose_vault_layout(
+        config,
         overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
     )
     print(output)

@@ -14,7 +14,7 @@ from .llm import ProposalProvider
 from .model_blocks import model_block_summary
 from .norms import norms_lock_path
 from .organize_pass import run_organize_vault_pass
-from .proposals import run_propose_cleanup_queue
+from .proposals import run_propose_cleanup_queue, run_propose_inbox_sort
 from .readiness import build_readiness_report
 from .retrieval import run_rebuild_retrieval
 from .review import load_proposals, run_review_proposals
@@ -122,6 +122,16 @@ def run_autonomous(
         record(name, code, output)
         if code != 0:
             return _finish(config, report_format, started_at, run_id, before_readiness, steps, max_notes, max_proposal_operations, apply_safe, stage, before_change_sets)
+
+    code, output = run_propose_inbox_sort(
+        config,
+        max_notes=max_notes,
+        safe_only=apply_safe,
+        overwrite_proposal=True,
+    )
+    record("propose-inbox-sort", code, output)
+    if code != 0:
+        return _finish(config, report_format, started_at, run_id, before_readiness, steps, max_notes, max_proposal_operations, apply_safe, stage, before_change_sets)
 
     if apply_safe:
         code, output = run_review_proposals(

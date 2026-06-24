@@ -19,7 +19,7 @@ class ReviewProposalTests(unittest.TestCase):
     def test_review_proposals_dry_run_renders_without_writing(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "index.json").write_text(
                 json.dumps(
@@ -49,12 +49,12 @@ class ReviewProposalTests(unittest.TestCase):
         self.assertIn("review-proposals dry run", output)
         self.assertIn("Project Index", output)
         self.assertIn("Validation: passed", output)
-        self.assertFalse((root / "00 System" / "0.01 agent" / "review" / "proposed-changes.md").exists())
+        self.assertFalse((root / "99 System" / "0.01 agent" / "review" / "proposed-changes.md").exists())
 
     def test_apply_approved_index_note_proposal_marks_applied(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             proposal_path = proposals / "index.json"
             proposal_path.write_text(
@@ -82,7 +82,7 @@ class ReviewProposalTests(unittest.TestCase):
             index_text = (root / "Indexes" / "Sources.md").read_text(encoding="utf-8")
             updated_proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
             review = (
-                root / "00 System" / "0.01 agent" / "review" / "proposed-changes.md"
+                root / "99 System" / "0.01 agent" / "review" / "proposed-changes.md"
             ).read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 0)
@@ -100,7 +100,7 @@ class ReviewProposalTests(unittest.TestCase):
                 "---\ntype: note\nlegacy: old\n---\n# Note\n\nBody.\n",
                 encoding="utf-8",
             )
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "cleanup.json").write_text(
                 json.dumps(
@@ -126,7 +126,7 @@ class ReviewProposalTests(unittest.TestCase):
             )
             text = note.read_text(encoding="utf-8")
             backups = list(
-                (root / "00 System" / "0.01 agent" / "backups").glob("note.md.*.bak")
+                (root / "99 System" / "0.01 agent" / "backups").glob("note.md.*.bak")
             )
 
         self.assertEqual(exit_code, 0)
@@ -144,7 +144,7 @@ class ReviewProposalTests(unittest.TestCase):
                 "---\ntitle: ** Bad\n---\nOriginal body.\n",
                 encoding="utf-8",
             )
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "organize.json").write_text(
                 json.dumps(
@@ -192,7 +192,7 @@ class ReviewProposalTests(unittest.TestCase):
     def test_invalid_queue_blocks_apply(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "approved.json").write_text(
                 json.dumps(
@@ -234,7 +234,7 @@ class ReviewProposalTests(unittest.TestCase):
     def test_agent_review_dry_run_recommends_safe_pending_proposal(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "index.json").write_text(
                 json.dumps(
@@ -275,7 +275,7 @@ class ReviewProposalTests(unittest.TestCase):
     def test_agent_review_approve_safe_marks_bounded_pending_proposal_approved(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             proposal_path = proposals / "index.json"
             proposal_path.write_text(
@@ -308,7 +308,7 @@ class ReviewProposalTests(unittest.TestCase):
             )
             proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
             review = (
-                root / "00 System" / "0.01 agent" / "review" / "agent-review.md"
+                root / "99 System" / "0.01 agent" / "review" / "agent-review.md"
             ).read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 0)
@@ -320,7 +320,7 @@ class ReviewProposalTests(unittest.TestCase):
     def test_dry_run_rejects_escaping_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            proposals = root / "00 System" / "0.01 agent" / "review" / "proposals"
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
             proposals.mkdir(parents=True)
             (proposals / "escape.json").write_text(
                 json.dumps(

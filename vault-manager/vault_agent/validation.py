@@ -33,6 +33,8 @@ def validate_entries(
             issues.append(ValidationIssue("error", path, entry["frontmatter_error"]))
         for key in entry.get("frontmatter", {}):
             if key not in COMMON_PROPERTIES:
+                if key == "cssclasses" and entry.get("type") == "index":
+                    continue
                 mapped = mapped_property_for(key, config) if config else None
                 if mapped:
                     issues.append(

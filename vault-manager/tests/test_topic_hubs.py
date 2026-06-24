@@ -75,7 +75,7 @@ class TopicHubTests(unittest.TestCase):
         self.assertTrue(any("Therapy" in label for label in added))
         # schema.json + topic hubs md + one hub note
         paths = [op["path"] for op in proposal["operations"]]
-        self.assertIn("00 System/0.01 agent/schema.json", paths)
+        self.assertIn("99 System/0.01 agent/schema.json", paths)
         self.assertTrue(any(p.endswith("Therapy.md") for p in paths))
 
     def test_assign_hub_validator_gates_on_registry(self):
@@ -96,7 +96,7 @@ class TopicHubTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.run_cli(["--vault-root", directory, "init"])
-            schema_path = root / "00 System" / "0.01 agent" / "schema.json"
+            schema_path = root / "99 System" / "0.01 agent" / "schema.json"
             schema = json.loads(schema_path.read_text(encoding="utf-8"))
             schema.setdefault("topic_hubs", {}).setdefault("personal", []).append(
                 {"name": "Therapy", "description": "x"}
