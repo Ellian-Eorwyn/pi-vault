@@ -6,6 +6,7 @@
 
 - Added the pi-vault application identity, bundled Obsidian vault skills and extension, interactive onboarding, vault-local context loading, validated vault tools, and namespaced automation commands.
 - Added deterministic pi-forge MCP client tools, proposal-first artifact import, and a restricted `pi-vault-mcp` server for pending vault handoffs.
+- Added first-run pi-vault defaults for the local OpenAI-compatible `code` model at `http://llms:8008/v1` with a 262,144-token context window and 32,768-token maximum output.
 
 ### Fixed
 

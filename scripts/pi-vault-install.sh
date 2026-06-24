@@ -8,6 +8,7 @@ BIN_DIR="${PI_VAULT_BIN_DIR:-$HOME/.local/bin}"
 RUNTIME_DIR="${PI_VAULT_HOME:-$HOME/.pi-vault/runtime}"
 NPM_CACHE_DIR="${PI_VAULT_NPM_CACHE:-$RUNTIME_DIR/npm-cache}"
 VENV_DIR="$RUNTIME_DIR/venv"
+AGENT_DIR="${PI_VAULT_CODING_AGENT_DIR:-$HOME/.pi-vault/agent}"
 
 usage() {
 	cat <<'EOF'
@@ -84,6 +85,7 @@ if [[ ! -x "$VENV_DIR/bin/python" ]]; then
 fi
 
 mkdir -p "$BIN_DIR" "$RUNTIME_DIR"
+node "$SOURCE_DIR/scripts/pi-vault-ensure-defaults.mjs" "$SOURCE_DIR" "$AGENT_DIR"
 
 if [[ "$NEEDS_INSTALL" == true ]]; then
 	npm_config_cache="$NPM_CACHE_DIR" npm --prefix "$SOURCE_DIR" ci --ignore-scripts

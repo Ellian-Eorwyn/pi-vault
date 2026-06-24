@@ -18,6 +18,8 @@ curl -fsSL https://raw.githubusercontent.com/Ellian-Eorwyn/pi-vault/main/install
 
 The installer builds the Node harness, creates a managed Python environment under `~/.pi-vault/runtime/venv`, and symlinks `pi-vault`, `pi-vault-mcp`, and `pi-vault-update` into `~/.local/bin`. Add that directory to `PATH` if it is not already present.
 
+New installations default to the OpenAI-compatible `code` model at `http://llms:8008/v1`, with a 262,144-token context window and 32,768-token maximum output. The defaults are written to `~/.pi-vault/agent/models.json` and `settings.json` only when those files do not already exist. Edit those files to use another backend or model.
+
 ## Update
 
 ```bash

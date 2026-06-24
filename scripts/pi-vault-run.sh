@@ -12,4 +12,6 @@ done
 SOURCE_DIR="$(cd -P "$(dirname "$SOURCE_PATH")/.." && pwd)"
 export PI_SKIP_VERSION_CHECK="${PI_SKIP_VERSION_CHECK:-1}"
 
+node "$SOURCE_DIR/scripts/pi-vault-ensure-defaults.mjs" "$SOURCE_DIR"
+
 exec node "$SOURCE_DIR/packages/coding-agent/dist/cli.js" "$@"
