@@ -41,6 +41,7 @@ if [[ -z "$SOURCE_DIR" || ! -f "$SOURCE_DIR/package.json" ]]; then
 fi
 
 SOURCE_DIR="$(cd "$SOURCE_DIR" && pwd)"
+rm -rf -- "$SOURCE_DIR/.claude" "$SOURCE_DIR/.codex"
 command -v node >/dev/null 2>&1 || { echo "pi-vault requires Node.js 22.19 or newer." >&2; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo "pi-vault requires npm." >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "pi-vault requires Python 3.11 or newer." >&2; exit 1; }
@@ -110,11 +111,13 @@ fi
 ln -sfn "$SOURCE_DIR/scripts/pi-vault-run.sh" "$BIN_DIR/pi-vault"
 ln -sfn "$SOURCE_DIR/scripts/pi-vault-mcp-run.sh" "$BIN_DIR/pi-vault-mcp"
 ln -sfn "$SOURCE_DIR/update.sh" "$BIN_DIR/pi-vault-update"
+ln -sfn "$SOURCE_DIR/uninstall.sh" "$BIN_DIR/pi-vault-uninstall"
 
 echo "pi-vault is installed."
 echo "  CLI: $BIN_DIR/pi-vault"
 echo "  MCP: $BIN_DIR/pi-vault-mcp"
 echo "  Updater: $BIN_DIR/pi-vault-update"
+echo "  Uninstaller: $BIN_DIR/pi-vault-uninstall"
 echo "  Runtime: $RUNTIME_DIR"
 echo "Run pi-vault from an Obsidian vault root."
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then

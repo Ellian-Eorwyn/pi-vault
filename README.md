@@ -28,6 +28,22 @@ pi-vault-update
 
 Updates pull the latest revision and rebuild the CLI or Python engine only when their sources changed.
 
+## Uninstall
+
+Preview a complete local uninstall:
+
+```bash
+./uninstall.sh --dry-run
+```
+
+Then remove the managed checkout, launchers, runtime, caches, settings, credentials, and sessions:
+
+```bash
+./uninstall.sh
+```
+
+Use `--yes` for noninteractive removal or `--keep-state` to preserve runtime and agent state. The uninstaller never deletes the development checkout it is launched from.
+
 ## First launch
 
 Open a terminal at an Obsidian vault root and run:
