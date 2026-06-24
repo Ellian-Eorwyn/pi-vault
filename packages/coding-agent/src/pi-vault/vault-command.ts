@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { findVaultRoot } from "./extension.ts";
 import { runVaultAgentSync } from "./vault-process.ts";
 
 function takeOption(args: string[], name: string): { value?: string; remaining: string[] } {
@@ -24,7 +25,7 @@ export function dispatchVaultCommand(args: string[], cwd: string): number {
 		return 1;
 	}
 	const vaultOption = takeOption(args.slice(1), "--vault");
-	const vaultRoot = resolve(cwd, vaultOption.value ?? ".");
+	const vaultRoot = resolve(cwd, vaultOption.value ?? findVaultRoot(cwd) ?? ".");
 	let remaining = vaultOption.remaining;
 
 	if (command !== "init" && command !== "hermes-run" && !requireBootstrap(vaultRoot)) return 1;

@@ -12,6 +12,7 @@
 ### Changed
 
 - Excluded `.claude` and `.codex` configuration from the repository and removed checkout-local copies during installation and updates so they cannot influence the bundled local model.
+- Isolated each vault's sessions, debug output, trust state, and startup context under its configured system folder; nested launches now resolve to one vault root, migrate legacy global sessions, ignore project prompt/config overlays, and load canonical norms immediately.
 
 ### Fixed
 

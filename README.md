@@ -68,6 +68,8 @@ integrations:
 
 Detailed purpose, conventions, schema, templates, generated retrieval data, reports, proposals, and versioning metadata live under the selected system folder.
 
+Interactive launches from the vault root or any descendant resolve to the same vault root. Session transcripts and debug logs are stored under `<system folder>/0.01 agent/`; uninitialized vaults use in-memory sessions until onboarding selects the system folder. pi-vault ignores project `.pi` prompt/config overlays and loads the bundled vault skills plus canonical purpose, conventions, contract, schema, norms lock, template norms, and retrieval context directly from the configured system folder. `~/.pi-vault/agent` remains a vault-neutral hub for model credentials, model definitions, UI settings, and reusable resources.
+
 Before broad organization, pi-vault scans existing conventions, plans norms with the user, generates reviewable proposals, and writes a norms lock only after approval.
 
 The optional pi-forge integration exposes sequential transcription and conversion tools. Completed Markdown or text artifacts can be submitted with `vault_submit_artifact`; submission creates a validated pending proposal and never approves, applies, or edits an inbox note directly. The restricted `pi-vault-mcp --vault-root <vault> --read-root <forge-output>` server provides the same pending-only handoff to pi-forge.

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
 import { parse } from "yaml";
@@ -8,7 +8,7 @@ import { submitArtifactTool } from "./artifact-tool.ts";
 import { loadPiForgeIntegration, PiForgeMcpClient } from "./mcp-client.ts";
 import { runVaultAgent } from "./vault-process.ts";
 
-interface BootstrapConfig {
+export interface BootstrapConfig {
 	version: 1;
 	systemDir: string;
 	inboxDir: string;
@@ -38,10 +38,22 @@ export function readBootstrap(vaultRoot: string): BootstrapConfig | undefined {
 	if (record.version !== 1 || typeof record.system_dir !== "string" || typeof record.inbox_dir !== "string") {
 		return undefined;
 	}
+	for (const folder of [record.system_dir, record.inbox_dir]) {
+		const normalized = folder.replaceAll("\\", "/");
+		const parts = normalized.split("/");
+		if (
+			isAbsolute(folder) ||
+			/^[A-Za-z]:\//.test(normalized) ||
+			parts.some((part) => !part || part === "." || part === "..") ||
+			[".git", ".obsidian", ".pi-vault"].includes(parts[0])
+		) {
+			return undefined;
+		}
+	}
 	return { version: 1, systemDir: record.system_dir, inboxDir: record.inbox_dir };
 }
 
-function readContextFile(path: string, limit = 8_000): string | undefined {
+function readContextFile(path: string, limit = 20_000): string | undefined {
 	if (!existsSync(path)) return undefined;
 	const content = readFileSync(path, "utf8").trim();
 	if (!content) return undefined;
@@ -52,22 +64,37 @@ export function loadVaultContext(vaultRoot: string): string | undefined {
 	const bootstrap = readBootstrap(vaultRoot);
 	if (!bootstrap) return undefined;
 	const agentDir = join(vaultRoot, bootstrap.systemDir, "0.01 agent");
+	const templateDir = join(vaultRoot, bootstrap.systemDir, "0.02 templates");
 	const sections: Array<[string, string]> = [];
-	for (const [label, path] of [
-		["Purpose", join(agentDir, "vault-purpose.md")],
-		["Conventions", join(agentDir, "vault-conventions.md")],
-		["Agent handoff", join(agentDir, "AGENT_HANDOFF.md")],
-		["Vault map", join(agentDir, "retrieval", "01 vault-map.md")],
-		["Summary brief", join(agentDir, "retrieval", "04 summary-brief.md")],
+	for (const [label, relativePath, path] of [
+		["Agent configuration", "0.01 agent/config.yaml", join(agentDir, "config.yaml")],
+		["Purpose", "0.01 agent/vault-purpose.md", join(agentDir, "vault-purpose.md")],
+		["Conventions", "0.01 agent/vault-conventions.md", join(agentDir, "vault-conventions.md")],
+		["Agent handoff", "0.01 agent/AGENT_HANDOFF.md", join(agentDir, "AGENT_HANDOFF.md")],
+		["Agent contract", "0.01 agent/AGENT_CONTRACT.md", join(agentDir, "AGENT_CONTRACT.md")],
+		["Norms lock", "0.01 agent/norms-lock.json", join(agentDir, "norms-lock.json")],
+		["Canonical schema", "0.01 agent/schema.json", join(agentDir, "schema.json")],
+		["Vault schema", "0.02 templates/0.020 vault schema.md", join(templateDir, "0.020 vault schema.md")],
+		["Property values", "0.02 templates/0.021 property values.md", join(templateDir, "0.021 property values.md")],
+		["Folder norms", "0.02 templates/0.022 folder norms.md", join(templateDir, "0.022 folder norms.md")],
+		["Topic hubs", "0.02 templates/0.023 topic hubs.md", join(templateDir, "0.023 topic hubs.md")],
+		[
+			"Retrieval instructions",
+			"0.01 agent/retrieval/00 retrieval-readme.md",
+			join(agentDir, "retrieval", "00 retrieval-readme.md"),
+		],
+		["Vault map", "0.01 agent/retrieval/01 vault-map.md", join(agentDir, "retrieval", "01 vault-map.md")],
+		["Summary brief", "0.01 agent/retrieval/04 summary-brief.md", join(agentDir, "retrieval", "04 summary-brief.md")],
 	] as const) {
 		const content = readContextFile(path);
-		if (content) sections.push([label, content]);
+		if (content) sections.push([`${label} (${bootstrap.systemDir}/${relativePath})`, content]);
 	}
 	const header = [
 		"## pi-vault context",
 		`Vault root: ${vaultRoot}`,
 		`System folder: ${bootstrap.systemDir}`,
 		`Inbox folder: ${bootstrap.inboxDir}`,
+		"All vault-specific policy, state, sessions, and generated context belong under the configured system folder.",
 		"Use vault tools and pending proposals for mutations. Do not bypass proposal review for organization changes.",
 	].join("\n");
 	return [header, ...sections.map(([label, content]) => `### ${label}\n\n${content}`)].join("\n\n");

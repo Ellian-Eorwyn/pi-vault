@@ -6,13 +6,14 @@ This document defines the operating contract for working in a vault managed by p
 
 - Bootstrap paths live in `.pi-vault/config.yaml`; examples below use the defaults `00 System` and `01 Inbox`.
 - Canonical machine state lives under the configured system folder at `0.01 agent/`.
+- Interactive session transcripts and debug logs live under the configured system folder at `0.01 agent/`; they are never shared between vaults through the global pi-vault profile.
 - Human-editable schema and templates live under the configured system folder at `0.02 templates/`.
 - Ordinary notes may live anywhere except the configured system folder; folder placement is advisory outside the configured system and inbox folders.
 - Managed frontmatter is sparse: `type`, `status`, `domain`, `parent`, `related`, `cover`, `source_kind`, and `capture_type`.
 
 ## Startup Sequence
 
-1. On launch pi loads the `vault-*` skills and the `vault_status` / `vault_manage` tools and injects vault context into the system prompt; start there.
+1. On launch from the vault root or any descendant, pi-vault resolves the vault root, loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, and injects the canonical purpose, conventions, contract, schema, norms lock, template norms, and retrieval context into the system prompt; start there.
 2. Read `00 System/0.01 agent/AGENT_HANDOFF.md` and `00 System/0.01 agent/AGENT_CONTRACT.md` if present.
 3. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status` and `vault-agent --vault-root <vault> version status`).
 4. Read `00 System/0.01 agent/norms-lock.json` if present. If it is missing before broad processing, run `vault-agent --vault-root <vault> norms-lock --write` after confirming schema/templates are the intended defaults.

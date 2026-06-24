@@ -483,6 +483,7 @@ export const VERSION: string = pkg.version || "0.0.0";
 const envAppName = APP_NAME.toUpperCase().replaceAll(/[^A-Z0-9_]/g, "_");
 export const ENV_AGENT_DIR = `${envAppName}_CODING_AGENT_DIR`;
 export const ENV_SESSION_DIR = `${envAppName}_CODING_AGENT_SESSION_DIR`;
+export const ENV_DEBUG_LOG = `${envAppName}_DEBUG_LOG`;
 
 export function expandTildePath(path: string): string {
 	return normalizePath(path);
@@ -551,5 +552,7 @@ export function getSessionsDir(): string {
 
 /** Get path to debug log file */
 export function getDebugLogPath(): string {
+	const configuredPath = process.env[ENV_DEBUG_LOG];
+	if (configuredPath) return expandTildePath(configuredPath);
 	return join(getAgentDir(), `${APP_NAME}-debug.log`);
 }

@@ -77,19 +77,37 @@ def submit_artifact(
         ],
     }
 
-    with tempfile.TemporaryDirectory(prefix="pi-vault-import-review-") as directory:
-        candidate_path = Path(directory) / f"{proposal_id}.json"
-        candidate_path.write_text(json.dumps(proposal, indent=2) + "\n", encoding="utf-8")
-        candidates = load_proposals(Path(directory))
-        if len(candidates) != 1 or candidates[0].errors:
-            errors = candidates[0].errors if candidates else ["proposal could not be loaded"]
-            raise ArtifactImportError("proposal_validation_failed", "; ".join(errors))
-        review_code, review_output = run_review_proposals(
-            replace(config, dry_run=True),
-            proposal_dir=directory,
-        )
-        if review_code != 0:
-            raise ArtifactImportError("proposal_review_failed", review_output)
+    temporary_root = config.vault_root / config.paths.agent_dir / "tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    try:
+        with tempfile.TemporaryDirectory(
+            prefix="pi-vault-import-review-", dir=temporary_root
+        ) as directory:
+            candidate_path = Path(directory) / f"{proposal_id}.json"
+            candidate_path.write_text(
+                json.dumps(proposal, indent=2) + "\n", encoding="utf-8"
+            )
+            candidates = load_proposals(Path(directory))
+            if len(candidates) != 1 or candidates[0].errors:
+                errors = (
+                    candidates[0].errors
+                    if candidates
+                    else ["proposal could not be loaded"]
+                )
+                raise ArtifactImportError(
+                    "proposal_validation_failed", "; ".join(errors)
+                )
+            review_code, review_output = run_review_proposals(
+                replace(config, dry_run=True),
+                proposal_dir=directory,
+            )
+            if review_code != 0:
+                raise ArtifactImportError("proposal_review_failed", review_output)
+    finally:
+        try:
+            temporary_root.rmdir()
+        except OSError:
+            pass
 
     proposal_path = config.vault_root / config.paths.review_dir / "proposals" / f"{proposal_id}.json"
     if proposal_path.exists():

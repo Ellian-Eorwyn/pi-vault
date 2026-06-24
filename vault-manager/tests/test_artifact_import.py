@@ -69,6 +69,7 @@ class ArtifactImportTests(unittest.TestCase):
             self.assertEqual(proposal["operations"][0]["content"], "# Transcript\n\nOriginal.\n")
             self.assertFalse((vault / "Capture" / "transcript.md").exists())
             self.assertEqual(review_path.read_text(encoding="utf-8"), review_before)
+            self.assertFalse((vault / "System/0.01 agent/tmp").exists())
 
     def test_text_normalizes_destination_to_markdown_without_changing_content(self):
         with tempfile.TemporaryDirectory() as directory:
