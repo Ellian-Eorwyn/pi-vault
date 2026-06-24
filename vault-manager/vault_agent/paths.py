@@ -37,6 +37,7 @@ class VaultPaths:
     inbox_dir: Path
     dashboards_dir: Path
     content_dirs: dict[str, Path]
+    extra_folders: tuple[Path, ...] = ()
 
     @property
     def agent_dir(self) -> Path:
@@ -67,6 +68,7 @@ DEFAULT_PATHS = VaultPaths(
     DEFAULT_INBOX_DIR,
     DEFAULT_DASHBOARDS_DIR,
     dict(DEFAULT_CONTENT_DIRS),
+    (),
 )
 
 # Backward-compatible defaults for public helpers and callers that do not yet have a
@@ -97,6 +99,7 @@ def build_paths(
     inbox_dir: str | Path,
     dashboards_dir: str | Path = DEFAULT_DASHBOARDS_DIR,
     content_dirs: dict[str, str | Path] | None = None,
+    extra_folders: list[str | Path] | tuple[str | Path, ...] | None = None,
 ) -> VaultPaths:
     system = validate_vault_relative_path(system_dir, label="system_dir")
     inbox = validate_vault_relative_path(inbox_dir, label="inbox_dir")
@@ -136,7 +139,35 @@ def build_paths(
     for key in ("health", "home", "finance", "travel", "administrative_general"):
         if not configured[key].is_relative_to(configured["administrative"]):
             raise ValueError(f"content_dirs.{key} must be inside content_dirs.administrative")
-    return VaultPaths(system, inbox, dashboards, configured)
+    extras = _validate_extra_folders(extra_folders, system, inbox, dashboards, configured)
+    return VaultPaths(system, inbox, dashboards, configured, extras)
+
+
+def _validate_extra_folders(
+    extra_folders: list[str | Path] | tuple[str | Path, ...] | None,
+    system: Path,
+    inbox: Path,
+    dashboards: Path,
+    content_dirs: dict[str, Path],
+) -> tuple[Path, ...]:
+    if extra_folders is None:
+        return ()
+    if not isinstance(extra_folders, (list, tuple)):
+        raise ValueError("extra_folders must be a list of folder paths")
+    reserved = (system, inbox, dashboards, *content_dirs.values())
+    validated: list[Path] = []
+    for value in extra_folders:
+        folder = validate_vault_relative_path(value, label="extra_folders")
+        for index, existing in enumerate(validated):
+            if folder == existing or folder.is_relative_to(existing) or existing.is_relative_to(folder):
+                raise ValueError("extra_folders must be distinct and non-nested")
+        for root in reserved:
+            if folder == root or folder.is_relative_to(root) or root.is_relative_to(folder):
+                raise ValueError(
+                    "extra_folders cannot equal or nest with the system, inbox, dashboards, or content folders"
+                )
+        validated.append(folder)
+    return tuple(validated)
 
 
 def paths_for(
@@ -158,6 +189,7 @@ def paths_for(
         bootstrap.get("inbox_dir", DEFAULT_INBOX_DIR.as_posix()),
         bootstrap.get("dashboards_dir", DEFAULT_DASHBOARDS_DIR.as_posix()),
         bootstrap.get("content_dirs"),
+        bootstrap.get("extra_folders"),
     )
 
 
@@ -178,18 +210,18 @@ def load_bootstrap(vault_root: Path) -> dict[str, Any] | None:
 
 
 def render_bootstrap(paths: VaultPaths) -> str:
-    return yaml.safe_dump(
-        {
-            "version": 1,
-            "system_dir": paths.system_dir.as_posix(),
-            "inbox_dir": paths.inbox_dir.as_posix(),
-            "dashboards_dir": paths.dashboards_dir.as_posix(),
-            "content_dirs": {
-                key: value.as_posix() for key, value in paths.content_dirs.items()
-            },
+    data: dict[str, Any] = {
+        "version": 1,
+        "system_dir": paths.system_dir.as_posix(),
+        "inbox_dir": paths.inbox_dir.as_posix(),
+        "dashboards_dir": paths.dashboards_dir.as_posix(),
+        "content_dirs": {
+            key: value.as_posix() for key, value in paths.content_dirs.items()
         },
-        sort_keys=False,
-    )
+    }
+    if paths.extra_folders:
+        data["extra_folders"] = [folder.as_posix() for folder in paths.extra_folders]
+    return yaml.safe_dump(data, sort_keys=False)
 
 
 def agent_path(vault_root: Path, relative: str | Path) -> Path:

@@ -247,6 +247,10 @@ def _directory_specs(config: AgentConfig) -> tuple[tuple[str, str], ...]:
         (path.as_posix(), "dashboard-first user-facing vault structure")
         for path in dashboard_directories(config.paths)
     )
+    specs.extend(
+        (path.as_posix(), "user-defined unmanaged folder")
+        for path in config.paths.extra_folders
+    )
     return tuple(specs)
 
 

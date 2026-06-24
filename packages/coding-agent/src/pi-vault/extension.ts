@@ -336,25 +336,49 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 		let newlyInitialized = false;
 		if (!readBootstrap(vaultRoot)) {
 			const choice = await ctx.ui.select(`Initialize ${vaultRoot}`, [
+				"Suggest a folder layout from my existing folders and notes (review before creating)",
 				"Use dashboard-first defaults: 00 Inbox, 01 Dashboards, and 99 System",
 				"Customize folders",
 				"Cancel",
 			]);
 			if (!choice || choice === "Cancel") return;
-			let systemDir = "99 System";
-			let inboxDir = "00 Inbox";
-			if (choice === "Customize folders") {
-				const selectedSystemDir = await ctx.ui.input("System folder", systemDir);
-				if (selectedSystemDir === undefined) return;
-				const selectedInboxDir = await ctx.ui.input("Inbox folder", inboxDir);
-				if (selectedInboxDir === undefined) return;
-				systemDir = selectedSystemDir.trim() || systemDir;
-				inboxDir = selectedInboxDir.trim() || inboxDir;
+			let layoutApplied = false;
+			if (choice.startsWith("Suggest a folder layout")) {
+				const suggestResult = await runVaultAgent(["--vault-root", vaultRoot, "suggest-layout"], vaultRoot);
+				if (suggestResult.exitCode !== 0) {
+					ctx.ui.notify(suggestResult.stderr || suggestResult.stdout || "pi-vault suggest-layout failed.", "error");
+					return;
+				}
+				const next = await ctx.ui.select(
+					"A suggested layout was written to .pi-vault/layout-suggestion.yaml. Edit it to match the folders you want, then choose:",
+					["Apply the layout and initialize", "Use dashboard-first defaults instead", "Cancel"],
+				);
+				if (!next || next === "Cancel") return;
+				if (next.startsWith("Apply")) {
+					const applyResult = await runVaultAgent(["--vault-root", vaultRoot, "apply-layout"], vaultRoot);
+					if (applyResult.exitCode !== 0) {
+						ctx.ui.notify(applyResult.stderr || applyResult.stdout || "pi-vault apply-layout failed.", "error");
+						return;
+					}
+					layoutApplied = true;
+				}
 			}
-			const result = await runVaultAgent(
-				["--vault-root", vaultRoot, "init", "--system-dir", systemDir, "--inbox-dir", inboxDir],
-				vaultRoot,
-			);
+			// When a layout is applied, init reads it from the bootstrap; otherwise pass the chosen folders.
+			const initArgs = ["--vault-root", vaultRoot, "init"];
+			if (!layoutApplied) {
+				let systemDir = "99 System";
+				let inboxDir = "00 Inbox";
+				if (choice === "Customize folders") {
+					const selectedSystemDir = await ctx.ui.input("System folder", systemDir);
+					if (selectedSystemDir === undefined) return;
+					const selectedInboxDir = await ctx.ui.input("Inbox folder", inboxDir);
+					if (selectedInboxDir === undefined) return;
+					systemDir = selectedSystemDir.trim() || systemDir;
+					inboxDir = selectedInboxDir.trim() || inboxDir;
+				}
+				initArgs.push("--system-dir", systemDir, "--inbox-dir", inboxDir);
+			}
+			const result = await runVaultAgent(initArgs, vaultRoot);
 			const scanResult =
 				result.exitCode === 0 ? await runVaultAgent(["--vault-root", vaultRoot, "scan"], vaultRoot) : undefined;
 			if (result.exitCode !== 0 || scanResult?.exitCode !== 0) {

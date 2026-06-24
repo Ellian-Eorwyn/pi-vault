@@ -20,6 +20,11 @@ from .autonomous import run_autonomous
 from .execution import MassEditBlocked, execute_versioned
 from .hermes import run_hermes
 from .init import apply_init, render_init_dry_run
+from .layout_suggestion import (
+    parse_layout_outline,
+    render_layout_outline,
+    suggest_layout,
+)
 from .llm import OpenAICompatibleProposalProvider, JsonFileProposalProvider
 from .model_blocks import run_review_model_blocks
 from .norms import run_norms_lock
@@ -42,7 +47,8 @@ from .readiness import run_organization_readiness
 from .reconcile import build_reconcile_plan, run_reconcile
 from .retrieval import run_rebuild_retrieval
 from .review import load_proposals, run_review_proposals
-from .scanner import run_scan
+from .paths import render_bootstrap
+from .scanner import run_scan, scan_vault
 from .schema_conversation import run_schema_conversation
 from .status import run_status
 from .validation import run_validate
@@ -60,6 +66,8 @@ from .version_cli import (
 
 MAIN_COMMANDS = (
     "init",
+    "suggest-layout",
+    "apply-layout",
     "scan",
     "validate",
     "process-next",
@@ -95,6 +103,8 @@ MAIN_COMMANDS = (
 
 MAIN_COMMAND_HELP = {
     "init": "Preview or initialize vault-agent folders and starter files.",
+    "suggest-layout": "Propose a folder layout from existing folders and notes before init.",
+    "apply-layout": "Write the edited folder-layout outline to the vault bootstrap config.",
     "scan": "Scan Markdown notes and update generated manifest/catalog files.",
     "validate": "Validate notes and write review queues.",
     "process-next": "Process one eligible note from the configured inbox.",
@@ -199,6 +209,15 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Vault-relative inbox folder for captured notes.",
             )
             command_parser.set_defaults(handler=_handle_init)
+        elif command == "suggest-layout":
+            command_parser.set_defaults(handler=_handle_suggest_layout)
+        elif command == "apply-layout":
+            command_parser.add_argument(
+                "--file",
+                default=None,
+                help="Path to the edited layout outline. Defaults to .pi-vault/layout-suggestion.yaml.",
+            )
+            command_parser.set_defaults(handler=_handle_apply_layout)
         elif command == "scan":
             command_parser.set_defaults(handler=_handle_scan)
         elif command == "validate":
@@ -845,6 +864,66 @@ def _handle_init(args: argparse.Namespace, config: AgentConfig) -> int:
     return exit_code
 
 
+LAYOUT_SUGGESTION_FILE = Path(".pi-vault") / "layout-suggestion.yaml"
+BOOTSTRAP_CONFIG_FILE = Path(".pi-vault") / "config.yaml"
+
+
+def _handle_suggest_layout(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    scan = scan_vault(config.vault_root)
+    suggestion = suggest_layout(scan, config.paths)
+    outline = render_layout_outline(suggestion)
+
+    if config.dry_run:
+        print("vault-agent suggest-layout dry run")
+        print("No files were changed. Proposed outline:\n")
+        print(outline)
+        return 0
+
+    target = config.vault_root / LAYOUT_SUGGESTION_FILE
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(outline, encoding="utf-8")
+    print("vault-agent suggest-layout complete")
+    print(f"Wrote proposed layout to {LAYOUT_SUGGESTION_FILE.as_posix()}")
+    print(
+        "Review and edit it, then run `vault-agent apply-layout` followed by "
+        "`vault-agent init`."
+    )
+    return 0
+
+
+def _handle_apply_layout(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    file_arg = getattr(args, "file", None)
+    outline_path = (
+        Path(file_arg).expanduser()
+        if file_arg
+        else config.vault_root / LAYOUT_SUGGESTION_FILE
+    )
+    if not outline_path.exists():
+        print("vault-agent apply-layout failed")
+        print(f"Error: layout outline not found: {outline_path}")
+        print("Run `vault-agent suggest-layout` first, or pass --file.")
+        return 1
+
+    paths = parse_layout_outline(outline_path.read_text(encoding="utf-8"))
+    bootstrap = render_bootstrap(paths)
+
+    if config.dry_run:
+        print("vault-agent apply-layout dry run")
+        print("No files were changed. Resolved bootstrap config:\n")
+        print(bootstrap)
+        return 0
+
+    target = config.vault_root / BOOTSTRAP_CONFIG_FILE
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(bootstrap, encoding="utf-8")
+    print("vault-agent apply-layout complete")
+    print(f"Wrote vault bootstrap to {BOOTSTRAP_CONFIG_FILE.as_posix()}")
+    print("Run `vault-agent init` to create the folders.")
+    return 0
+
+
 def _handle_scan(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
     exit_code, output = run_scan(config)
@@ -1431,6 +1510,8 @@ def _should_version_command(args: argparse.Namespace, config: AgentConfig) -> bo
     command = getattr(args, "command", None)
     if command in {
         "status",
+        "suggest-layout",
+        "apply-layout",
         "organization-readiness",
         "action-plan",
         "obsidian-check",
