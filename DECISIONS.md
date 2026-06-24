@@ -374,3 +374,16 @@ Implications:
 - pi-vault owns results it requested from pi-forge and submits them through its local tool; the reverse MCP bridge is only for interactive pi-forge handoff.
 - Version 1 accepts UTF-8 Markdown and text only, embeds content and SHA-256 provenance in the proposal, and adds no note frontmatter properties.
 - `pi-vault-mcp` exposes only `vault_status` and `vault_submit_artifact`; approval, apply, undo, arbitrary engine commands, and shell execution stay unavailable.
+
+## 2026-06-24: Startup Resumes Vault Context And Schema Authority Comes From The Norms Lock
+
+Decision: Normal interactive launches resume the latest vault-local session and trigger a read-only startup assessment. The bundled schema and templates are provisional until captured by a current `norms-lock.json`; a current lock is exact authority, while drift blocks broad processing until review and re-locking.
+
+Reason: A returning model should recover prior context and current vault state without waiting for a generic first prompt, while a new vault must not mistake repository defaults for user-approved organization rules.
+
+Implications:
+
+- Explicit session flags override automatic continuation.
+- Startup may report and offer work but cannot authorize inbox processing, proposal application, or other mutations.
+- First-launch sessions stay vault-local and migrate from bootstrap storage after initialization.
+- Recommendations based on observed vault practice remain proposal-first and should preserve the intended purpose of the approved schema.

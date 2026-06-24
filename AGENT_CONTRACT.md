@@ -13,12 +13,13 @@ This document defines the operating contract for working in a vault managed by p
 
 ## Startup Sequence
 
-1. On launch from the vault root or any descendant, pi-vault resolves the vault root, loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, and injects the canonical purpose, conventions, contract, schema, norms lock, template norms, and retrieval context into the system prompt; start there.
-2. Read `00 System/0.01 agent/AGENT_HANDOFF.md` and `00 System/0.01 agent/AGENT_CONTRACT.md` if present.
-3. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status` and `vault-agent --vault-root <vault> version status`).
-4. Read `00 System/0.01 agent/norms-lock.json` if present. If it is missing before broad processing, run `vault-agent --vault-root <vault> norms-lock --write` after confirming schema/templates are the intended defaults.
-5. Run `vault-agent --vault-root <vault> organization-readiness --json` before any broad organization pass.
-6. Consult generated retrieval files before opening many notes:
+1. On launch from the vault root or any descendant, pi-vault resolves the vault root, resumes the latest vault-local session unless explicitly overridden, loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, and injects purpose, conventions, contract, schema, norms lock, template norms, and retrieval context into the system prompt; start there.
+2. Treat the automatic startup assessment as read-only context. Summarize prior work, health, schema state, inbox changes, and pending review, then offer specific next actions without treating it as mutation approval.
+3. Read `00 System/0.01 agent/AGENT_HANDOFF.md` and `00 System/0.01 agent/AGENT_CONTRACT.md` if present.
+4. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status` and `vault-agent --vault-root <vault> version status`).
+5. Interpret schema state before processing: `provisional` means defaults are discussion aids only; `locked` means follow the current schema exactly; `drifted` blocks broad processing until review and re-locking.
+6. Run `vault-agent --vault-root <vault> organization-readiness --json` before any broad organization pass.
+7. Consult generated retrieval files before opening many notes:
    - `00 System/0.01 agent/retrieval/01 vault-map.md`
    - `00 System/0.01 agent/retrieval/02 note-catalog.md`
    - `00 System/0.01 agent/retrieval/03 property-index.md`
@@ -163,6 +164,8 @@ The apply step only applies proposals with `status: approved`; after success, it
 The generator writes dashboard notes with embedded Bases. It does not change note metadata, create new schema fields, move notes, or treat blank/invalid domains as real domains.
 
 ## Locked Norms And Organization Reports
+
+Without `norms-lock.json`, the bundled schema and templates are only a default starting point for onboarding and must not be imposed on existing notes. A current lock is authoritative and must be followed exactly. If current files drift from the lock, keep the locked snapshot authoritative and block broad processing until the differences are reviewed. The model may recommend proposal-first changes based on observed vault practice when they preserve the intended purpose of the schema.
 
 Before an expensive vault pass, create a norms lock:
 

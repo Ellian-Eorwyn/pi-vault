@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-06-24
+
+- Expanded read-only status output with provisional/locked/drifted schema state, previous scan time, new and changed inbox files, grouped validation issues, generated-state details, pending proposals, blocked/stale processing, and the latest organization report.
+- Clarified initialized-vault guidance so bundled schema/templates remain provisional until approved and captured by `norms-lock.json`.
+- Added status regressions for lock lifecycle, manifest deltas, pending proposals, and missing or corrupt prior state.
+
 ## 2026-06-20
 
 - Integrated vault-manager as the deterministic sidecar for the new pi-vault application and removed its nested repository boundary.

@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a read-only model startup assessment that surfaces resumed work, schema state, vault health, inbox changes, pending review, and concrete next actions.
 - Added the pi-vault application identity, bundled Obsidian vault skills and extension, interactive onboarding, vault-local context loading, validated vault tools, and namespaced automation commands.
 - Added deterministic pi-forge MCP client tools, proposal-first artifact import, and a restricted `pi-vault-mcp` server for pending vault handoffs.
 - Added first-run pi-vault defaults for the local OpenAI-compatible `code` model at `http://llms:8008/v1` with a 262,144-token context window and 32,768-token maximum output.
@@ -11,6 +12,8 @@
 
 ### Changed
 
+- Normal vault launches now resume the latest vault-local session unless explicitly overridden; first launch uses one default-or-custom folder choice, preserves its session under `.pi-vault` until migration, and begins onboarding automatically.
+- Clarified that schema/templates are provisional until norms are locked, exact when the lock is current, and blocked from broad processing when the lock has drifted.
 - Excluded `.claude` and `.codex` configuration from the repository and removed checkout-local copies during installation and updates so they cannot influence the bundled local model.
 - Isolated each vault's sessions, debug output, trust state, and startup context under its configured system folder; nested launches now resolve to one vault root, migrate legacy global sessions, ignore project prompt/config overlays, and load canonical norms immediately.
 

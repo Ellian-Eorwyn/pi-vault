@@ -52,7 +52,7 @@ Open a terminal at an Obsidian vault root and run:
 pi-vault
 ```
 
-When `.pi-vault/config.yaml` is missing, the interactive extension asks for the system and inbox folders. The bootstrap remains inside the vault:
+When `.pi-vault/config.yaml` is missing, the interactive extension offers one choice to use `00 System` and `01 Inbox`, customize both folders, or cancel. It then initializes, scans, and starts the schema/purpose onboarding conversation. The bootstrap remains inside the vault:
 
 ```yaml
 version: 1
@@ -68,7 +68,9 @@ integrations:
 
 Detailed purpose, conventions, schema, templates, generated retrieval data, reports, proposals, and versioning metadata live under the selected system folder.
 
-Interactive launches from the vault root or any descendant resolve to the same vault root. Session transcripts and debug logs are stored under `<system folder>/0.01 agent/`; uninitialized vaults use in-memory sessions until onboarding selects the system folder. pi-vault ignores project `.pi` prompt/config overlays and loads the bundled vault skills plus canonical purpose, conventions, contract, schema, norms lock, template norms, and retrieval context directly from the configured system folder. `~/.pi-vault/agent` remains a vault-neutral hub for model credentials, model definitions, UI settings, and reusable resources.
+Interactive launches from the vault root or any descendant resolve to the same vault root and resume the latest vault-local session unless an explicit session option is supplied. Session transcripts and debug logs are stored under `<system folder>/0.01 agent/`; first-launch transcripts use `.pi-vault/onboarding-sessions/` until the selected system folder is available, then migrate on the next launch. Each startup runs a read-only assessment and asks the model to summarize prior work, health, schema state, inbox changes, pending review, and concrete next actions. pi-vault ignores project `.pi` prompt/config overlays and loads the bundled vault skills plus purpose, conventions, contract, schema, norms lock, template norms, and retrieval context directly from the configured system folder. `~/.pi-vault/agent` remains a vault-neutral hub for model credentials, model definitions, UI settings, and reusable resources.
+
+Schema state is explicit: `provisional` means no norms lock exists and bundled schema/templates are only onboarding defaults; `locked` means the current schema and norms must be followed exactly; `drifted` means current files differ from the lock and broad processing must wait for review. Recommendations remain proposal-first in every state.
 
 Before broad organization, pi-vault scans existing conventions, plans norms with the user, generates reviewable proposals, and writes a norms lock only after approval.
 

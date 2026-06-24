@@ -6,6 +6,9 @@ description: Plan or revise a pi-vault schema and organization norms. Use when t
 # Vault Schema
 
 1. Read the vault purpose, current conventions, schema, templates, and norms-lock status.
+   - `provisional`: defaults are discussion aids only; infer recommendations from the vault and ask before canonicalizing them.
+   - `locked`: follow the locked schema and norms exactly.
+   - `drifted`: treat the lock snapshot as authoritative and block broad processing until changes are reviewed and re-locked.
 2. Prefer links, note names, or views over adding metadata. Add a property only when it powers durable retrieval, filtering, sorting, grouping, or display.
 3. Clarify ambiguous preferences before generating changes.
 4. Submit schema, template, and navigation changes as pending proposals. Schema changes are never unattended safe approvals.
@@ -18,4 +21,4 @@ Specific topics (e.g. Therapy, Journaling, a project) are not property values â€
 - Surface candidate hubs from the vault's own content with `propose-topic-hubs` (one domain at a time), review them with the user, approve only the useful ones, then re-lock norms.
 - Treat folders as a categorization signal, not a dependency: dashboards filter on `parent`, so notes can be re-foldered freely.
 
-Preserve the approved property order and existing user-authored content. Do not silently expand controlled vocabularies or invent hubs outside the approved registry.
+Preserve the approved property order and existing user-authored content. Recommendations may evolve the schema when they remain consistent with its purpose, but they must stay pending until approved, applied, and re-locked. Do not silently expand controlled vocabularies or invent hubs outside the approved registry.

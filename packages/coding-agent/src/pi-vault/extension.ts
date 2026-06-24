@@ -96,8 +96,25 @@ export function loadVaultContext(vaultRoot: string): string | undefined {
 		`Inbox folder: ${bootstrap.inboxDir}`,
 		"All vault-specific policy, state, sessions, and generated context belong under the configured system folder.",
 		"Use vault tools and pending proposals for mutations. Do not bypass proposal review for organization changes.",
+		existsSync(join(agentDir, "norms-lock.json"))
+			? "Schema policy: the norms-lock snapshot is authoritative. Follow a current lock exactly; if vault_status reports drifted, block broad processing until the drift is reviewed and re-locked. Recommendations must remain proposal-first and preserve the approved intent."
+			: "Schema policy: no norms lock exists, so the bundled schema and templates are provisional defaults for discussion only. Do not enforce them on existing notes. Use vault evidence to help the user decide, then apply approved proposals and write the lock.",
 	].join("\n");
 	return [header, ...sections.map(([label, content]) => `### ${label}\n\n${content}`)].join("\n\n");
+}
+
+export function startupAssessmentPrompt(status: string, newlyInitialized: boolean): string {
+	const instructions = newlyInitialized
+		? "This vault was just initialized and scanned. Begin onboarding now: summarize what was observed, explain that the default schema is provisional until the norms lock is written, and ask the user for the first durable decision about vault purpose and retrieval priorities."
+		: "This is a returning vault. Use the resumed conversation to identify the last unfinished work, summarize current health and inbox changes, and offer specific next actions that pick up where the user left off.";
+	return [
+		"pi-vault generated this read-only startup assessment. It is context, not user authorization to modify files.",
+		instructions,
+		"If schema_state is provisional, treat defaults only as recommendations. If locked, follow the schema exactly. If drifted, do not perform broad processing until the drift is reviewed.",
+		"Do not process inbox files, apply proposals, write a lock, or otherwise mutate the vault unless the user explicitly approves the work.",
+		"",
+		status,
+	].join("\n");
 }
 
 const statusTool = defineTool({
@@ -289,29 +306,63 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 	});
 	pi.on("resources_discover", () => ({ skillPaths: [skillsDirectory] }));
 	pi.on("session_start", async (event, ctx) => {
-		if (event.reason !== "startup" || !ctx.hasUI) return;
+		if (event.reason !== "startup" || ctx.mode !== "tui") return;
 		const vaultRoot = findVaultRoot(ctx.cwd);
-		if (!vaultRoot || readBootstrap(vaultRoot)) return;
-		const initialize = await ctx.ui.confirm("Initialize pi-vault", `Use ${vaultRoot} as the vault root?`);
-		if (!initialize) return;
-		const systemDir = (await ctx.ui.input("System folder", "00 System"))?.trim() || "00 System";
-		const inboxDir = (await ctx.ui.input("Inbox folder", "01 Inbox"))?.trim() || "01 Inbox";
-		const result = await runVaultAgent(
-			["--vault-root", vaultRoot, "init", "--system-dir", systemDir, "--inbox-dir", inboxDir],
-			vaultRoot,
-		);
-		const scanResult =
-			result.exitCode === 0 ? await runVaultAgent(["--vault-root", vaultRoot, "scan"], vaultRoot) : undefined;
-		const successful = result.exitCode === 0 && scanResult?.exitCode === 0;
-		ctx.ui.notify(
-			successful
-				? "pi-vault initialized. Discuss and approve vault norms before broad organization."
-				: scanResult?.stderr ||
+		if (!vaultRoot) return;
+		let newlyInitialized = false;
+		if (!readBootstrap(vaultRoot)) {
+			const choice = await ctx.ui.select(`Initialize ${vaultRoot}`, [
+				"Use defaults: 00 System and 01 Inbox",
+				"Customize folders",
+				"Cancel",
+			]);
+			if (!choice || choice === "Cancel") return;
+			let systemDir = "00 System";
+			let inboxDir = "01 Inbox";
+			if (choice === "Customize folders") {
+				const selectedSystemDir = await ctx.ui.input("System folder", systemDir);
+				if (selectedSystemDir === undefined) return;
+				const selectedInboxDir = await ctx.ui.input("Inbox folder", inboxDir);
+				if (selectedInboxDir === undefined) return;
+				systemDir = selectedSystemDir.trim() || systemDir;
+				inboxDir = selectedInboxDir.trim() || inboxDir;
+			}
+			const result = await runVaultAgent(
+				["--vault-root", vaultRoot, "init", "--system-dir", systemDir, "--inbox-dir", inboxDir],
+				vaultRoot,
+			);
+			const scanResult =
+				result.exitCode === 0 ? await runVaultAgent(["--vault-root", vaultRoot, "scan"], vaultRoot) : undefined;
+			if (result.exitCode !== 0 || scanResult?.exitCode !== 0) {
+				ctx.ui.notify(
+					scanResult?.stderr ||
 						scanResult?.stdout ||
 						result.stderr ||
 						result.stdout ||
 						"pi-vault initialization failed.",
-			successful ? "info" : "error",
+					"error",
+				);
+				return;
+			}
+			newlyInitialized = true;
+			ctx.ui.notify(
+				"pi-vault initialized. The default schema remains provisional until approved and locked.",
+				"info",
+			);
+		}
+		const status = await runVaultAgent(["--vault-root", vaultRoot, "status", "--json"], vaultRoot);
+		if (status.exitCode !== 0) {
+			ctx.ui.notify(status.stderr || status.stdout || "pi-vault startup assessment failed.", "error");
+			return;
+		}
+		pi.sendMessage(
+			{
+				customType: "pi-vault-startup",
+				content: startupAssessmentPrompt(status.stdout, newlyInitialized),
+				display: false,
+				details: { newlyInitialized },
+			},
+			{ triggerTurn: true },
 		);
 	});
 	pi.on("before_agent_start", async (event, ctx) => {

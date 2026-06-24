@@ -217,9 +217,9 @@ Describe what this vault is for and which information matters most.
 """,
         "00 System/0.01 agent/vault-conventions.md": """# Vault Conventions
 
-This file is durable, user-maintained policy. Changes to the approved block require a reviewed proposal.
+This file is durable, user-maintained policy. Until `norms-lock.json` is written, the defaults below are a provisional starting point for onboarding rather than approved rules. After locking, changes require a reviewed proposal and a replacement lock.
 
-## Approved Norms
+## Default Starting Point
 
 - Allowed note types: project, source, person, organization, meeting, task, note, index, daily, template, system
 - Approved properties: type, status, domain, parent, related, cover, source_kind, capture_type
@@ -232,7 +232,7 @@ This file is durable, user-maintained policy. Changes to the approved block requ
 
 ## Observed Inventory
 
-Generated scans may refresh this section without changing the approved norms above.
+Generated scans may refresh this section without changing the provisional or locked norms above.
 """,
         "00 System/0.01 agent/AGENT_HANDOFF.md": """# Agent Handoff
 
@@ -240,9 +240,9 @@ This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and
 
 ## Operating Order
 
-1. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status`).
+1. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status`). It reports schema state, prior scan time, inbox changes, validation groups, pending proposals, and the latest organization report.
 2. Preview risky work with `--dry-run`.
-3. Run or create `norms-lock` before broad processing so note work is tied to a schema/template snapshot.
+3. Treat missing-lock schema files as provisional onboarding defaults. Once the user approves the intended schema and templates, write `norms-lock`; follow a current lock exactly and stop broad processing when it is drifted.
 4. Run `organization-readiness --json` before any broad organization pass.
 5. Run `scan`, `validate`, `reconcile`, bounded `process-inbox` / `process-vault`, or `organize-vault-pass`, then `rebuild-retrieval`.
 6. Read review files and organization reports before widening batch sizes.
@@ -258,6 +258,7 @@ This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and
 - Preserve unknown legacy metadata unless `legacy_metadata.preserve_unknown_properties` is explicitly `false`.
 - LLMs propose structured JSON only; deterministic code validates and applies changes.
 - Generated reports live under `00 System/0.01 agent/reports/`; use them to explain what was done and what remains.
+- Startup assessment is read-only. It may offer to process inbox files or continue prior work, but it does not authorize mutations.
 
 ## Local LLM Monitoring
 
@@ -279,12 +280,13 @@ pi is the primary driver of this vault: launch `pi-vault` and the agent loads th
 - Human-editable schema and templates live in `00 System/0.02 templates/`.
 - Ordinary notes may live anywhere except `00 System`; folder placement is advisory outside `00 System` and `01 Inbox`.
 - Managed frontmatter is sparse: `type`, `status`, `domain`, `parent`, `related`, `cover`, `source_kind`, and `capture_type`.
+- Before the first norms lock, the bundled schema and templates are provisional defaults for discussion, not rules to impose on existing notes.
 
 ## Startup Sequence
 
 1. Start from the `vault-*` skills and the injected vault context, then read this file and `AGENT_HANDOFF.md`.
 2. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status` and `vault-agent --vault-root <vault> version status`).
-3. Read `norms-lock.json` if present. If it is missing before broad processing, run `vault-agent --vault-root <vault> norms-lock --write` after confirming schema/templates are the intended defaults.
+3. Interpret `vault_status` schema state: `provisional` means use defaults only to guide onboarding; `locked` means follow the schema exactly; `drifted` means stop broad processing until the differences are reviewed. Write `norms-lock.json` only after confirming schema/templates are intended.
 4. Run `vault-agent --vault-root <vault> organization-readiness --json` before any broad organization pass.
 5. Consult generated retrieval files before opening many notes:
    - `retrieval/01 vault-map.md`

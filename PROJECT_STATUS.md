@@ -1,13 +1,14 @@
 # Project Status
 
-Last updated: 2026-06-21
+Last updated: 2026-06-24
 
 ## Current Focus
 
-The engine is integrated into pi-vault as a bundled Python sidecar. Bidirectional pi-forge integration now uses deterministic stdio MCP: pi-vault delegates transcription/conversion to pi-forge, while pi-forge may submit completed text artifacts to pi-vault as validated pending proposals. Neither MCP server launches a model or exposes approval/application. Vault-local paths, proposal review, and Git-backed rollback remain authoritative.
+Startup and onboarding are now vault-state-aware: ordinary launches resume the latest vault-local session, run a read-only assessment, and offer to continue prior work or address current inbox/health issues. First launch uses one default-or-custom folder choice and begins onboarding automatically. Schema state is explicit: provisional without a lock, exact with a current lock, and blocked for broad processing when drifted. Vault-local paths, proposal review, and Git-backed rollback remain authoritative.
 
 ## Completed
 
+- Added streamlined startup/onboarding: automatic vault-local continuation with explicit flag precedence, bootstrap session persistence/migration, one-step default/custom folder selection, automatic read-only model briefs, expanded status/inbox deltas, and provisional/locked/drifted schema semantics.
 - Added deterministic bidirectional pi-forge/pi-vault MCP integration: sequential native forge tools, proposal-first `.md`/`.txt` artifact import with SHA-256 provenance, restricted `pi-vault-mcp`, reverse pi-forge client, and delegation/handoff skills. External submissions remain pending and never auto-approve or apply. Verified with 172 Python tests, focused MCP tests, both repositories' full checks, isolated installs, live sequential local-model calls in both directions, explicit review/apply in a temporary vault, Git change-set evidence, and `obsidian-check --json` with 0 errors and 0 warnings.
 - Fixed vault-manager package discovery so the isolated pi-vault installer excludes test and copied-vault directories and successfully builds the bundled Python wheel.
 

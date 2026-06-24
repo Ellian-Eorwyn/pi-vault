@@ -40,6 +40,7 @@ describe("pi-vault runtime profile", () => {
 				"--approve",
 				"--no-approve",
 				"--no-context-files",
+				"--continue",
 				"--session-dir",
 				join(root, "System", "0.01 agent", "sessions"),
 			],
@@ -49,14 +50,47 @@ describe("pi-vault runtime profile", () => {
 		});
 	});
 
-	it("uses an in-memory session until onboarding selects a system folder", () => {
+	it("uses a vault-local bootstrap session until onboarding selects a system folder", () => {
 		const root = temporaryDirectory();
 		mkdirSync(join(root, ".obsidian"), { recursive: true });
 
 		const profile = prepareVaultLaunch([], root, join(root, "global-agent"));
 
 		expect(profile?.initialized).toBe(false);
-		expect(profile?.args).toEqual(["--no-approve", "--no-context-files", "--no-session"]);
+		expect(profile?.args).toEqual([
+			"--no-approve",
+			"--no-context-files",
+			"--session-dir",
+			join(root, ".pi-vault", "onboarding-sessions"),
+		]);
+	});
+
+	it("respects explicit session selection flags", () => {
+		const root = temporaryDirectory();
+		initializeVault(root);
+
+		for (const args of [["--resume"], ["--session", "chosen"], ["--no-session"]]) {
+			const profile = prepareVaultLaunch(args, root, join(root, "global-agent"));
+			expect(profile?.args).not.toContain("--continue");
+		}
+	});
+
+	it("migrates first-launch sessions into the selected system folder", () => {
+		const root = temporaryDirectory();
+		const onboardingSessions = join(root, ".pi-vault", "onboarding-sessions");
+		mkdirSync(join(root, ".obsidian"), { recursive: true });
+		mkdirSync(onboardingSessions, { recursive: true });
+		writeFileSync(
+			join(onboardingSessions, "first.jsonl"),
+			`${JSON.stringify({ type: "session", version: 3, id: "first", timestamp: "2026-01-01", cwd: root })}\n`,
+		);
+		initializeVault(root);
+
+		const profile = prepareVaultLaunch([], root, join(root, "global-agent"));
+
+		expect(existsSync(join(onboardingSessions, "first.jsonl"))).toBe(false);
+		expect(existsSync(join(root, "System", "0.01 agent", "sessions", "first.jsonl"))).toBe(true);
+		expect(profile?.args).toContain("--continue");
 	});
 
 	it("migrates legacy global sessions and removes vault trust entries", () => {

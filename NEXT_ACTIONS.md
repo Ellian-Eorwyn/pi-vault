@@ -17,6 +17,7 @@
 
 ## Completed
 
+- [x] Streamline vault startup and onboarding. Evidence: normal launches continue the latest vault-local session unless explicitly overridden; first launch offers one default/custom folder choice, initializes and scans, then starts onboarding; `vault_status` reports schema lifecycle, prior scan, inbox deltas, issue groups, pending review, and prior reports; startup assessment remains read-only.
 - [x] Add bidirectional pi-forge/pi-vault MCP integration. Evidence: pi-vault exposes sequential forge client tools and `vault_submit_artifact`; `pi-vault-mcp` exposes only status and pending artifact submission; pi-forge includes the reverse client and `vault-handoff` skill; 172 Python tests and both full checks pass; isolated installed launchers completed live sequential local-model handoffs, pending-only verification, explicit temporary-vault review/apply, Git change-set inspection, and a clean static Obsidian check.
 
 - [x] Integrate the engine into pi-vault. Evidence: added `.pi-vault/config.yaml` bootstrap paths, parameterized runtime state, bundled pi extension and seven skills, namespaced automation commands, installer, validated move/rename operations, and custom-path/move regressions; verified with 157 Python tests and the pi extension test.

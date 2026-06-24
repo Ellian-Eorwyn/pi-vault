@@ -1,3 +1,4 @@
+import argparse
 import contextlib
 import io
 import json
@@ -8,6 +9,9 @@ from pathlib import Path
 import yaml
 
 from vault_agent.cli import main
+from vault_agent.config import load_config
+from vault_agent.norms import run_norms_lock
+from vault_agent.status import build_status
 
 
 class PiVaultBootstrapTests(unittest.TestCase):
@@ -16,6 +20,9 @@ class PiVaultBootstrapTests(unittest.TestCase):
         with contextlib.redirect_stdout(stdout):
             exit_code = main(args)
         return exit_code, stdout.getvalue()
+
+    def load_test_config(self, root: Path):
+        return load_config(argparse.Namespace(vault_root=root))
 
     def test_custom_system_and_inbox_paths_drive_all_generated_state(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -90,6 +97,61 @@ class PiVaultBootstrapTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("distinct, non-nested folders", output)
         self.assertEqual(paths, [])
+
+    def test_status_reports_schema_state_and_inbox_changes_without_scanning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.run_cli(["--vault-root", directory, "init"])
+            inbox = root / "01 Inbox"
+            (inbox / "changed.md").write_text("# Before\n", encoding="utf-8")
+            self.run_cli(["--vault-root", directory, "scan"])
+            state_path = root / "00 System" / "0.01 agent" / "state.json"
+            manifest_path = root / "00 System" / "0.01 agent" / "manifest.json"
+            state_before = state_path.read_text(encoding="utf-8")
+            manifest_before = manifest_path.read_text(encoding="utf-8")
+            previous_scan = json.loads(state_before)["last_scan"]
+            (inbox / "changed.md").write_text("# After\n", encoding="utf-8")
+            (inbox / "new.md").write_text("# New\n", encoding="utf-8")
+
+            provisional = build_status(self.load_test_config(root))
+            state_after = state_path.read_text(encoding="utf-8")
+            manifest_after = manifest_path.read_text(encoding="utf-8")
+            config = self.load_test_config(root)
+            run_norms_lock(config, write=True)
+            locked = build_status(config)
+            schema_path = root / "00 System" / "0.01 agent" / "schema.json"
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            schema["test_drift"] = True
+            schema_path.write_text(json.dumps(schema), encoding="utf-8")
+            drifted = build_status(config)
+
+        self.assertEqual(provisional["schema_state"], "provisional")
+        self.assertEqual(state_after, state_before)
+        self.assertEqual(manifest_after, manifest_before)
+        self.assertEqual(provisional["previous_scan"], previous_scan)
+        self.assertEqual(provisional["inbox_changes"]["new"], ["01 Inbox/new.md"])
+        self.assertEqual(
+            provisional["inbox_changes"]["changed"], ["01 Inbox/changed.md"]
+        )
+        self.assertEqual(locked["schema_state"], "locked")
+        self.assertEqual(drifted["schema_state"], "drifted")
+
+    def test_status_tolerates_corrupt_previous_state_and_lists_pending_proposals(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.run_cli(["--vault-root", directory, "init"])
+            agent_dir = root / "00 System" / "0.01 agent"
+            (agent_dir / "manifest.json").write_text("not json", encoding="utf-8")
+            (agent_dir / "state.json").write_text("not json", encoding="utf-8")
+            proposal = agent_dir / "review" / "proposals" / "pending.json"
+            proposal.write_text(
+                json.dumps({"id": "pending", "status": "pending"}), encoding="utf-8"
+            )
+
+            status = build_status(self.load_test_config(root))
+
+        self.assertEqual(status["previous_scan"], "")
+        self.assertEqual(status["pending_proposals"], {"count": 1, "files": ["pending.json"]})
 
 
 class MoveProposalTests(unittest.TestCase):

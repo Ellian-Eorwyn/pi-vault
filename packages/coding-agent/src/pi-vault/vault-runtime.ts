@@ -27,6 +27,14 @@ interface SessionMigration {
 	vaultRoot: string;
 }
 
+const onboardingSessionsDirectory = join(".pi-vault", "onboarding-sessions");
+
+function hasExplicitSessionSelection(args: string[]): boolean {
+	return args.some((arg) =>
+		["--continue", "-c", "--resume", "-r", "--session", "--session-id", "--fork", "--no-session"].includes(arg),
+	);
+}
+
 function isWithin(path: string, root: string): boolean {
 	const relative = path.slice(root.length);
 	return path === root || (path.startsWith(root) && (relative.startsWith("/") || relative.startsWith("\\")));
@@ -120,6 +128,33 @@ function migrateLegacySessions(globalAgentDir: string): string[] {
 	return [...vaultRoots];
 }
 
+function migrateOnboardingSessions(vaultRoot: string, destinationDirectory: string): void {
+	const sourceDirectory = join(vaultRoot, onboardingSessionsDirectory);
+	if (!existsSync(sourceDirectory)) return;
+	const filenames = readdirSync(sourceDirectory).filter((filename) => filename.endsWith(".jsonl"));
+	const reserved = new Set<string>();
+	const migrations = filenames.map((filename) => ({
+		source: join(sourceDirectory, filename),
+		destination: uniqueDestination(destinationDirectory, filename, reserved),
+		vaultRoot,
+	}));
+	const destinationBySource = new Map(migrations.map(({ source, destination }) => [resolve(source), destination]));
+	for (const migration of migrations) {
+		const content = readFileSync(migration.source, "utf8");
+		const newline = content.indexOf("\n");
+		const header = readSessionHeader(migration.source);
+		if (!header) continue;
+		header.cwd = vaultRoot;
+		if (typeof header.parentSession === "string") {
+			header.parentSession = destinationBySource.get(resolve(header.parentSession)) ?? header.parentSession;
+		}
+		const remainder = newline >= 0 ? content.slice(newline + 1) : "";
+		writeFileSync(migration.destination, `${JSON.stringify(header)}\n${remainder}`, { flag: "wx", mode: 0o600 });
+		unlinkSync(migration.source);
+	}
+	if (readdirSync(sourceDirectory).length === 0) rmdirSync(sourceDirectory);
+}
+
 function cleanGlobalTrust(globalAgentDir: string, knownVaultRoots: string[]): void {
 	const trustPath = join(globalAgentDir, "trust.json");
 	if (!existsSync(trustPath)) return;
@@ -175,7 +210,12 @@ export function prepareVaultLaunch(
 	const bootstrap = readBootstrap(vaultRoot);
 	const isolatedArgs = [...args, "--no-approve", "--no-context-files"];
 	if (!bootstrap) {
-		return { args: [...isolatedArgs, "--no-session"], cwd: vaultRoot, debugLogPath: devNull, initialized: false };
+		return {
+			args: [...isolatedArgs, "--session-dir", join(vaultRoot, onboardingSessionsDirectory)],
+			cwd: vaultRoot,
+			debugLogPath: devNull,
+			initialized: false,
+		};
 	}
 	const vaultAgentDir = join(vaultRoot, bootstrap.systemDir, "0.01 agent");
 	const systemDir = join(vaultRoot, bootstrap.systemDir);
@@ -183,9 +223,17 @@ export function prepareVaultLaunch(
 		throw new Error(`Configured system folder resolves outside the vault: ${systemDir}`);
 	}
 	mkdirSync(vaultAgentDir, { recursive: true });
+	const sessionDirectory = join(vaultAgentDir, "sessions");
+	mkdirSync(sessionDirectory, { recursive: true });
+	migrateOnboardingSessions(vaultRoot, sessionDirectory);
 	cleanGlobalVaultState(globalAgentDir, vaultRoot);
 	return {
-		args: [...isolatedArgs, "--session-dir", join(vaultAgentDir, "sessions")],
+		args: [
+			...isolatedArgs,
+			...(hasExplicitSessionSelection(args) ? [] : ["--continue"]),
+			"--session-dir",
+			sessionDirectory,
+		],
 		cwd: vaultRoot,
 		debugLogPath: join(vaultAgentDir, `${APP_NAME}-debug.log`),
 		initialized: true,

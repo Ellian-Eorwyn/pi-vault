@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { CONFIG_DIR_NAME, ENV_AGENT_DIR, ENV_DEBUG_LOG, ENV_SESSION_DIR, USER_CONFIG_DIR_NAME } from "../src/config.ts";
-import piVaultExtension, { findVaultRoot, loadVaultContext, readBootstrap } from "../src/pi-vault/extension.ts";
+import piVaultExtension, {
+	findVaultRoot,
+	loadVaultContext,
+	readBootstrap,
+	startupAssessmentPrompt,
+} from "../src/pi-vault/extension.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -54,6 +59,17 @@ describe("pi-vault extension", () => {
 		expect(context).toContain('"source"');
 		expect(context).toContain("Shallow.");
 		expect(context).toContain("System/0.01 agent/schema.json");
+		expect(context).toContain("no norms lock exists");
+	});
+
+	it("describes locked and provisional schema behavior in startup prompts", () => {
+		const returning = startupAssessmentPrompt('{"schema_state":"locked"}', false);
+		const onboarding = startupAssessmentPrompt('{"schema_state":"provisional"}', true);
+
+		expect(returning).toContain("resumed conversation");
+		expect(returning).toContain("follow the schema exactly");
+		expect(onboarding).toContain("Begin onboarding now");
+		expect(onboarding).toContain("default schema is provisional");
 	});
 
 	it("rejects bootstrap folders that escape the vault", () => {
@@ -78,5 +94,81 @@ describe("pi-vault extension", () => {
 		for (const name of ["forge_transcribe", "forge_convert_files", "vault_submit_artifact"]) {
 			expect(tools.find((tool) => tool.name === name)?.executionMode).toBe("sequential");
 		}
+	});
+
+	it("runs a hidden read-only assessment at startup", async () => {
+		const root = temporaryDirectory();
+		mkdirSync(join(root, ".obsidian"));
+		mkdirSync(join(root, ".pi-vault"), { recursive: true });
+		writeFileSync(join(root, ".pi-vault", "config.yaml"), 'version: 1\nsystem_dir: "System"\ninbox_dir: "Inbox"\n');
+		const handlers = new Map<string, (event: never, context: never) => Promise<void>>();
+		const messages: Array<{
+			message: { customType: string; display: boolean };
+			options?: { triggerTurn?: boolean };
+		}> = [];
+		piVaultExtension({
+			registerTool() {},
+			on(event: string, handler: (event: never, context: never) => Promise<void>) {
+				handlers.set(event, handler);
+			},
+			sendMessage(message: { customType: string; display: boolean }, options?: { triggerTurn?: boolean }) {
+				messages.push({ message, options });
+			},
+		} as never);
+
+		await handlers.get("session_start")?.(
+			{ reason: "startup" } as never,
+			{
+				cwd: root,
+				hasUI: true,
+				mode: "tui",
+				ui: { notify() {} },
+			} as never,
+		);
+
+		expect(messages).toHaveLength(1);
+		expect(messages[0]).toEqual({
+			message: expect.objectContaining({ customType: "pi-vault-startup", display: false }),
+			options: { triggerTurn: true },
+		});
+	});
+
+	it("initializes default folders from one startup choice and begins onboarding", async () => {
+		const root = temporaryDirectory();
+		mkdirSync(join(root, ".obsidian"));
+		const handlers = new Map<string, (event: never, context: never) => Promise<void>>();
+		const messageContents: string[] = [];
+		let inputCalls = 0;
+		piVaultExtension({
+			registerTool() {},
+			on(event: string, handler: (event: never, context: never) => Promise<void>) {
+				handlers.set(event, handler);
+			},
+			sendMessage(message: { content: string }) {
+				messageContents.push(message.content);
+			},
+		} as never);
+
+		await handlers.get("session_start")?.(
+			{ reason: "startup" } as never,
+			{
+				cwd: root,
+				hasUI: true,
+				mode: "tui",
+				ui: {
+					select: async () => "Use defaults: 00 System and 01 Inbox",
+					input: async () => {
+						inputCalls++;
+						return undefined;
+					},
+					notify() {},
+				},
+			} as never,
+		);
+
+		expect(inputCalls).toBe(0);
+		expect(readBootstrap(root)).toEqual({ version: 1, systemDir: "00 System", inboxDir: "01 Inbox" });
+		expect(messageContents).toHaveLength(1);
+		expect(messageContents[0]).toContain("Begin onboarding now");
 	});
 });

@@ -36,8 +36,8 @@ Startup checklist:
 
 - The pi extension lives in `packages/coding-agent/src/pi-vault/`. `extension.ts` registers
   the `vault_status` / `vault_manage` tools, exposes the `skills/` directory through the
-  harness `resources_discover` event, and injects vault context into the system prompt on
-  launch.
+  harness `resources_discover` event, injects vault context into the system prompt, resumes
+  the latest vault-local session, and triggers a read-only startup assessment.
 - The deterministic engine lives in `vault-manager/vault_agent/` (Python). pi drives it
   through the `vault_manage` tool and the `pi-vault vault <command>` standalone CLI; the
   build bundles the engine and skills into `dist/`.
@@ -63,6 +63,8 @@ Startup checklist:
 - Send local LLM requests serially: one prompt at a time, then wait for completion before
   the next request.
 - Keep canonical project state in files, not chat history.
+- Treat a missing norms lock as provisional onboarding state, a current lock as exact
+  authority, and a drifted lock as a blocker for broad processing.
 
 ## Local LLM Monitoring
 

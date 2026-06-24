@@ -243,7 +243,7 @@ The lock is generated machine state under `00 System/0.01 agent/`. It snapshots 
 - [x] Record norms lock hashes in the processing ledger. Evidence: updated `vault_agent/processing_state.py` and `vault_agent/processor.py`; tests prove content and lock changes make stages stale.
 - [x] Add bounded `vault-agent organize-vault-pass` with Markdown/JSON reports. Evidence: added `vault_agent/organize_pass.py`; workflow tests prove report writing and lock-aware state updates.
 - [x] Add `vault-agent propose-cleanup-queue` for bounded validation-group cleanup proposals. Evidence: added generator/CLI support and tests proving generated proposals validate through `review-proposals --dry-run`.
-- [x] Surface lock/report status to other agents. Evidence: updated `status`, README, `AGENT_CONTRACT.md`, and initialized-vault starter handoff/contract text.
+- [x] Surface lock/report status to other agents. Evidence: `status` reports provisional/locked/drifted schema state, previous scan time, inbox deltas, validation groups, pending proposals, stale/blocked work, and latest reports; README, `AGENT_CONTRACT.md`, and initialized-vault starter guidance define the same lifecycle.
 - [x] Add readiness-first organization preflight. Evidence: added `vault-agent organization-readiness`, `validate --json`, generated-state/template checks, and `reconcile --dry-run` preflight output.
 
 ### Acceptance Criteria
