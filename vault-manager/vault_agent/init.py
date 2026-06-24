@@ -146,6 +146,8 @@ def build_init_creation_items(config: AgentConfig) -> list[CreationItem]:
         inbox_dir=config.paths.inbox_dir,
         dashboards_dir=config.paths.dashboards_dir,
         content_dirs=config.paths.content_dirs,
+        domain_folders=config.paths.domain_folders,
+        custom_folders=config.paths.custom_folders,
     )
     for path, description in _directory_specs(config):
         items.append(CreationItem("directory", config.vault_root / path, description))
@@ -247,10 +249,6 @@ def _directory_specs(config: AgentConfig) -> tuple[tuple[str, str], ...]:
         (path.as_posix(), "dashboard-first user-facing vault structure")
         for path in dashboard_directories(config.paths)
     )
-    specs.extend(
-        (path.as_posix(), "user-defined unmanaged folder")
-        for path in config.paths.extra_folders
-    )
     return tuple(specs)
 
 
@@ -260,6 +258,8 @@ def _file_specs(config: AgentConfig) -> tuple[tuple[str, str], ...]:
         inbox_dir=config.paths.inbox_dir,
         dashboards_dir=config.paths.dashboards_dir,
         content_dirs=config.paths.content_dirs,
+        domain_folders=config.paths.domain_folders,
+        custom_folders=config.paths.custom_folders,
     )
     descriptions = dict(FILE_SPECS)
     specs: list[tuple[str, str]] = [

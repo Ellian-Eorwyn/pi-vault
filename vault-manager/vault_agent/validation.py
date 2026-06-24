@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from .config import AgentConfig
+from .config import AgentConfig, allowed_domains
 from .generated_state import generated_state_issues, template_schema_issues
 from .legacy import mapped_controlled_value, mapped_property_for
 from .logging_utils import append_log
@@ -149,6 +149,8 @@ def _validate_allowed(
     allowed = COMMON_PROPERTIES[key].get("allowed")
     if not allowed:
         return
+    if key == "domain" and config is not None:
+        allowed = allowed_domains(config)
     if value not in allowed:
         mapped = mapped_controlled_value(key, value, config) if config else None
         if mapped and mapped in allowed:

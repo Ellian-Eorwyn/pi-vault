@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -32,12 +32,21 @@ DEFAULT_CONTENT_DIRS = {
 
 
 @dataclass(frozen=True)
+class CustomFolder:
+    """A user-declared arbitrary folder the model can sort notes into."""
+
+    path: Path
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class VaultPaths:
     system_dir: Path
     inbox_dir: Path
     dashboards_dir: Path
     content_dirs: dict[str, Path]
-    extra_folders: tuple[Path, ...] = ()
+    domain_folders: dict[str, Path] = field(default_factory=dict)
+    custom_folders: tuple[CustomFolder, ...] = ()
 
     @property
     def agent_dir(self) -> Path:
@@ -68,7 +77,7 @@ DEFAULT_PATHS = VaultPaths(
     DEFAULT_INBOX_DIR,
     DEFAULT_DASHBOARDS_DIR,
     dict(DEFAULT_CONTENT_DIRS),
-    (),
+    {},
 )
 
 # Backward-compatible defaults for public helpers and callers that do not yet have a
@@ -94,12 +103,20 @@ def validate_vault_relative_path(value: str | Path, *, label: str) -> Path:
     return Path(*path.parts)
 
 
+# Domains already backed by dedicated content-role folders (renamed via content_dirs).
+# These are not valid domain_folders keys; their folders are configured through content_dirs.
+CONTENT_ROLE_DOMAINS = frozenset(
+    {"work", "health", "household", "finance", "travel", "administration"}
+)
+
+
 def build_paths(
     system_dir: str | Path,
     inbox_dir: str | Path,
     dashboards_dir: str | Path = DEFAULT_DASHBOARDS_DIR,
     content_dirs: dict[str, str | Path] | None = None,
-    extra_folders: list[str | Path] | tuple[str | Path, ...] | None = None,
+    domain_folders: dict[str, str | Path] | None = None,
+    custom_folders: list[Any] | tuple[Any, ...] | None = None,
 ) -> VaultPaths:
     system = validate_vault_relative_path(system_dir, label="system_dir")
     inbox = validate_vault_relative_path(inbox_dir, label="inbox_dir")
@@ -139,35 +156,83 @@ def build_paths(
     for key in ("health", "home", "finance", "travel", "administrative_general"):
         if not configured[key].is_relative_to(configured["administrative"]):
             raise ValueError(f"content_dirs.{key} must be inside content_dirs.administrative")
-    extras = _validate_extra_folders(extra_folders, system, inbox, dashboards, configured)
-    return VaultPaths(system, inbox, dashboards, configured, extras)
+    domains = _validate_domain_folders(domain_folders, system, inbox, dashboards, configured)
+    customs = _validate_custom_folders(custom_folders, system, inbox, dashboards)
+    return VaultPaths(system, inbox, dashboards, configured, domains, customs)
 
 
-def _validate_extra_folders(
-    extra_folders: list[str | Path] | tuple[str | Path, ...] | None,
+def _validate_custom_folders(
+    custom_folders: list[Any] | tuple[Any, ...] | None,
+    system: Path,
+    inbox: Path,
+    dashboards: Path,
+) -> tuple[CustomFolder, ...]:
+    if custom_folders is None:
+        return ()
+    if not isinstance(custom_folders, (list, tuple)):
+        raise ValueError("custom_folders must be a list of {path, description} entries")
+    reserved = (system, inbox, dashboards)
+    validated: list[CustomFolder] = []
+    seen: list[Path] = []
+    for entry in custom_folders:
+        if isinstance(entry, CustomFolder):
+            raw_path, description = entry.path, entry.description
+        elif isinstance(entry, dict):
+            raw_path = entry.get("path")
+            description = entry.get("description", "")
+        else:
+            raise ValueError("each custom_folders entry must be a mapping with a 'path'")
+        if raw_path is None:
+            raise ValueError("each custom_folders entry requires a 'path'")
+        folder = validate_vault_relative_path(raw_path, label="custom_folders.path")
+        for root in reserved:
+            if folder == root or folder.is_relative_to(root) or root.is_relative_to(folder):
+                raise ValueError(
+                    "custom_folders cannot equal or nest with the system, inbox, or dashboards folder"
+                )
+        if folder in seen:
+            raise ValueError(f"duplicate custom_folders path: {folder.as_posix()}")
+        seen.append(folder)
+        validated.append(CustomFolder(folder, str(description or "")))
+    return tuple(validated)
+
+
+def _validate_domain_folders(
+    domain_folders: dict[str, str | Path] | None,
     system: Path,
     inbox: Path,
     dashboards: Path,
     content_dirs: dict[str, Path],
-) -> tuple[Path, ...]:
-    if extra_folders is None:
-        return ()
-    if not isinstance(extra_folders, (list, tuple)):
-        raise ValueError("extra_folders must be a list of folder paths")
+) -> dict[str, Path]:
+    if domain_folders is None:
+        return {}
+    if not isinstance(domain_folders, dict):
+        raise ValueError("domain_folders must be a mapping of domain to folder path")
     reserved = (system, inbox, dashboards, *content_dirs.values())
-    validated: list[Path] = []
-    for value in extra_folders:
-        folder = validate_vault_relative_path(value, label="extra_folders")
-        for index, existing in enumerate(validated):
+    validated: dict[str, Path] = {}
+    for raw_key, value in domain_folders.items():
+        key = str(raw_key).strip()
+        if not key or not key.replace("_", "").isalnum() or key != key.lower():
+            raise ValueError(
+                f"domain_folders key must be a lowercase alphanumeric slug: {raw_key!r}"
+            )
+        if key in CONTENT_ROLE_DOMAINS:
+            raise ValueError(
+                f"domain_folders cannot redefine the content-role domain '{key}'; "
+                "rename its folder via content_dirs instead"
+            )
+        folder = validate_vault_relative_path(value, label=f"domain_folders.{key}")
+        for existing in validated.values():
             if folder == existing or folder.is_relative_to(existing) or existing.is_relative_to(folder):
-                raise ValueError("extra_folders must be distinct and non-nested")
+                raise ValueError("domain_folders paths must be distinct and non-nested")
         for root in reserved:
             if folder == root or folder.is_relative_to(root) or root.is_relative_to(folder):
                 raise ValueError(
-                    "extra_folders cannot equal or nest with the system, inbox, dashboards, or content folders"
+                    "domain_folders paths cannot equal or nest with the system, inbox, "
+                    "dashboards, or content folders"
                 )
-        validated.append(folder)
-    return tuple(validated)
+        validated[key] = folder
+    return validated
 
 
 def paths_for(
@@ -189,7 +254,8 @@ def paths_for(
         bootstrap.get("inbox_dir", DEFAULT_INBOX_DIR.as_posix()),
         bootstrap.get("dashboards_dir", DEFAULT_DASHBOARDS_DIR.as_posix()),
         bootstrap.get("content_dirs"),
-        bootstrap.get("extra_folders"),
+        bootstrap.get("domain_folders"),
+        bootstrap.get("custom_folders"),
     )
 
 
@@ -209,7 +275,7 @@ def load_bootstrap(vault_root: Path) -> dict[str, Any] | None:
     return loaded
 
 
-def render_bootstrap(paths: VaultPaths) -> str:
+def render_bootstrap(paths: VaultPaths, *, routing: dict[str, str] | None = None) -> str:
     data: dict[str, Any] = {
         "version": 1,
         "system_dir": paths.system_dir.as_posix(),
@@ -219,8 +285,17 @@ def render_bootstrap(paths: VaultPaths) -> str:
             key: value.as_posix() for key, value in paths.content_dirs.items()
         },
     }
-    if paths.extra_folders:
-        data["extra_folders"] = [folder.as_posix() for folder in paths.extra_folders]
+    if paths.custom_folders:
+        data["custom_folders"] = [
+            {"path": folder.path.as_posix(), "description": folder.description}
+            for folder in paths.custom_folders
+        ]
+    if paths.domain_folders:
+        data["domain_folders"] = {
+            domain: folder.as_posix() for domain, folder in paths.domain_folders.items()
+        }
+    if routing:
+        data["routing"] = dict(routing)
     return yaml.safe_dump(data, sort_keys=False)
 
 

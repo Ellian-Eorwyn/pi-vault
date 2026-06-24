@@ -57,6 +57,7 @@ class ProposalProvider(Protocol):
         note_text: str,
         stage: str,
         allowed_hubs: list[str] | None = None,
+        allowed_folders: list[tuple[str, str]] | None = None,
     ) -> dict[str, Any]:
         """Return a structured proposal for one narrow processing stage."""
 
@@ -85,8 +86,9 @@ class JsonFileProposalProvider:
         note_text: str,
         stage: str,
         allowed_hubs: list[str] | None = None,
+        allowed_folders: list[tuple[str, str]] | None = None,
     ) -> dict[str, Any]:
-        del stage, allowed_hubs
+        del stage, allowed_hubs, allowed_folders
         return self.propose(note_path=note_path, note_text=note_text)
 
     def propose_base_hierarchy(self, *, prompt: str) -> dict[str, Any]:
@@ -111,6 +113,7 @@ class OpenAICompatibleProposalProvider:
         max_input_tokens: int = 64000,
         chars_per_token: int = 4,
         max_input_chars: int | None = None,
+        extra_domains: list[str] | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -123,12 +126,14 @@ class OpenAICompatibleProposalProvider:
             if max_input_chars is not None
             else max_input_tokens * chars_per_token
         )
+        self.extra_domains = list(extra_domains or [])
 
     def propose(self, *, note_path: Path, note_text: str) -> dict[str, Any]:
         prompt = _proposal_prompt(
             note_path=note_path,
             note_text=note_text,
             max_chars=self.max_input_chars,
+            extra_domains=self.extra_domains,
         )
         system = (
             "You classify Obsidian notes for vault-agent. "
@@ -148,6 +153,7 @@ class OpenAICompatibleProposalProvider:
         note_text: str,
         stage: str,
         allowed_hubs: list[str] | None = None,
+        allowed_folders: list[tuple[str, str]] | None = None,
     ) -> dict[str, Any]:
         prompt = _stage_prompt(
             note_path=note_path,
@@ -155,6 +161,8 @@ class OpenAICompatibleProposalProvider:
             stage=stage,
             max_chars=self.max_input_chars,
             allowed_hubs=allowed_hubs,
+            allowed_folders=allowed_folders,
+            extra_domains=self.extra_domains,
         )
         system = (
             "You perform one narrow Obsidian vault-agent stage. "
@@ -258,12 +266,41 @@ class ConfiguredProposalProvider(OpenAICompatibleProposalProvider):
     """Backward-compatible name for configured OpenAI-compatible providers."""
 
 
-def _proposal_prompt(*, note_path: Path, note_text: str, max_chars: int) -> str:
+def provider_from_config(config: Any) -> "OpenAICompatibleProposalProvider | None":
+    """Build the configured LLM proposal provider, or None when LLM is disabled."""
+    if not config.llm_enabled or config.llm_provider in {"", "none"}:
+        return None
+    if config.llm_provider not in {"openai-compatible", "llama.cpp", "local-openai"}:
+        raise ValueError(f"Unsupported LLM provider `{config.llm_provider}`")
+    return OpenAICompatibleProposalProvider(
+        base_url=config.llm_base_url,
+        model=config.llm_model,
+        api_key=config.llm_api_key,
+        timeout_seconds=config.llm_timeout_seconds,
+        max_input_tokens=config.llm_max_input_tokens,
+        chars_per_token=config.llm_chars_per_token,
+        max_input_chars=config.llm_max_input_chars,
+        extra_domains=list(config.paths.domain_folders),
+    )
+
+
+def _allowed_domain_values(extra_domains: list[str] | None) -> list[str]:
+    builtin = list(COMMON_PROPERTIES["domain"]["allowed"])
+    return builtin + [d for d in (extra_domains or []) if d not in builtin]
+
+
+def _proposal_prompt(
+    *,
+    note_path: Path,
+    note_text: str,
+    max_chars: int,
+    extra_domains: list[str] | None = None,
+) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars
     allowed_types = ", ".join(sorted(NOTE_TYPES))
     allowed_statuses = ", ".join(COMMON_PROPERTIES["status"]["allowed"])
-    allowed_domains = ", ".join(COMMON_PROPERTIES["domain"]["allowed"])
+    allowed_domains = ", ".join(_allowed_domain_values(extra_domains))
     allowed_source_kinds = ", ".join(COMMON_PROPERTIES["source_kind"]["allowed"])
     allowed_capture_types = ", ".join(COMMON_PROPERTIES["capture_type"]["allowed"])
     return f"""Classify this Obsidian note and propose only schema-approved metadata.
@@ -321,12 +358,14 @@ def _stage_prompt(
     stage: str,
     max_chars: int,
     allowed_hubs: list[str] | None = None,
+    allowed_folders: list[tuple[str, str]] | None = None,
+    extra_domains: list[str] | None = None,
 ) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars
     allowed_types = ", ".join(sorted(NOTE_TYPES))
     allowed_statuses = ", ".join(COMMON_PROPERTIES["status"]["allowed"])
-    allowed_domains = ", ".join(COMMON_PROPERTIES["domain"]["allowed"])
+    allowed_domains = ", ".join(_allowed_domain_values(extra_domains))
     allowed_source_kinds = ", ".join(COMMON_PROPERTIES["source_kind"]["allowed"])
     allowed_capture_types = ", ".join(COMMON_PROPERTIES["capture_type"]["allowed"])
     common = f"""Path: {note_path.as_posix()}
@@ -397,6 +436,28 @@ Choose only from the approved hubs. Never invent a hub. Use the note's title, co
 folder location as signals. Do not propose type, status, domain, summary, headings, or body edits.
 
 {common}"""
+    if stage == "assign-folder":
+        if allowed_folders:
+            folder_lines = "\n".join(
+                f"- {path}: {description}" if description else f"- {path}"
+                for path, description in allowed_folders
+            )
+        else:
+            folder_lines = "(no custom folders defined)"
+        return f"""Assign this note to exactly one of the folders below, or none.
+
+Available folders (path: description):
+{folder_lines}
+
+Return JSON with exactly these keys:
+- folder: one folder path exactly as listed above, or empty string if none fits
+- confidence: number from 0 to 1
+- warnings: list of short strings for ambiguity
+
+Choose only from the listed folder paths. Never invent a folder. Use the note's title, content,
+and each folder's description as signals. Do not propose type, status, domain, summary, or body edits.
+
+{common}"""
     raise ValueError(f"unsupported LLM stage `{stage}`")
 
 
@@ -464,7 +525,9 @@ def _first_balanced_json_object(text: str) -> str | None:
     return None
 
 
-def validate_proposal(proposal: dict[str, Any]) -> ProposalValidation:
+def validate_proposal(
+    proposal: dict[str, Any], *, extra_domains: list[str] | None = None
+) -> ProposalValidation:
     errors: list[str] = []
     unknown = sorted(set(proposal) - ALLOWED_PROPOSAL_KEYS)
     if unknown:
@@ -488,7 +551,7 @@ def validate_proposal(proposal: dict[str, Any]) -> ProposalValidation:
         errors.append("summary must be 1000 characters or fewer")
 
     _validate_optional_string(proposal, "domain", errors)
-    _validate_allowed_domain(proposal, errors)
+    _validate_allowed_domain(proposal, errors, extra_domains)
     _validate_optional_string(proposal, "source_kind", errors)
     _validate_allowed_source_kind(proposal, errors)
     _validate_optional_string(proposal, "capture_type", errors)
@@ -521,17 +584,48 @@ def validate_proposal(proposal: dict[str, Any]) -> ProposalValidation:
 
 
 def validate_stage_proposal(
-    stage: str, proposal: dict[str, Any], *, allowed_hubs: list[str] | None = None
+    stage: str,
+    proposal: dict[str, Any],
+    *,
+    allowed_hubs: list[str] | None = None,
+    allowed_folders: list[str] | None = None,
+    extra_domains: list[str] | None = None,
 ) -> StageValidation:
     if stage == "classify-type":
         return _validate_type_stage(proposal)
     if stage == "property-values":
-        return _validate_property_values_stage(proposal)
+        return _validate_property_values_stage(proposal, extra_domains)
     if stage == "summary":
         return _validate_summary_stage(proposal)
     if stage == "assign-hub":
         return _validate_assign_hub_stage(proposal, allowed_hubs or [])
+    if stage == "assign-folder":
+        return _validate_assign_folder_stage(proposal, allowed_folders or [])
     return StageValidation(False, {}, [f"unknown stage `{stage}`"])
+
+
+def _validate_assign_folder_stage(
+    proposal: dict[str, Any], allowed_folders: list[str]
+) -> StageValidation:
+    errors: list[str] = []
+    unknown = sorted(set(proposal) - {"folder", "confidence", "warnings"})
+    if unknown:
+        errors.append("unknown proposal keys: " + ", ".join(unknown))
+    raw = proposal.get("folder", "")
+    folder = raw.strip() if isinstance(raw, str) else ""
+    if folder and folder not in allowed_folders:
+        errors.append(f"folder `{folder}` is not one of the declared custom folders")
+    _validate_string_list(proposal, "warnings", errors)
+    confidence = _validate_confidence(proposal, errors)
+    return StageValidation(
+        not errors,
+        {
+            "folder": folder,
+            "confidence": confidence,
+            "warnings": proposal.get("warnings", []),
+        },
+        errors,
+    )
 
 
 def _validate_assign_hub_stage(
@@ -586,7 +680,9 @@ def _validate_type_stage(proposal: dict[str, Any]) -> StageValidation:
     )
 
 
-def _validate_property_values_stage(proposal: dict[str, Any]) -> StageValidation:
+def _validate_property_values_stage(
+    proposal: dict[str, Any], extra_domains: list[str] | None = None
+) -> StageValidation:
     errors: list[str] = []
     unknown = sorted(set(proposal) - {"status", "domain", "parent", "related", "cover", "source_kind", "capture_type", "confidence", "warnings"})
     if unknown:
@@ -596,7 +692,7 @@ def _validate_property_values_stage(proposal: dict[str, Any]) -> StageValidation
     if not isinstance(status, str) or status not in allowed_statuses:
         errors.append(f"status must be one of: {', '.join(allowed_statuses)}")
     _validate_optional_string(proposal, "domain", errors)
-    _validate_allowed_domain(proposal, errors)
+    _validate_allowed_domain(proposal, errors, extra_domains)
     _validate_optional_string(proposal, "source_kind", errors)
     _validate_allowed_source_kind(proposal, errors)
     _validate_optional_string(proposal, "capture_type", errors)
@@ -665,9 +761,11 @@ def _validate_optional_string(
         errors.append(f"{key} must be a string")
 
 
-def _validate_allowed_domain(proposal: dict[str, Any], errors: list[str]) -> None:
+def _validate_allowed_domain(
+    proposal: dict[str, Any], errors: list[str], extra_domains: list[str] | None = None
+) -> None:
     value = proposal.get("domain", "")
-    allowed_domains = COMMON_PROPERTIES["domain"]["allowed"]
+    allowed_domains = _allowed_domain_values(extra_domains)
     if isinstance(value, str) and value not in allowed_domains:
         errors.append(f"domain must be one of: {', '.join(allowed_domains)}")
 

@@ -19,7 +19,7 @@ from .config import AgentConfig
 from .dashboard_layout import dashboard_directories, dashboard_shell_contents
 from .frontmatter import parse_note
 from .legacy import apply_legacy_mappings
-from .llm import ProposalProvider, validate_stage_proposal
+from .llm import ProposalProvider, provider_from_config, validate_stage_proposal
 from .layout_routing import build_inbox_sort_proposal, route_note
 from .paths import BOOTSTRAP_FILE, render_bootstrap
 from .reconcile import infer_type_from_content
@@ -188,11 +188,14 @@ def run_propose_inbox_sort(
     max_notes: int = 5,
     safe_only: bool = False,
     overwrite_proposal: bool = False,
+    proposal_provider: ProposalProvider | None = None,
 ) -> tuple[int, str]:
     if max_notes < 1:
         return 1, "vault-agent propose-inbox-sort failed\nError: max-notes must be positive"
+    if proposal_provider is None and config.routing_mode == "custom":
+        proposal_provider = provider_from_config(config)
     proposal, warnings = build_inbox_sort_proposal(
-        config, max_notes=max_notes, safe_only=safe_only
+        config, max_notes=max_notes, safe_only=safe_only, proposal_provider=proposal_provider
     )
     if not proposal["operations"]:
         detail = "\n".join(f"Warning: {warning}" for warning in warnings)

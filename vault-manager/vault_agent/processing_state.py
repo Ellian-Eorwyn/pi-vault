@@ -64,6 +64,33 @@ def mark_stage(
     )
 
 
+def record_routed_destination(vault_root: Path, note_path: Path, destination: str) -> None:
+    """Persist the model-chosen custom folder for a note (consumed by inbox-sort)."""
+    state = load_processing_state(vault_root)
+    relative = note_path.relative_to(vault_root).as_posix()
+    note_state = state["notes"].setdefault(relative, {"stages": {}})
+    note_state["hash"] = note_hash(note_path)
+    note_state["routed_destination"] = destination
+    write_text_safely(
+        vault_root / paths_for(vault_root).agent_dir / "processing-state.json",
+        json.dumps(state, indent=2, sort_keys=True) + "\n",
+        backup_root=vault_root / paths_for(vault_root).agent_dir / "backups",
+    )
+
+
+def routed_destination(vault_root: Path, note_path: Path) -> str | None:
+    """Return the recorded custom folder for a note when still fresh."""
+    state = load_processing_state(vault_root)
+    relative = note_path.relative_to(vault_root).as_posix()
+    note_state = state.get("notes", {}).get(relative, {})
+    destination = note_state.get("routed_destination")
+    if not isinstance(destination, str) or not destination:
+        return None
+    if note_state.get("hash") != note_hash(note_path):
+        return None
+    return destination
+
+
 def stage_status(vault_root: Path, note_path: Path, stage: str) -> str | None:
     state = load_processing_state(vault_root)
     relative = note_path.relative_to(vault_root).as_posix()

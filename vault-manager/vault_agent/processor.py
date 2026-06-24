@@ -10,8 +10,8 @@ from .frontmatter import parse_note, render_note
 from .logging_utils import append_log
 from .llm import ProposalProvider, validate_proposal, validate_stage_proposal
 from .model_blocks import record_model_block
-from .paths import paths_for
-from .processing_state import mark_stage, stage_complete
+from .paths import load_bootstrap, paths_for
+from .processing_state import mark_stage, record_routed_destination, stage_complete
 from .safety import write_text_safely
 from .scanner import scan_vault
 from .schema import (
@@ -30,6 +30,7 @@ PROCESSING_STAGES = (
     "property-values",
     "template-body",
     "assign-hub",
+    "assign-folder",
     "summary",
 )
 
@@ -396,6 +397,7 @@ def process_note(
     body = parsed.body
     confidence: float | None = None
     warnings: list[str] = []
+    extra_domains = list(paths_for(vault_root).domain_folders)
 
     if stage == "frontmatter-shape":
         _apply_shape_defaults(frontmatter)
@@ -434,7 +436,9 @@ def process_note(
                 )
             except Exception as exc:
                 return ProcessResult(changed=False, mode="blocked", errors=[str(exc)])
-            validation = validate_stage_proposal(stage, proposal, allowed_hubs=approved)
+            validation = validate_stage_proposal(
+                stage, proposal, allowed_hubs=approved, extra_domains=extra_domains
+            )
             if not validation.valid:
                 return ProcessResult(changed=False, mode="blocked", errors=validation.errors)
             confidence = validation.proposal.get("confidence")
@@ -471,6 +475,72 @@ def process_note(
             )
         frontmatter["parent"] = chosen
         mode = "hub-assigned"
+    elif stage == "assign-folder":
+        vault_paths = paths_for(vault_root)
+        routing = (load_bootstrap(vault_root) or {}).get("routing") or {}
+        if routing.get("mode") != "custom" or not vault_paths.custom_folders:
+            return ProcessResult(
+                changed=False, mode="skipped", errors=["custom routing is not enabled"]
+            )
+        if not proposal_provider:
+            return ProcessResult(
+                changed=False,
+                mode="skipped",
+                errors=["assign-folder needs an LLM proposal provider"],
+            )
+        catalog = [(f.path.as_posix(), f.description) for f in vault_paths.custom_folders]
+        allowed_paths = [path for path, _ in catalog]
+        try:
+            proposal = _stage_proposal(
+                proposal_provider, stage, note_path, text, allowed_folders=catalog
+            )
+        except Exception as exc:
+            return ProcessResult(changed=False, mode="blocked", errors=[str(exc)])
+        validation = validate_stage_proposal(
+            "assign-folder", proposal, allowed_folders=allowed_paths
+        )
+        if not validation.valid:
+            return ProcessResult(changed=False, mode="blocked", errors=validation.errors)
+        confidence = validation.proposal.get("confidence")
+        warnings = validation.proposal.get("warnings", [])
+        if (
+            confidence_threshold is not None
+            and confidence is not None
+            and confidence < confidence_threshold
+        ) or _requires_human_review(
+            confidence=confidence,
+            confidence_threshold=confidence_threshold,
+            warnings=warnings,
+            review_on_warnings=review_on_warnings,
+            warning_confidence_margin=warning_confidence_margin,
+        ):
+            reason = "assign-folder proposal requires review (low/near-threshold confidence or warnings)"
+            record_model_block(
+                vault_root,
+                note_path,
+                stage=stage,
+                proposal=validation.proposal,
+                reason=reason,
+                suggested_next_action="Run `vault-agent review-model-blocks --dry-run`, then convert safe items through the proposal review path.",
+                proposal_provider=proposal_provider,
+            )
+            return ProcessResult(changed=False, mode="blocked", errors=[reason])
+        chosen_folder = validation.proposal.get("folder", "")
+        if not chosen_folder:
+            return ProcessResult(
+                changed=False, mode="skipped", errors=["model selected no custom folder"]
+            )
+        record_routed_destination(vault_root, note_path, chosen_folder)
+        mark_stage(
+            vault_root,
+            note_path,
+            stage=stage,
+            status="complete",
+            norms_lock_hash=norms_lock_hash,
+            confidence=confidence,
+            warnings=warnings,
+        )
+        return ProcessResult(changed=False, mode="folder-assigned")
     else:
         if not proposal_provider:
             return ProcessResult(
@@ -482,7 +552,7 @@ def process_note(
             proposal = _stage_proposal(proposal_provider, stage, note_path, text)
         except Exception as exc:
             return ProcessResult(changed=False, mode="blocked", errors=[str(exc)])
-        validation = validate_stage_proposal(stage, proposal)
+        validation = validate_stage_proposal(stage, proposal, extra_domains=extra_domains)
         if not validation.valid:
             return ProcessResult(changed=False, mode="blocked", errors=validation.errors)
         confidence = validation.proposal.get("confidence")
@@ -675,6 +745,13 @@ def _stage_needed(
         if frontmatter.get("parent") not in (None, ""):
             return False
         return bool(approved_hubs_for(domain, _load_vault_schema(vault_root)))
+    if stage == "assign-folder":
+        if completed:
+            return False
+        routing = (load_bootstrap(vault_root) or {}).get("routing") or {}
+        if routing.get("mode") != "custom":
+            return False
+        return bool(paths_for(vault_root).custom_folders)
     if stage == "summary":
         if completed:
             return False
@@ -707,12 +784,15 @@ def _stage_proposal(
     text: str,
     *,
     allowed_hubs: list[str] | None = None,
+    allowed_folders: list[tuple[str, str]] | None = None,
 ) -> dict:
     propose_stage = getattr(proposal_provider, "propose_stage", None)
     if callable(propose_stage):
         kwargs: dict = {"note_path": note_path, "note_text": text, "stage": stage}
         if allowed_hubs is not None:
             kwargs["allowed_hubs"] = allowed_hubs
+        if allowed_folders is not None:
+            kwargs["allowed_folders"] = allowed_folders
         return propose_stage(**kwargs)
     return proposal_provider.propose(note_path=note_path, note_text=text)
 

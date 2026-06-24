@@ -125,7 +125,10 @@ def starter_file_contents(
     inbox_dir: Path = Path("00 Inbox"),
     dashboards_dir: Path = DEFAULT_DASHBOARDS_DIR,
     content_dirs: dict[str, Path] | None = None,
+    domain_folders: dict[str, Path] | None = None,
+    custom_folders: tuple | list | None = None,
 ) -> dict[str, str]:
+    extra_domains = list(domain_folders or {})
     contents = {
         "99 System/0.01 agent/config.yaml": """# vault-agent configuration
 version: 1
@@ -496,7 +499,7 @@ If the model returns non-JSON or thinking text, record the failure, fall back de
 - Preserve unknown legacy metadata unless explicitly configured otherwise.
 - LLM output must be validated structured proposals, not direct file edits.
 """,
-        "99 System/0.01 agent/schema.json": default_schema_json(),
+        "99 System/0.01 agent/schema.json": default_schema_json(extra_domains),
         "99 System/0.01 agent/manifest.json": json.dumps(
             {"generated_by": "vault-agent", "notes": []}, indent=2, sort_keys=True
         )
@@ -528,8 +531,8 @@ Open full notes only after selecting likely candidates. Do not edit notes during
         "99 System/0.01 agent/retrieval/04 summary-brief.md": "# Summary Brief\n\nNot scanned yet.\n",
         "99 System/0.01 agent/retrieval/stale-summaries.md": "# Stale Summaries\n\n",
         "99 System/0.01 agent/retrieval/retrieval-log.md": "# Retrieval Log\n\n",
-        "99 System/0.02 templates/0.020 vault schema.md": schema_markdown(),
-        "99 System/0.02 templates/0.021 property values.md": property_values_markdown(),
+        "99 System/0.02 templates/0.020 vault schema.md": schema_markdown(extra_domains),
+        "99 System/0.02 templates/0.021 property values.md": property_values_markdown(extra_domains),
         "99 System/0.02 templates/0.022 folder norms.md": folder_norms_markdown(),
         "99 System/0.02 templates/0.023 topic hubs.md": topic_hubs_markdown(),
         ".obsidian/snippets/dashboard.css": DASHBOARD_SNIPPET_CSS,
@@ -544,6 +547,8 @@ Open full notes only after selecting likely candidates. Do not edit notes during
                 inbox_dir=inbox_dir,
                 dashboards_dir=dashboards_dir,
                 content_dirs=dict(content_dirs or DEFAULT_CONTENT_DIRS),
+                domain_folders=dict(domain_folders or {}),
+                custom_folders=tuple(custom_folders or ()),
             )
         )
     )

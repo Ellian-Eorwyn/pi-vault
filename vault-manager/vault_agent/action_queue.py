@@ -595,7 +595,9 @@ def _llm_categorization_operation(
             proposal_provider=proposal_provider,
             fallback_reason=str(exc),
         )
-    validation = validate_proposal(proposal)
+    validation = validate_proposal(
+        proposal, extra_domains=list(config.paths.domain_folders)
+    )
     if not validation.valid:
         return _llm_staged_categorization_operation(
             config=config,
@@ -686,7 +688,11 @@ def _llm_staged_categorization_operation(
             note_text=contextual_text,
             stage="property-values",
         )
-        property_validation = validate_stage_proposal("property-values", property_proposal)
+        property_validation = validate_stage_proposal(
+            "property-values",
+            property_proposal,
+            extra_domains=list(config.paths.domain_folders),
+        )
         if not property_validation.valid:
             return None, f"{fallback_reason}; staged property-values failed: {'; '.join(property_validation.errors)}"
         property_error = _stage_gate_error(config, property_validation.proposal)

@@ -1,14 +1,16 @@
 """Suggest a folder layout from an existing vault before init writes defaults.
 
 This reads a deterministic vault scan and proposes how the user's existing
-folders map onto pi-vault's fixed content roles (people, work, sources, ...),
-keeping any unmatched top-level folders as user-defined "extra" folders that the
-agent leaves unmanaged. The suggestion is rendered as a human-editable YAML
-outline; the edited outline is parsed back and validated via ``build_paths``.
+folders map onto pi-vault's fixed content roles (people, work, sources, ...).
+Folders that don't match a built-in role become user-defined **domains**: each is
+mapped to its own top-level folder that notes route into by their ``domain``
+value. The suggestion is rendered as a human-editable YAML outline; the edited
+outline is parsed back and validated via ``build_paths``.
 """
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +24,7 @@ from .paths import (
     DEFAULT_INBOX_DIR,
     DEFAULT_SYSTEM_DIR,
     BOOTSTRAP_DIR,
+    CONTENT_ROLE_DOMAINS,
     VaultPaths,
     build_paths,
 )
@@ -83,10 +86,12 @@ class LayoutSuggestion:
     inbox_dir: Path
     dashboards_dir: Path
     content_dirs: dict[str, Path]
-    extra_folders: list[Path] = field(default_factory=list)
+    # domain value -> folder that notes with that domain route into
+    domain_folders: dict[str, Path] = field(default_factory=dict)
     # role -> short human explanation of why the folder was mapped here
     reasons: dict[str, str] = field(default_factory=dict)
-    extra_reasons: dict[str, str] = field(default_factory=dict)
+    # domain -> short human explanation of the proposed domain folder
+    domain_reasons: dict[str, str] = field(default_factory=dict)
 
 
 def suggest_layout(scan: ScanResult, paths: VaultPaths | None = None) -> LayoutSuggestion:
@@ -107,8 +112,8 @@ def suggest_layout(scan: ScanResult, paths: VaultPaths | None = None) -> LayoutS
 
     claimed: dict[str, str] = {}  # role -> folder name
     reasons: dict[str, str] = {}
-    extra_folders: list[Path] = []
-    extra_reasons: dict[str, str] = {}
+    domain_folders: dict[str, Path] = {}
+    domain_reasons: dict[str, str] = {}
 
     # Sort by note count (desc) then name so the busiest folder wins a contested role.
     for name in sorted(observed, key=lambda n: (-observed[n]["count"], n.lower())):
@@ -118,15 +123,19 @@ def suggest_layout(scan: ScanResult, paths: VaultPaths | None = None) -> LayoutS
         if role and role not in claimed:
             claimed[role] = name
             reasons[role] = reason
+            continue
+        # No built-in role: make this a user-defined, routable domain folder.
+        domain = _unique_domain_slug(name, domain_folders)
+        domain_folders[domain] = Path(name)
+        if role:
+            domain_reasons[domain] = (
+                f"looks like '{role}' but that role is already mapped to "
+                f"'{claimed[role]}'; kept as the '{domain}' domain folder"
+            )
         else:
-            extra_folders.append(Path(name))
-            if role:
-                extra_reasons[name] = (
-                    f"looks like '{role}' but that role is already mapped to "
-                    f"'{claimed[role]}'; kept as an unmanaged folder"
-                )
-            else:
-                extra_reasons[name] = "no confident role match; kept as an unmanaged folder"
+            domain_reasons[domain] = (
+                f"no built-in role matched; notes with domain '{domain}' route here"
+            )
 
     # Apply claimed top-level roles, rebuilding child paths under the new parent.
     for role, folder_name in claimed.items():
@@ -137,9 +146,9 @@ def suggest_layout(scan: ScanResult, paths: VaultPaths | None = None) -> LayoutS
         inbox_dir=inbox_dir,
         dashboards_dir=dashboards_dir,
         content_dirs=content_dirs,
-        extra_folders=extra_folders,
+        domain_folders=domain_folders,
         reasons=reasons,
-        extra_reasons=extra_reasons,
+        domain_reasons=domain_reasons,
     )
 
 
@@ -184,6 +193,22 @@ def _classify_folder(name: str, info: dict[str, Any]) -> tuple[str | None, str]:
     return None, ""
 
 
+def _domain_slug(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return slug or "domain"
+
+
+def _unique_domain_slug(name: str, existing: dict[str, Path]) -> str:
+    base = _domain_slug(name)
+    # Avoid colliding with content-role domains (work/health/...) or another folder.
+    candidate = base
+    suffix = 2
+    while candidate in CONTENT_ROLE_DOMAINS or candidate in existing:
+        candidate = f"{base}_{suffix}"
+        suffix += 1
+    return candidate
+
+
 def _remap_role(content_dirs: dict[str, Path], role: str, new_path: Path) -> None:
     """Point a top-level role (and its children) at an observed folder."""
 
@@ -205,10 +230,11 @@ def render_layout_outline(suggestion: LayoutSuggestion) -> str:
         "# below to match the structure you want, then run `vault-agent apply-layout`.",
         "# Nothing has been created yet.",
         "#",
-        "# - content_dirs map your folders onto pi-vault's fixed roles. The agent routes",
-        "#   notes and builds dashboards using these roles.",
-        "# - extra_folders are kept as-is and left UNMANAGED: created on init but never an",
-        "#   automatic routing or dashboard target. Add or remove freely.",
+        "# - content_dirs map your folders onto pi-vault's built-in roles (people,",
+        "#   organizations, work, sources, ...). Notes route into them by note type/domain.",
+        "# - domain_folders are your own folders. Each is a routable domain: a note whose",
+        "#   `domain` matches the key is filed into that folder and gets its own dashboard.",
+        "#   Add, rename, or remove entries freely (keys must be lowercase slugs).",
         "",
         f"system_dir: {suggestion.system_dir.as_posix()}",
         f"inbox_dir: {suggestion.inbox_dir.as_posix()}",
@@ -223,13 +249,35 @@ def render_layout_outline(suggestion: LayoutSuggestion) -> str:
         lines.append(f'  {key}: "{value}"{comment}')
 
     lines.append("")
-    if suggestion.extra_folders:
-        lines.append("extra_folders:")
-        for folder in suggestion.extra_folders:
-            reason = suggestion.extra_reasons.get(folder.as_posix(), "unmanaged folder")
-            lines.append(f'  - "{folder.as_posix()}"  # {reason}')
+    if suggestion.domain_folders:
+        lines.append("domain_folders:")
+        for domain, folder in suggestion.domain_folders.items():
+            reason = suggestion.domain_reasons.get(domain, "user-defined domain folder")
+            lines.append(f'  {domain}: "{folder.as_posix()}"  # {reason}')
     else:
-        lines.append("extra_folders: []  # add any folders you want kept but unmanaged")
+        lines.append(
+            "domain_folders: {}  # add `slug: \"Folder\"` to make your own routable folders"
+        )
+
+    lines.extend(
+        [
+            "",
+            "# custom_folders: an arbitrary structure the MODEL sorts notes into, using each",
+            "# description as a hint. Only active when routing.mode is 'custom' below.",
+            "custom_folders: []",
+            "#   - path: Areas/Health",
+            "#     description: fitness, medical, nutrition",
+            "#   - path: Resources/Books",
+            "#     description: book notes and highlights",
+            "",
+            "# routing.mode 'deterministic' (default) sorts by note type/domain. Set it to",
+            "# 'custom' to let the model sort notes into custom_folders during normal",
+            "# processing; 'fallback: deterministic' still applies when the model is unsure.",
+            "routing:",
+            "  mode: deterministic",
+            "  fallback: deterministic",
+        ]
+    )
 
     return "\n".join(lines) + "\n"
 
@@ -253,5 +301,25 @@ def parse_layout_outline(text: str) -> VaultPaths:
         data.get("inbox_dir", DEFAULT_INBOX_DIR.as_posix()),
         data.get("dashboards_dir", DEFAULT_DASHBOARDS_DIR.as_posix()),
         content_dirs,
-        data.get("extra_folders"),
+        data.get("domain_folders"),
+        data.get("custom_folders"),
     )
+
+
+def parse_layout_routing(text: str) -> dict[str, str] | None:
+    """Extract the optional routing block from an edited outline."""
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    routing = data.get("routing")
+    if not isinstance(routing, dict):
+        return None
+    result: dict[str, str] = {}
+    for key in ("mode", "fallback"):
+        value = routing.get(key)
+        if isinstance(value, str) and value:
+            result[key] = value
+    return result or None

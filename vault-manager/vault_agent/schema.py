@@ -221,18 +221,34 @@ def default_topic_hubs() -> dict[str, list[dict[str, str]]]:
     return {domain: [] for domain in DOMAIN_DEFINITIONS}
 
 
-def default_schema() -> dict[str, Any]:
+def new_domains(extra_domains: list[str] | None) -> list[str]:
+    """User-defined domains not already part of the built-in vocabulary."""
+    existing = set(DOMAIN_DEFINITIONS) | set(CORE_PROPERTIES["domain"]["allowed"])
+    result: list[str] = []
+    for domain in extra_domains or []:
+        if domain and domain not in existing and domain not in result:
+            result.append(domain)
+    return result
+
+
+def default_schema(extra_domains: list[str] | None = None) -> dict[str, Any]:
+    extra = new_domains(extra_domains)
+    core = deepcopy(CORE_PROPERTIES)
+    core["domain"]["allowed"] = list(core["domain"]["allowed"]) + extra
+    domain_definitions = deepcopy(DOMAIN_DEFINITIONS)
+    for domain in extra:
+        domain_definitions[domain] = "User-defined domain."
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_by": "vault-agent",
         "note_types": deepcopy(NOTE_TYPES),
         "status_definitions": deepcopy(STATUS_DEFINITIONS),
-        "domain_definitions": deepcopy(DOMAIN_DEFINITIONS),
+        "domain_definitions": domain_definitions,
         "recommended_topic_hubs": list(RECOMMENDED_TOPIC_HUBS),
-        "topic_hubs": default_topic_hubs(),
+        "topic_hubs": {domain: [] for domain in domain_definitions},
         "agent_rules": list(AGENT_RULES),
-        "core_properties": deepcopy(CORE_PROPERTIES),
-        "common_properties": deepcopy(CORE_PROPERTIES),
+        "core_properties": core,
+        "common_properties": core,
         "folder_norms": {
             note_type: {"preferred_folder": spec["folder"]}
             for note_type, spec in NOTE_TYPES.items()
@@ -288,11 +304,11 @@ def ordered_properties_for(note_type: str | None = None) -> tuple[str, ...]:
     return CORE_PROPERTY_ORDER
 
 
-def default_schema_json() -> str:
-    return json.dumps(default_schema(), indent=2) + "\n"
+def default_schema_json(extra_domains: list[str] | None = None) -> str:
+    return json.dumps(default_schema(extra_domains), indent=2) + "\n"
 
 
-def schema_markdown() -> str:
+def schema_markdown(extra_domains: list[str] | None = None) -> str:
     lines = [
         "---",
         "type: system",
@@ -333,9 +349,12 @@ def schema_markdown() -> str:
     ]
     for note_type, spec in NOTE_TYPES.items():
         lines.append(f"- `{note_type}`: {spec['description']} Preferred folder: `{spec['folder']}`.")
+    extra = new_domains(extra_domains)
     lines.extend(["", "## Common Properties", ""])
     for prop, spec in CORE_PROPERTIES.items():
         allowed = spec.get("allowed")
+        if prop == "domain" and allowed:
+            allowed = list(allowed) + extra
         suffix = f" Allowed: {', '.join(f'`{value}`' for value in allowed)}." if allowed else ""
         lines.append(f"- `{prop}`: {spec['type']}.{suffix}")
     lines.extend(
@@ -356,7 +375,7 @@ def schema_markdown() -> str:
     return "\n".join(lines) + "\n"
 
 
-def property_values_markdown() -> str:
+def property_values_markdown(extra_domains: list[str] | None = None) -> str:
     lines = [
         "---",
         "type: system",
@@ -409,6 +428,8 @@ def property_values_markdown() -> str:
     )
     for domain, definition in DOMAIN_DEFINITIONS.items():
         lines.append(f"- `{domain}`: {definition}")
+    for domain in new_domains(extra_domains):
+        lines.append(f"- `{domain}`: User-defined domain.")
     lines.extend(
         [
             "",

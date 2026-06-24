@@ -22,10 +22,15 @@ from .hermes import run_hermes
 from .init import apply_init, render_init_dry_run
 from .layout_suggestion import (
     parse_layout_outline,
+    parse_layout_routing,
     render_layout_outline,
     suggest_layout,
 )
-from .llm import OpenAICompatibleProposalProvider, JsonFileProposalProvider
+from .llm import (
+    OpenAICompatibleProposalProvider,
+    JsonFileProposalProvider,
+    provider_from_config,
+)
 from .model_blocks import run_review_model_blocks
 from .norms import run_norms_lock
 from .obsidian_check import run_obsidian_check
@@ -906,8 +911,10 @@ def _handle_apply_layout(args: argparse.Namespace, config: AgentConfig) -> int:
         print("Run `vault-agent suggest-layout` first, or pass --file.")
         return 1
 
-    paths = parse_layout_outline(outline_path.read_text(encoding="utf-8"))
-    bootstrap = render_bootstrap(paths)
+    outline_text = outline_path.read_text(encoding="utf-8")
+    paths = parse_layout_outline(outline_text)
+    routing = parse_layout_routing(outline_text)
+    bootstrap = render_bootstrap(paths, routing=routing)
 
     if config.dry_run:
         print("vault-agent apply-layout dry run")
@@ -1441,19 +1448,7 @@ def _proposal_provider_from_args(args: argparse.Namespace):
 
 
 def _proposal_provider_from_config(config: AgentConfig):
-    if not config.llm_enabled or config.llm_provider in {"", "none"}:
-        return None
-    if config.llm_provider not in {"openai-compatible", "llama.cpp", "local-openai"}:
-        raise ValueError(f"Unsupported LLM provider `{config.llm_provider}`")
-    return OpenAICompatibleProposalProvider(
-        base_url=config.llm_base_url,
-        model=config.llm_model,
-        api_key=config.llm_api_key,
-        timeout_seconds=config.llm_timeout_seconds,
-        max_input_tokens=config.llm_max_input_tokens,
-        chars_per_token=config.llm_chars_per_token,
-        max_input_chars=config.llm_max_input_chars,
-    )
+    return provider_from_config(config)
 
 
 def _handle_memory_placeholder(args: argparse.Namespace, config: AgentConfig) -> int:

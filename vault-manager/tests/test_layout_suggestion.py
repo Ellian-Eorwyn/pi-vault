@@ -1,6 +1,7 @@
 import argparse
 import contextlib
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +18,7 @@ from vault_agent.layout_routing import route_note
 from vault_agent.config import load_config
 from vault_agent.paths import DEFAULT_PATHS, build_paths, paths_for
 from vault_agent.scanner import ScanResult
+from vault_agent.validation import run_validate
 
 
 def _entry(path: str, **frontmatter) -> dict:
@@ -33,7 +35,7 @@ class SuggestLayoutTests(unittest.TestCase):
         )
         suggestion = suggest_layout(scan, DEFAULT_PATHS)
         self.assertEqual(suggestion.content_dirs["sources"].as_posix(), "Reading")
-        self.assertEqual(suggestion.extra_folders, [])
+        self.assertEqual(suggestion.domain_folders, {})
 
     def test_type_dominated_folder_maps_when_name_is_unclear(self):
         scan = ScanResult(
@@ -46,20 +48,22 @@ class SuggestLayoutTests(unittest.TestCase):
         )
         suggestion = suggest_layout(scan, DEFAULT_PATHS)
         self.assertEqual(suggestion.content_dirs["people"].as_posix(), "Misc")
-        # Children are rebuilt under the remapped parent.
         self.assertEqual(suggestion.content_dirs["contacts"].as_posix(), "Misc/02.01 Contacts")
 
-    def test_unmatched_folder_becomes_extra(self):
+    def test_unmatched_folder_becomes_domain(self):
         scan = ScanResult(
-            entries=[_entry("Recipes/pasta.md")],
-            folders=["Recipes"],
+            entries=[_entry("Cooking/pasta.md")],
+            folders=["Cooking"],
         )
         suggestion = suggest_layout(scan, DEFAULT_PATHS)
-        self.assertEqual([f.as_posix() for f in suggestion.extra_folders], ["Recipes"])
-        # Roles keep their defaults when nothing matches.
+        self.assertEqual(
+            {d: f.as_posix() for d, f in suggestion.domain_folders.items()},
+            {"cooking": "Cooking"},
+        )
+        # Built-in roles keep their defaults when nothing matches.
         self.assertEqual(suggestion.content_dirs["sources"].as_posix(), "07 Sources")
 
-    def test_contested_role_keeps_busiest_and_demotes_rest_to_extra(self):
+    def test_contested_role_keeps_busiest_and_demotes_rest_to_domain(self):
         scan = ScanResult(
             entries=[
                 _entry("Reading/a.md", type="source"),
@@ -70,44 +74,64 @@ class SuggestLayoutTests(unittest.TestCase):
         )
         suggestion = suggest_layout(scan, DEFAULT_PATHS)
         self.assertEqual(suggestion.content_dirs["sources"].as_posix(), "Reading")
-        self.assertEqual([f.as_posix() for f in suggestion.extra_folders], ["Library"])
+        self.assertEqual(
+            {d: f.as_posix() for d, f in suggestion.domain_folders.items()},
+            {"library": "Library"},
+        )
 
     def test_outline_round_trip(self):
         scan = ScanResult(
             entries=[
                 _entry("Projects/p.md", type="project", domain="work"),
-                _entry("Recipes/r.md"),
+                _entry("Cooking/r.md"),
             ],
-            folders=["Projects", "Recipes"],
+            folders=["Projects", "Cooking"],
         )
         suggestion = suggest_layout(scan, DEFAULT_PATHS)
         outline = render_layout_outline(suggestion)
         paths = parse_layout_outline(outline)
         self.assertEqual(paths.content_dirs["work"].as_posix(), "Projects")
-        self.assertEqual([f.as_posix() for f in paths.extra_folders], ["Recipes"])
+        self.assertEqual(
+            {d: f.as_posix() for d, f in paths.domain_folders.items()},
+            {"cooking": "Cooking"},
+        )
 
-    def test_parse_rejects_extra_folder_nested_in_content_dir(self):
+    def test_parse_rejects_domain_folder_nested_in_content_dir(self):
         outline = (
             "system_dir: 99 System\n"
             "inbox_dir: 00 Inbox\n"
             "dashboards_dir: 01 Dashboards\n"
-            "extra_folders:\n"
-            "  - 02 People/Sub\n"
+            "domain_folders:\n"
+            "  cooking: 02 People/Sub\n"
+        )
+        with self.assertRaises(ValueError):
+            parse_layout_outline(outline)
+
+    def test_parse_rejects_content_role_domain_key(self):
+        outline = (
+            "system_dir: 99 System\n"
+            "inbox_dir: 00 Inbox\n"
+            "dashboards_dir: 01 Dashboards\n"
+            "domain_folders:\n"
+            "  work: Work2\n"
         )
         with self.assertRaises(ValueError):
             parse_layout_outline(outline)
 
 
-class ExtraFoldersPathTests(unittest.TestCase):
-    def test_build_paths_round_trips_extra_folders(self):
+class DomainFolderPathTests(unittest.TestCase):
+    def test_build_paths_round_trips_domain_folders(self):
         paths = build_paths(
-            "99 System", "00 Inbox", "01 Dashboards", None, ["Recipes", "Garden"]
+            "99 System", "00 Inbox", "01 Dashboards", None, {"cooking": "Cooking", "music": "Music"}
         )
-        self.assertEqual([f.as_posix() for f in paths.extra_folders], ["Recipes", "Garden"])
+        self.assertEqual(
+            {d: f.as_posix() for d, f in paths.domain_folders.items()},
+            {"cooking": "Cooking", "music": "Music"},
+        )
 
-    def test_build_paths_rejects_duplicate_extra_folders(self):
+    def test_build_paths_rejects_uppercase_domain_key(self):
         with self.assertRaises(ValueError):
-            build_paths("99 System", "00 Inbox", "01 Dashboards", None, ["Recipes", "Recipes"])
+            build_paths("99 System", "00 Inbox", "01 Dashboards", None, {"Cooking": "Cooking"})
 
 
 class LayoutCliTests(unittest.TestCase):
@@ -117,15 +141,15 @@ class LayoutCliTests(unittest.TestCase):
             exit_code = main(args)
         return exit_code, stdout.getvalue()
 
-    def test_suggest_apply_init_flow_creates_custom_and_extra_folders(self):
+    def test_suggest_apply_init_flow_creates_routable_domain_folder(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "Projects").mkdir()
             (root / "Projects" / "p.md").write_text(
                 "---\ntype: project\ndomain: work\n---\n# P\n", encoding="utf-8"
             )
-            (root / "Recipes").mkdir()
-            (root / "Recipes" / "pasta.md").write_text("# Pasta\n", encoding="utf-8")
+            (root / "Cooking").mkdir()
+            (root / "Cooking" / "pasta.md").write_text("# Pasta\n", encoding="utf-8")
 
             suggest_code, _ = self.run_cli(["--vault-root", directory, "suggest-layout"])
             outline_path = root / ".pi-vault" / "layout-suggestion.yaml"
@@ -138,27 +162,49 @@ class LayoutCliTests(unittest.TestCase):
             )
             self.assertEqual(apply_code, 0)
             self.assertEqual(bootstrap["content_dirs"]["work"], "Projects")
-            self.assertEqual(bootstrap["extra_folders"], ["Recipes"])
+            self.assertEqual(bootstrap["domain_folders"], {"cooking": "Cooking"})
 
             init_code, _ = self.run_cli(["--vault-root", directory, "init"])
             self.assertEqual(init_code, 0)
             self.assertTrue((root / "Projects").is_dir())
-            self.assertTrue((root / "Recipes").is_dir())
+            self.assertTrue((root / "Cooking").is_dir())
+            # Custom domain folder gets its own dashboard.
+            self.assertTrue((root / "Cooking" / "Cooking.md").is_file())
             # No forced default work folder when the role was remapped.
             self.assertFalse((root / "04 Work").exists())
 
-            # paths_for round-trips the unmanaged folder.
-            paths = paths_for(root)
-            self.assertEqual([f.as_posix() for f in paths.extra_folders], ["Recipes"])
+            # schema.json lists the custom domain as an allowed value.
+            schema = json.loads(
+                (root / "99 System" / "0.01 agent" / "schema.json").read_text(encoding="utf-8")
+            )
+            self.assertIn("cooking", schema["core_properties"]["domain"]["allowed"])
 
-            # Routing never targets an unmanaged extra folder.
+            # paths_for round-trips the custom domain folder.
+            paths = paths_for(root)
+            self.assertEqual(paths.domain_folders["cooking"].as_posix(), "Cooking")
+
+            # A note with the custom domain routes INTO the custom folder.
             config = load_config(argparse.Namespace(vault_root=root))
             decision = route_note(
-                config, root / "note.md", {"type": "note", "domain": "work"}
+                config, root / "00 Inbox" / "soup.md", {"type": "note", "domain": "cooking"}
             )
-            destination = decision.destination_dir
-            if destination is not None:
-                self.assertNotEqual(destination.parts[0], "Recipes")
+            self.assertEqual(decision.destination_dir.as_posix(), "Cooking")
+
+    def test_validation_accepts_custom_domain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Cooking").mkdir()
+            (root / "Cooking" / "n.md").write_text("# n\n", encoding="utf-8")
+            self.run_cli(["--vault-root", directory, "suggest-layout"])
+            self.run_cli(["--vault-root", directory, "apply-layout"])
+            self.run_cli(["--vault-root", directory, "init"])
+            (root / "Cooking" / "soup.md").write_text(
+                "---\ntype: note\ndomain: cooking\n---\n# Soup\n", encoding="utf-8"
+            )
+            self.run_cli(["--vault-root", directory, "scan"])
+            config = load_config(argparse.Namespace(vault_root=root))
+            _code, output = run_validate(config)
+            self.assertNotIn("invalid domain `cooking`", output)
 
     def test_apply_layout_without_outline_fails_cleanly(self):
         with tempfile.TemporaryDirectory() as directory:

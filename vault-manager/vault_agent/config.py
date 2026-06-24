@@ -9,7 +9,11 @@ from typing import Any
 
 import yaml
 
-from .paths import VaultPaths, paths_for
+from .paths import VaultPaths, load_bootstrap, paths_for
+from .schema import COMMON_PROPERTIES
+
+ROUTING_MODES = ("deterministic", "custom")
+ROUTING_FALLBACKS = ("deterministic", "none")
 
 DEFAULT_TYPE_ALIASES = {
     "administrative": "system",
@@ -94,6 +98,8 @@ class AgentConfig:
     versioning_full_restore_requires_force: bool
     versioning_ignored_paths: list[str]
     versioning_protected_paths: list[str]
+    routing_mode: str
+    routing_fallback: str
 
 
 def load_config(args: argparse.Namespace) -> AgentConfig:
@@ -106,6 +112,13 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         system_dir=getattr(args, "system_dir", None),
         inbox_dir=getattr(args, "inbox_dir", None),
     )
+    routing = _mapping((load_bootstrap(vault_root) or {}).get("routing"))
+    routing_mode = str(routing.get("mode", "deterministic"))
+    if routing_mode not in ROUTING_MODES:
+        routing_mode = "deterministic"
+    routing_fallback = str(routing.get("fallback", "deterministic"))
+    if routing_fallback not in ROUTING_FALLBACKS:
+        routing_fallback = "deterministic"
     file_config = _load_config_file(config_path or vault_root / paths.agent_dir / "config.yaml")
     auto_process = _mapping(file_config.get("auto_process"))
     llm = _mapping(file_config.get("llm"))
@@ -189,7 +202,16 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         ),
         versioning_ignored_paths=_string_list(versioning.get("ignored_paths")),
         versioning_protected_paths=_string_list(versioning.get("protected_paths")),
+        routing_mode=routing_mode,
+        routing_fallback=routing_fallback,
     )
+
+
+def allowed_domains(config: AgentConfig) -> list[str]:
+    """Built-in allowed domains plus any user-defined routable domains for this vault."""
+    builtin = list(COMMON_PROPERTIES["domain"]["allowed"])
+    extra = [domain for domain in config.paths.domain_folders if domain not in builtin]
+    return builtin + extra
 
 
 def _load_config_file(path: Path) -> dict[str, Any]:

@@ -15,7 +15,7 @@ GENERATED_END = "<!-- pi-vault:generated:end -->"
 def dashboard_shell_contents(paths: VaultPaths) -> dict[str, str]:
     dashboards = paths.dashboards_dir
     content = paths.content_dirs
-    return {
+    contents = {
         (dashboards / "Home.md").as_posix(): _home_dashboard(paths),
         (dashboards / "Domains.md").as_posix(): _property_dashboard(
             "Domains", "Vault notes grouped by approved domain.", "domain"
@@ -52,6 +52,9 @@ def dashboard_shell_contents(paths: VaultPaths) -> dict[str, str]:
         (content["thoughts"] / "Thoughts.md").as_posix(): _thoughts_dashboard(paths),
         (content["sources"] / "Sources.md").as_posix(): _sources_dashboard(),
     }
+    contents.update(_custom_domain_dashboards(paths))
+    contents.update(_custom_folder_dashboards(paths))
+    return contents
 
 
 def _managed(body: str) -> str:
@@ -301,4 +304,46 @@ def _maintenance_dashboard(paths: VaultPaths) -> str:
 
 
 def dashboard_directories(paths: VaultPaths) -> tuple[Path, ...]:
-    return (paths.dashboards_dir, *paths.content_dirs.values())
+    return (
+        paths.dashboards_dir,
+        *paths.content_dirs.values(),
+        *paths.domain_folders.values(),
+        *(folder.path for folder in paths.custom_folders),
+    )
+
+
+def _custom_domain_dashboards(paths: VaultPaths) -> dict[str, str]:
+    """A domain dashboard inside each user-defined domain folder."""
+    contents: dict[str, str] = {}
+    for domain, folder in paths.domain_folders.items():
+        title = folder.name
+        contents[(folder / f"{title}.md").as_posix()] = _domain_dashboard(title, domain)
+    return contents
+
+
+def _folder_scoped_dashboard(title: str, description: str, root: str) -> str:
+    block = _base_block(
+        filters=['file.ext == "md"', f'file.path.startsWith("{root}")'],
+        views=[
+            {
+                "type": "table",
+                "name": title,
+                "sort": [("file.mtime", "DESC")],
+                "order": ["file.name", "type", "domain", "status", "file.mtime"],
+            }
+        ],
+    )
+    summary = description or f"Notes filed under {root}."
+    return _note(title, summary, f"## {title}\n\n{block}")
+
+
+def _custom_folder_dashboards(paths: VaultPaths) -> dict[str, str]:
+    """A folder-scoped dashboard inside each user-defined custom folder."""
+    contents: dict[str, str] = {}
+    for folder in paths.custom_folders:
+        title = folder.path.name
+        root = folder.path.as_posix()
+        contents[(folder.path / f"{title}.md").as_posix()] = _folder_scoped_dashboard(
+            title, folder.description, root
+        )
+    return contents
