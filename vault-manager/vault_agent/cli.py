@@ -55,6 +55,7 @@ from .review import load_proposals, run_review_proposals
 from .paths import render_bootstrap
 from .scanner import run_scan, scan_vault
 from .schema_conversation import run_schema_conversation
+from .schema_defaults import run_export_schema_defaults, run_import_schema_defaults
 from .status import run_status
 from .validation import run_validate
 from .version_cli import (
@@ -103,6 +104,8 @@ MAIN_COMMANDS = (
     "hermes-run",
     "obsidian-check",
     "schema-conversation",
+    "export-schema-defaults",
+    "import-schema-defaults",
     "version",
 )
 
@@ -140,6 +143,8 @@ MAIN_COMMAND_HELP = {
     "hermes-run": "Run scheduled maintenance across vaults in a Hermes directory.",
     "obsidian-check": "Validate frontmatter and embedded Bases for Obsidian compatibility.",
     "schema-conversation": "Turn a schema/onboarding transcript into reviewable proposals.",
+    "export-schema-defaults": "Export editable Markdown vault defaults.",
+    "import-schema-defaults": "Import editable Markdown defaults as pending proposals.",
     "version": "Inspect, snapshot, diff, and roll back Git-backed agent changes.",
 }
 
@@ -762,6 +767,25 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Include current controlled values in the generated summary.",
             )
             command_parser.set_defaults(handler=_handle_schema_conversation)
+        elif command == "export-schema-defaults":
+            command_parser.add_argument(
+                "--output",
+                required=True,
+                help="Markdown output path for the editable vault defaults contract.",
+            )
+            command_parser.set_defaults(handler=_handle_export_schema_defaults)
+        elif command == "import-schema-defaults":
+            command_parser.add_argument(
+                "--schema-file",
+                required=True,
+                help="Edited Markdown defaults file to convert into a pending proposal.",
+            )
+            command_parser.add_argument(
+                "--overwrite-proposal",
+                action="store_true",
+                help="Replace an existing vault-schema-defaults proposal.",
+            )
+            command_parser.set_defaults(handler=_handle_import_schema_defaults)
         elif command == "review-model-blocks":
             command_parser.add_argument(
                 "--approve-safe",
@@ -1376,6 +1400,30 @@ def _handle_schema_conversation(args: argparse.Namespace, config: AgentConfig) -
     return exit_code
 
 
+def _handle_export_schema_defaults(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    try:
+        exit_code, output = run_export_schema_defaults(config, output=args.output)
+    except ValueError as exc:
+        exit_code, output = 1, f"vault-agent export-schema-defaults failed\nError: {exc}"
+    print(output)
+    return exit_code
+
+
+def _handle_import_schema_defaults(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    try:
+        exit_code, output = run_import_schema_defaults(
+            config,
+            schema_file=args.schema_file,
+            overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
+        )
+    except ValueError as exc:
+        exit_code, output = 1, f"vault-agent import-schema-defaults failed\nError: {exc}"
+    print(output)
+    return exit_code
+
+
 def _handle_version_init(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
     exit_code, output = run_version_init(config)
@@ -1511,6 +1559,8 @@ def _should_version_command(args: argparse.Namespace, config: AgentConfig) -> bo
         "action-plan",
         "obsidian-check",
         "submit-artifact",
+        "export-schema-defaults",
+        "import-schema-defaults",
         "version",
         "memory",
     }:
@@ -1537,6 +1587,8 @@ def _expected_changed_files(args: argparse.Namespace, config: AgentConfig) -> in
         return max_notes + int(getattr(args, "max_proposal_operations", 10)) + 10
     if command == "schema-conversation":
         return 5
+    if command == "import-schema-defaults":
+        return 1
     if command == "propose-cleanup-queue":
         return 1 if (getattr(args, "max_items", 25) or 0) else 0
     if command == "review-proposals" and getattr(args, "apply_approved", False):

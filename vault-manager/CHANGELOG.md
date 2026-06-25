@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-06-25
+
+- Added editable Markdown vault defaults at `0.024 vault defaults.md`, covering sparse core properties, controlled values, folder structure, dashboard structure, dashboard regeneration rules, agent rules, and schema-change policy.
+- Added `vault-agent export-schema-defaults --output <path>` and `vault-agent import-schema-defaults --schema-file <path>` so onboarding can round-trip defaults through a human-edited Markdown contract and generate pending review proposals only.
+- Updated domain validation to honor additional domain values from vault-local `schema.json`, keeping imported domain additions consistent after approved schema proposals are applied.
+- Added regressions for default export content, untouched round-trip import, edited domain/folder proposals, malformed import failure with no proposal, applied domain validation, and the init/export/import/review/Obsidian-check smoke flow.
+- Verified with `python3 -m unittest discover -s tests` running 208 tests and `npm run check`.
+
 ## 2026-06-24
 
 - Replaced the new-vault defaults with `00 Inbox`, `01 Dashboards`, purpose-based content folders, and `99 System`; bootstrap/status output now includes validated dashboard and content paths.

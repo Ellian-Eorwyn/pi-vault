@@ -16,6 +16,7 @@ from .schema import (
     starter_templates,
     topic_hubs_markdown,
 )
+from .schema_defaults import vault_defaults_markdown
 
 # Bundled Dashboard++ CSS snippet (TfTHacker, https://tfthacker.com), extended with
 # callout and Bases card polish. Generated dashboards set `cssclasses: [dashboard]`,
@@ -535,6 +536,17 @@ Open full notes only after selecting likely candidates. Do not edit notes during
         "99 System/0.02 templates/0.021 property values.md": property_values_markdown(extra_domains),
         "99 System/0.02 templates/0.022 folder norms.md": folder_norms_markdown(),
         "99 System/0.02 templates/0.023 topic hubs.md": topic_hubs_markdown(),
+        "99 System/0.02 templates/0.024 vault defaults.md": vault_defaults_markdown(
+            paths=VaultPaths(
+                system_dir=system_dir,
+                inbox_dir=inbox_dir,
+                dashboards_dir=dashboards_dir,
+                content_dirs=dict(content_dirs or DEFAULT_CONTENT_DIRS),
+                domain_folders=dict(domain_folders or {}),
+                custom_folders=tuple(custom_folders or ()),
+            ),
+            extra_domains=extra_domains,
+        ),
         ".obsidian/snippets/dashboard.css": DASHBOARD_SNIPPET_CSS,
         ".obsidian/appearance.json": DASHBOARD_APPEARANCE_JSON,
     }

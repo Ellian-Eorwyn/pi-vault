@@ -128,6 +128,10 @@ FILE_SPECS = (
         "99 System/0.02 templates/0.022 folder norms.md",
         "human-readable folder norms",
     ),
+    (
+        "99 System/0.02 templates/0.024 vault defaults.md",
+        "editable exported vault schema defaults",
+    ),
 )
 
 def build_init_plan(config: AgentConfig) -> list[InitItem]:

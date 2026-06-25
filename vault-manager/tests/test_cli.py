@@ -123,6 +123,7 @@ class CliTests(unittest.TestCase):
             self.assertIn("Scheduled Maintenance Workflow", contract_text)
             self.assertTrue((root / "99 System" / "0.01 agent" / "schema.json").is_file())
             self.assertTrue((root / "99 System" / "0.02 templates" / "note-types" / "note.md").is_file())
+            self.assertTrue((root / "99 System" / "0.02 templates" / "0.024 vault defaults.md").is_file())
 
         self.assertEqual(exit_code, 0)
         self.assertIn("vault-agent init complete", output)
@@ -141,6 +142,9 @@ class CliTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             folder_norms = (
                 root / "99 System" / "0.02 templates" / "0.022 folder norms.md"
+            ).read_text(encoding="utf-8")
+            vault_defaults = (
+                root / "99 System" / "0.02 templates" / "0.024 vault defaults.md"
             ).read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 0)
@@ -194,6 +198,9 @@ class CliTests(unittest.TestCase):
         self.assertIn("- `imported`", property_values)
         self.assertIn("## parent", property_values)
         self.assertIn("cover: https://example.com/image.jpg", property_values)
+        self.assertIn("# Editable Vault Defaults", vault_defaults)
+        self.assertIn("core_property_order:", vault_defaults)
+        self.assertIn("dashboard_structure:", vault_defaults)
 
     def test_verbose_command_prints_config_diagnostics(self):
         with tempfile.TemporaryDirectory() as directory:

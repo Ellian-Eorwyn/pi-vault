@@ -8,6 +8,7 @@
 - [ ] If Obsidian is open on the Memex test vault, run `obsidian-check --live-obsidian`; otherwise keep using `obsidian-check --json` as the static acceptance gate.
 - [ ] Review `test_vaults/Memex/00 System/0.01 agent/review/proposals/base-hierarchy.json`; if the dashboard paths and generated coverage summaries look useful, approve and apply it in the ignored Memex test vault only.
 - [ ] Run a transcript-file schema onboarding rehearsal against a copied/test vault conversation file, then review the generated `schema-conversation-summary.md` and pending proposal JSON.
+- [ ] Run an edited `export-schema-defaults` / `import-schema-defaults` rehearsal against a copied/test vault, approve only the generated pending proposal, then write a fresh norms lock.
 - [ ] Add a small report comparison helper for Memex pilots so validation counts, stale tracked notes, blocked stages, and cleanup queue totals can be compared across runs.
 
 ## Then
@@ -18,6 +19,7 @@
 ## Completed
 
 - [x] Implement the dashboard-first default layout. Evidence: fresh vaults create `00 Inbox`, `01 Dashboards`, People/Organizations/Work/Administrative/Thoughts/Sources branches, and `99 System`; `propose-inbox-sort` and `propose-vault-layout` preserve review/versioning boundaries; clean external smoke validation reports 0 issues and Obsidian check reports 0 errors/0 warnings.
+- [x] Add editable Markdown schema-default export/import. Evidence: `vault-agent init` creates `0.024 vault defaults.md`; `export-schema-defaults` writes a portable Markdown contract; `import-schema-defaults` validates edited Markdown and writes only a pending `vault-schema-defaults.json` proposal; malformed imports write no proposal; verified with `python3 -m unittest discover -s tests` running 208 tests and `npm run check`.
 - [x] Streamline vault startup and onboarding. Evidence: normal launches continue the latest vault-local session unless explicitly overridden; first launch offers one default/custom folder choice, initializes and scans, then starts onboarding; `vault_status` reports schema lifecycle, prior scan, inbox deltas, issue groups, pending review, and prior reports; startup assessment remains read-only.
 - [x] Add bidirectional pi-forge/pi-vault MCP integration. Evidence: pi-vault exposes sequential forge client tools and `vault_submit_artifact`; `pi-vault-mcp` exposes only status and pending artifact submission; pi-forge includes the reverse client and `vault-handoff` skill; 172 Python tests and both full checks pass; isolated installed launchers completed live sequential local-model handoffs, pending-only verification, explicit temporary-vault review/apply, Git change-set inspection, and a clean static Obsidian check.
 

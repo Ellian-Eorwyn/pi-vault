@@ -134,6 +134,7 @@ The starter note types are project, source, person, organization, meeting, task,
 - [x] Keep note metadata sparse and avoid type-specific frontmatter properties. Evidence: default schema accepts only the sparse core properties, with controlled values for `type`, `status`, `domain`, `source_kind`, and `capture_type`.
 - [x] Add folder norms in machine-readable form. Evidence: `default_schema()` includes `folder_norms` derived from note type preferred folders.
 - [x] Mirror schema in human-readable Markdown files. Evidence: starter file rendering in `vault_agent/starter_files.py`.
+- [x] Add editable schema-default export/import. Evidence: `0.024 vault defaults.md`, `export-schema-defaults`, and `import-schema-defaults` provide a parseable Markdown contract that generates pending review proposals only.
 - [ ] Define deprecation fields for future schema changes.
 
 ### Acceptance Criteria
@@ -141,7 +142,7 @@ The starter note types are project, source, person, organization, meeting, task,
 - [x] Schema can be loaded and validated. Evidence: starter schema generation and validator tests use `vault_agent/schema.py`.
 - [x] Required properties and allowed values are explicit. Evidence: `schema.json` includes allowed values for `type`, `status`, `domain`, `source_kind`, and `capture_type`; all frontmatter keys remain optional.
 - [x] Schema version is recorded. Evidence: `SCHEMA_VERSION` is written into `schema.json`.
-- [ ] Human-readable schema files match machine-readable schema.
+- [x] Human-readable schema files match machine-readable schema. Evidence: schema-default export/import tests round-trip the generated Markdown and verify the imported proposal rewrites schema, property, folder, and defaults docs together.
 
 ### Files Likely Involved
 

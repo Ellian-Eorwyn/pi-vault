@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-06-24
+Last updated: 2026-06-25
 
 ## Current Focus
 
@@ -9,6 +9,7 @@ New vaults are dashboard-first: capture begins in `00 Inbox`, navigation begins 
 ## Completed
 
 - Implemented the complete dashboard-first default layout, configurable bootstrap paths, preserved-curation dashboard shells, domain hierarchy output under `01 Dashboards`, deterministic purpose-based routing, safe-only inbox sorting, and proposal-first existing-vault migration. Clean external initialization reports 0 validation issues and `obsidian-check --json` reports 0 errors/0 warnings.
+- Added editable Markdown vault defaults: initialized vaults now include `99 System/0.02 templates/0.024 vault defaults.md`, `export-schema-defaults` writes a portable schema/layout contract, and `import-schema-defaults` converts edited defaults into a pending `schema-change` proposal without mutating active schema files. Verified with 208 Python tests and `npm run check`.
 - Added streamlined startup/onboarding: automatic vault-local continuation with explicit flag precedence, bootstrap session persistence/migration, one-step default/custom folder selection, automatic read-only model briefs, expanded status/inbox deltas, and provisional/locked/drifted schema semantics.
 - Added deterministic bidirectional pi-forge/pi-vault MCP integration: sequential native forge tools, proposal-first `.md`/`.txt` artifact import with SHA-256 provenance, restricted `pi-vault-mcp`, reverse pi-forge client, and delegation/handoff skills. External submissions remain pending and never auto-approve or apply. Verified with 172 Python tests, focused MCP tests, both repositories' full checks, isolated installs, live sequential local-model calls in both directions, explicit review/apply in a temporary vault, Git change-set evidence, and `obsidian-check --json` with 0 errors and 0 warnings.
 - Fixed vault-manager package discovery so the isolated pi-vault installer excludes test and copied-vault directories and successfully builds the bundled Python wheel.
@@ -172,4 +173,4 @@ Publish the repository at its final Git URL, substitute that URL into the docume
 
 ## Notes for Next Session
 
-Start with `START_HERE.md`, then take the first unchecked task in `NEXT_ACTIONS.md`. The latest implementation added model-block review artifacts and `review-model-blocks`; use that before widening LLM batches. The latest Memex static Obsidian check had 0 errors and 22 existing wikilink warnings. The next live LLM pass should remain tiny and stage-scoped so the scheduler report, model-block review artifacts, version restore hints, and Obsidian validation can be reviewed together.
+Start with `START_HERE.md`, then take the first unchecked task in `NEXT_ACTIONS.md`. The latest implementation added editable schema-default Markdown export/import; use `export-schema-defaults`, edit the generated Markdown, then run `import-schema-defaults` and `review-proposals --dry-run` before approval. The latest Memex static Obsidian check had 0 errors and 22 existing wikilink warnings. The next live LLM pass should remain tiny and stage-scoped so the scheduler report, model-block review artifacts, version restore hints, and Obsidian validation can be reviewed together.

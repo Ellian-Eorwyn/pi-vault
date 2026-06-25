@@ -346,7 +346,10 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 			if (choice.startsWith("Suggest a folder layout")) {
 				const suggestResult = await runVaultAgent(["--vault-root", vaultRoot, "suggest-layout"], vaultRoot);
 				if (suggestResult.exitCode !== 0) {
-					ctx.ui.notify(suggestResult.stderr || suggestResult.stdout || "pi-vault suggest-layout failed.", "error");
+					ctx.ui.notify(
+						suggestResult.stderr || suggestResult.stdout || "pi-vault suggest-layout failed.",
+						"error",
+					);
 					return;
 				}
 				const next = await ctx.ui.select(

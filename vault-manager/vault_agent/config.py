@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -208,10 +209,23 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
 
 
 def allowed_domains(config: AgentConfig) -> list[str]:
-    """Built-in allowed domains plus any user-defined routable domains for this vault."""
+    """Built-in, schema-approved, and routable domain values for this vault."""
     builtin = list(COMMON_PROPERTIES["domain"]["allowed"])
-    extra = [domain for domain in config.paths.domain_folders if domain not in builtin]
-    return builtin + extra
+    values = list(builtin)
+    schema_path = config.vault_root / config.paths.agent_dir / "schema.json"
+    try:
+        loaded = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        loaded = {}
+    core = loaded.get("core_properties", {}) if isinstance(loaded, dict) else {}
+    domain = core.get("domain", {}) if isinstance(core, dict) else {}
+    for value in domain.get("allowed", []) if isinstance(domain, dict) else []:
+        if isinstance(value, str) and value not in values:
+            values.append(value)
+    for domain_value in config.paths.domain_folders:
+        if domain_value not in values:
+            values.append(domain_value)
+    return values
 
 
 def _load_config_file(path: Path) -> dict[str, Any]:
