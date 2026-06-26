@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-06-26: LLM-Led Note Refinement Is Guarded And Backend-Only
+
+Decision: pi-vault can refine a note's *body* — structure, coherence, skimmability,
+and Obsidian Markdown — through a new `refine-body` LLM stage, a `restructure_body`
+proposal operation (kind `note-refinement`), the `propose-folder-refinement` engine
+command, and the **vault-analysis** skill for chatting about a folder. Two hard rules
+bound it: (1) all model work runs through the user-configured pi/engine LLM backend
+only — never Claude, Codex, or any third party unless the user explicitly points the
+harness there; and (2) a deterministic word-preservation guard (`refine.meaning_preserved`)
+compares the prose word multiset before and after and rejects any rewrite that drops
+or substitutes the author's words, so wording and meaning never change. Frontmatter is
+preserved byte-for-byte, the guard runs at both generation and apply time, and every
+change stays proposal-gated, diffable, and git-backed.
+
+Rationale: the user wanted thorough, whole-note analysis that improves structure
+without rewriting content, while keeping pi-vault self-hosted and provider-agnostic.
+Body rewriting is the one place the model produces note text, so it gets an explicit
+deterministic safeguard plus mandatory human diff review rather than trust alone. The
+guard is a safeguard, not a proof; the review gate and git rollback cover the residual.
+
 ## 2026-06-20: pi Is The Primary Interface; The Python CLI Is The Engine
 
 Decision: pi-vault is a pi-first project. Users and agents interact with the vault by

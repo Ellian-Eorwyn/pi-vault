@@ -35,6 +35,7 @@ from .model_blocks import run_review_model_blocks
 from .norms import run_norms_lock
 from .obsidian_check import run_obsidian_check
 from .organize_pass import run_organize_vault_pass
+from .refine import run_propose_folder_refinement
 from .processor import PROCESSING_STAGES, run_process_inbox, run_process_next, run_process_vault
 from .proposals import (
     run_propose_base_hierarchy,
@@ -96,6 +97,7 @@ MAIN_COMMANDS = (
     "propose-base-hierarchy",
     "propose-action-queue",
     "propose-folder-organization",
+    "propose-folder-refinement",
     "review-proposals",
     "review-model-blocks",
     "submit-artifact",
@@ -135,6 +137,7 @@ MAIN_COMMAND_HELP = {
     "propose-base-hierarchy": "Generate hierarchical Bases dashboard proposals.",
     "propose-action-queue": "Generate a pending proposal for queued maintenance actions.",
     "propose-folder-organization": "Generate a pending proposal to organize one folder and dashboard.",
+    "propose-folder-refinement": "Generate note-body refinement proposals for a folder using the configured LLM, guarded so wording never changes.",
     "review-proposals": "Validate and apply approved deterministic proposal files.",
     "review-model-blocks": "Review blocked model stage proposals and convert safe ones.",
     "submit-artifact": "Create a validated pending proposal for an external text artifact.",
@@ -656,6 +659,18 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Maximum notes to consult the configured LLM for when --use-llm is set.",
             )
             command_parser.set_defaults(handler=_handle_propose_folder_organization)
+        elif command == "propose-folder-refinement":
+            command_parser.add_argument(
+                "--folder",
+                help="Folder path to refine, relative to the vault root.",
+            )
+            command_parser.add_argument(
+                "--note",
+                help="Single note path to refine, relative to the vault root.",
+            )
+            command_parser.add_argument("--max-notes", type=int)
+            command_parser.add_argument("--max-runtime-minutes", type=int)
+            command_parser.set_defaults(handler=_handle_propose_folder_refinement)
         elif command == "review-proposals":
             command_parser.add_argument(
                 "--mass-edit",
@@ -1348,6 +1363,31 @@ def _handle_propose_folder_organization(args: argparse.Namespace, config: AgentC
         remove_legacy=bool(args.remove_legacy),
         checkpoint=bool(args.checkpoint),
         resume=bool(args.resume),
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_propose_folder_refinement(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    if not args.folder and not args.note:
+        print(
+            "vault-agent propose-folder-refinement failed\n"
+            "Error: pass --folder or --note to choose what to refine."
+        )
+        return 1
+    proposal_provider = _proposal_provider_from_config(config)
+    exit_code, output = run_propose_folder_refinement(
+        config,
+        folder=args.folder,
+        note=args.note,
+        max_notes=args.max_notes if args.max_notes is not None else config.max_notes,
+        max_runtime_minutes=(
+            args.max_runtime_minutes
+            if args.max_runtime_minutes is not None
+            else config.max_runtime_minutes
+        ),
+        proposal_provider=proposal_provider,
     )
     print(output)
     return exit_code

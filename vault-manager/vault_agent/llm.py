@@ -436,6 +436,27 @@ Choose only from the approved hubs. Never invent a hub. Use the note's title, co
 folder location as signals. Do not propose type, status, domain, summary, headings, or body edits.
 
 {common}"""
+    if stage == "refine-body":
+        return f"""Improve only the structure and Obsidian Markdown formatting of this note body.
+
+Return JSON with exactly these keys:
+- body: the full reformatted note body as a single Markdown string, with no YAML frontmatter
+- confidence: number from 0 to 1
+- warnings: list of short strings for ambiguity or content you could not safely keep intact
+
+You may add or adjust headings, lists, bold/italic emphasis, callouts, blockquotes, tables,
+code fences, and whitespace so the note is easier to skim and better structured. You may add
+short structural heading labels.
+
+Hard rules, never break them:
+- Do not add, remove, reword, paraphrase, translate, correct, summarize, or reorder the meaning
+  of any sentence. Reuse the author's exact words.
+- Do not invent new claims, facts, links, or content. Do not fix spelling or grammar.
+- Markdown structural tokens and short heading labels are the only text you may add.
+- Preserve all existing wikilinks, URLs, and inline references verbatim.
+- Return the body only; do not include frontmatter, type, status, or other property edits.
+
+{common}"""
     if stage == "assign-folder":
         if allowed_folders:
             folder_lines = "\n".join(
@@ -597,6 +618,8 @@ def validate_stage_proposal(
         return _validate_property_values_stage(proposal, extra_domains)
     if stage == "summary":
         return _validate_summary_stage(proposal)
+    if stage == "refine-body":
+        return _validate_refine_body_stage(proposal)
     if stage == "assign-hub":
         return _validate_assign_hub_stage(proposal, allowed_hubs or [])
     if stage == "assign-folder":
@@ -735,6 +758,27 @@ def _validate_summary_stage(proposal: dict[str, Any]) -> StageValidation:
         not errors,
         {
             "summary": summary.strip() if isinstance(summary, str) else summary,
+            "confidence": confidence,
+            "warnings": proposal.get("warnings", []),
+        },
+        errors,
+    )
+
+
+def _validate_refine_body_stage(proposal: dict[str, Any]) -> StageValidation:
+    errors: list[str] = []
+    unknown = sorted(set(proposal) - {"body", "confidence", "warnings"})
+    if unknown:
+        errors.append("unknown proposal keys: " + ", ".join(unknown))
+    body = proposal.get("body")
+    if not isinstance(body, str) or not body.strip():
+        errors.append("body is required")
+    _validate_string_list(proposal, "warnings", errors)
+    confidence = _validate_confidence(proposal, errors)
+    return StageValidation(
+        not errors,
+        {
+            "body": body if isinstance(body, str) else "",
             "confidence": confidence,
             "warnings": proposal.get("warnings", []),
         },

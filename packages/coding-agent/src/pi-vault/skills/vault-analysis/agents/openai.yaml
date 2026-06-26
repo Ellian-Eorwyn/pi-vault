@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Analysis"
+  short_description: "Read a folder in full and refine it through guarded proposals"
+  default_prompt: "Analyze this folder under its locked norms and propose schema-compliant refinements."

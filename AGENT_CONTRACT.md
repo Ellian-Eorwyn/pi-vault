@@ -38,6 +38,7 @@ Each request routes to a pi skill, which drives the engine commands beneath it:
 - "Build an index for a type/project/topic" → **vault-schema** / **vault-organization**: create or update an `index` note using sparse properties, Bases, links, and retrieval files; do not add new YAML fields unless the user approves a schema change (engine: `propose-index`).
 - "Build a hierarchy of Bases" → **vault-organization** skill: generate pending domain and parent/project dashboards with embedded Bases; keep coverage prose in Markdown dashboard bodies, not frontmatter (engine: `propose-base-hierarchy`).
 - "Organize one project/folder" → **vault-organization** skill: generate a pending proposal with sparse metadata cleanup and a dashboard; keep mutation inside the target folder plus `99 System` review/log/backup files (engine: `propose-folder-organization`).
+- "Analyze / refine this folder; clean up the notes themselves" → **vault-analysis** skill: read whole notes in one folder for context, apply schema-compliant defaults and renames, and refine note bodies for structure, skimmability, and Obsidian Markdown without changing wording or meaning, all through reviewable proposals (engine: `organize-vault-pass --folder`, `propose-folder-refinement`).
 - "What can be done here?" → **vault-review** skill: list the machine-readable queue of transcript cleanup, people extraction, and categorization actions (engine: `action-plan --json`).
 - "Run queued maintenance" → **vault-inbox** / **vault-organization**: generate pending action proposals; for fuzzy categorization use `--use-llm --llm-limit 1 --max-items 1` first, then increase only after review (engine: `propose-action-queue`).
 - "Extract people" → **vault-organization** skill: keep sparse person frontmatter and put relationship details in the note body. Treat author and `Key thinkers` lists as referenced people; treat meeting, call, speaker, and direct interaction contexts as direct contacts with contact-detail scaffolding.
@@ -242,6 +243,26 @@ vault-agent --vault-root <vault> obsidian-check --json
 
 Use `obsidian-check --live-obsidian` when Obsidian is open and a visual/render smoke test is needed.
 
+## Model Provider Boundary
+
+pi-vault performs all model inference through the user-configured pi/engine LLM
+backend only — the provider set under `llm` in the vault-agent config (`provider`,
+`base_url`, `model`). It does not call Claude, Codex, Gemini, or any third-party model
+unless the user explicitly points the harness at that provider's API. Every
+LLM-authored change (classification, property values, summaries, and note-body
+refinement) is produced by that configured backend, returned as a validated
+structured proposal, and applied by deterministic code — never by an outside model
+and never as direct file edits.
+
+Note-body refinement (`propose-folder-refinement`, the **vault-analysis** skill) lets
+the configured backend reformat a note's body for structure and Obsidian Markdown.
+It must never change wording or meaning: a deterministic word-preservation guard
+compares the prose word multiset before and after and rejects any rewrite that drops
+or substitutes the author's words (allowed budgets are configurable under `refine` in
+the config). Frontmatter is preserved byte-for-byte. The guard runs both when the
+proposal is generated and again at apply time; blocked rewrites are reported with a
+word-diff rather than applied.
+
 ## Local LLM Monitoring
 
 When testing local LLM-backed behavior, use the configured vault provider and send one prompt at a time. Monitor `http://llms:8077/`: click Logs, select `Backend MoE`, click `Stream`, and watch for a single `slot id 0` task. Wait for `release` and `all slots are idle` before sending another prompt. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` performs that sequencing automatically inside one run. Vault-agent does not set a generation-token cap; leave generation limits to the configured backend.
@@ -257,3 +278,5 @@ If the model returns non-JSON or thinking text, the provider extracts the first 
 - Move or rename notes only through validated, explicitly approved `move_note` proposals. Scheduled auto-approval additionally requires `automation_safe: true`.
 - Preserve unknown legacy metadata unless explicitly configured otherwise.
 - LLM output must be validated structured proposals, not direct file edits.
+- Refine note bodies only through `note-refinement` proposals; the word-preservation guard must pass, frontmatter stays byte-identical, and wording and meaning are never changed.
+- Run all model inference through the configured pi/engine LLM backend; never route note content to a third-party model unless the user explicitly configured it.

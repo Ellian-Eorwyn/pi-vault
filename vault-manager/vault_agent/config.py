@@ -80,6 +80,8 @@ class AgentConfig:
     preserve_unknown_properties: bool
     review_on_warnings: bool
     warning_confidence_margin: float
+    refine_max_added_words: int
+    refine_allow_dropped_words: int
     versioning_enabled: bool
     versioning_auto_init: bool
     versioning_separate_git_dir: str | None
@@ -125,6 +127,7 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
     llm = _mapping(file_config.get("llm"))
     legacy = _mapping(file_config.get("legacy_metadata"))
     review = _mapping(file_config.get("review"))
+    refine = _mapping(file_config.get("refine"))
     versioning = _mapping(file_config.get("versioning"))
     max_input_tokens = int(llm.get("max_input_tokens", 64000))
     chars_per_token = int(llm.get("chars_per_token", 4))
@@ -166,6 +169,8 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         preserve_unknown_properties=bool(legacy.get("preserve_unknown_properties", True)),
         review_on_warnings=bool(review.get("model_warnings_block_writes", True)),
         warning_confidence_margin=float(review.get("warning_confidence_margin", 0.05)),
+        refine_max_added_words=int(refine.get("max_added_words", 12)),
+        refine_allow_dropped_words=int(refine.get("allow_dropped_words", 0)),
         versioning_enabled=bool(versioning.get("enabled", True)),
         versioning_auto_init=bool(versioning.get("auto_init", True)),
         versioning_separate_git_dir=_optional_string(versioning.get("separate_git_dir")),

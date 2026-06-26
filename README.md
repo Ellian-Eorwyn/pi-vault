@@ -1,6 +1,6 @@
 # pi-vault
 
-pi-vault is an Obsidian vault agent built on the [pi agent harness](https://github.com/earendil-works/pi). It combines pi's interactive model session with a deterministic Python engine for vault scanning, schema and norms management, reviewable proposals, bounded inbox maintenance, Obsidian validation, reports, and Git-backed rollback.
+pi-vault is an Obsidian vault agent built on the [pi agent harness](https://github.com/earendil-works/pi). It combines pi's interactive model session with a deterministic Python engine for vault scanning, schema and norms management, reviewable proposals, bounded inbox maintenance, whole-note analysis and guarded note-body refinement, Obsidian validation, reports, and Git-backed rollback.
 
 ## Install
 
@@ -112,7 +112,9 @@ Uninitialized noninteractive commands fail with an initialization instruction. S
 
 - Vault-specific policy stays in the vault.
 - Models produce structured proposals; deterministic code validates and applies them.
+- All model inference runs through the user-configured pi/engine LLM backend; pi-vault never calls Claude, Codex, or any third-party model unless you explicitly point the harness at that provider's API.
 - Moves and renames use `move_note` operations with collision checks, inbound wikilink updates, backups, and versioned rollback.
+- Note-body refinement reformats only: a deterministic word-preservation guard rejects any rewrite that drops or substitutes the author's words, frontmatter is preserved byte-for-byte, and wording and meaning never change.
 - Notes are never deleted automatically.
 - Broad work requires current locked norms and readiness checks.
 - Every write run records changed files and an undo command.

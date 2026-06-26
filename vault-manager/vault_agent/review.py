@@ -14,6 +14,7 @@ from .dashboard_layout import GENERATED_END, GENERATED_START
 from .frontmatter import parse_note, render_note
 from .logging_utils import append_log
 from .paths import REVIEW_DIR
+from .refine import meaning_preserved
 from .safety import atomic_write_text, backup_file, write_text_safely
 from .schema import COMMON_PROPERTIES, CORE_PROPERTY_ORDER, NOTE_TYPES, ordered_properties_for
 from .templates import append_missing_headings
@@ -33,6 +34,7 @@ ALLOWED_KINDS = {
     "base-hierarchy",
     "inbox-sort",
     "vault-layout",
+    "note-refinement",
 }
 ALLOWED_WRITE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".base"}
 
@@ -337,6 +339,8 @@ def apply_proposal(config: AgentConfig, proposal: Proposal) -> list[str]:
             errors.extend(_apply_create_directory(config, operation))
         elif op == "move_note":
             errors.extend(_apply_move_note(config, operation))
+        elif op == "restructure_body":
+            errors.extend(_apply_restructure_body(config, operation))
         else:
             errors.append(f"operation {index} has unsupported op `{op}`")
     return errors
@@ -361,7 +365,7 @@ def _validate_proposal(proposal: Proposal) -> list[str]:
         errors.append("status must be pending, approved, rejected, or applied")
     if data.get("kind") not in ALLOWED_KINDS:
         errors.append(
-            "kind must be action-queue, artifact-import, schema-change, index-note, template-change, cleanup, folder-organization, base-hierarchy, inbox-sort, or vault-layout"
+            "kind must be action-queue, artifact-import, schema-change, index-note, template-change, cleanup, folder-organization, base-hierarchy, inbox-sort, vault-layout, or note-refinement"
         )
     if data.get("kind") == "artifact-import":
         errors.extend(_validate_artifact_provenance(data.get("provenance")))
@@ -384,6 +388,8 @@ def _validate_proposal(proposal: Proposal) -> list[str]:
             errors.extend(_validate_create_directory(operation, index))
         elif op == "move_note":
             errors.extend(_validate_move_note(operation, index))
+        elif op == "restructure_body":
+            errors.extend(_validate_restructure_body(operation, index))
         else:
             errors.append(f"operation {index} has unsupported op `{op}`")
     return errors
@@ -508,6 +514,23 @@ def _validate_move_note(operation: dict[str, Any], index: int) -> list[str]:
     return errors
 
 
+def _validate_restructure_body(operation: dict[str, Any], index: int) -> list[str]:
+    errors: list[str] = []
+    path = operation.get("path")
+    if not isinstance(path, str) or not path.strip():
+        errors.append(f"operation {index} path is required")
+    else:
+        path_error = _validate_relative_path(path, index)
+        if path_error:
+            errors.append(path_error)
+        elif Path(path).suffix != ".md":
+            errors.append(f"operation {index} restructure_body path must be Markdown")
+    body = operation.get("body")
+    if not isinstance(body, str) or not body.strip():
+        errors.append(f"operation {index} body must be a non-empty string")
+    return errors
+
+
 def _apply_write_file(config: AgentConfig, operation: dict[str, Any]) -> list[str]:
     try:
         path = _resolve_vault_path(config.vault_root, operation["path"])
@@ -602,6 +625,43 @@ def _apply_organize_note(config: AgentConfig, operation: dict[str, Any]) -> list
     return []
 
 
+def _apply_restructure_body(config: AgentConfig, operation: dict[str, Any]) -> list[str]:
+    try:
+        path = _resolve_vault_path(config.vault_root, operation["path"])
+    except ValueError as exc:
+        return [str(exc)]
+    relative = path.relative_to(config.vault_root)
+    if relative.is_relative_to(config.paths.system_dir):
+        return [f"restructure_body cannot target {config.paths.system_dir}"]
+    if not path.exists():
+        return [f"target note does not exist: {operation['path']}"]
+    text = path.read_text(encoding="utf-8")
+    parsed = parse_note(text)
+    if parsed.error:
+        return [parsed.error]
+    new_body = operation["body"]
+    # Final, apply-time meaning gate (defense in depth): never let a body rewrite
+    # drop or substitute the author's words, even if the proposal was hand-edited.
+    ok, guard = meaning_preserved(
+        parsed.body,
+        new_body,
+        max_added=config.refine_max_added_words,
+        allow_dropped=config.refine_allow_dropped_words,
+    )
+    if not ok:
+        detail = json.dumps({"dropped": guard["dropped"], "added": guard["added"]}, sort_keys=True)
+        return [f"restructure_body would change wording for {operation['path']}: {detail}"]
+    # Preserve the existing frontmatter block byte-for-byte; only the body changes.
+    prefix = text[: len(text) - len(parsed.body)]
+    rendered = prefix + new_body
+    if not rendered.endswith("\n"):
+        rendered += "\n"
+    backup_root = config.vault_root / config.paths.agent_dir / "backups"
+    if rendered != text:
+        write_text_safely(path, rendered, backup_root=backup_root)
+    return []
+
+
 def _apply_summary(body: str, summary: str) -> str:
     lines = body.splitlines()
     for index, line in enumerate(lines):
@@ -689,7 +749,7 @@ def _preflight_operations(
     write_targets: set[Path] = set()
     for index, operation in enumerate(operations, start=1):
         op = operation.get("op")
-        if op in {"write_file", "update_frontmatter", "organize_note"}:
+        if op in {"write_file", "update_frontmatter", "organize_note", "restructure_body"}:
             relative = Path(operation["path"])
             target = config.vault_root / relative
             allowed_error = _write_allowed(config, relative)

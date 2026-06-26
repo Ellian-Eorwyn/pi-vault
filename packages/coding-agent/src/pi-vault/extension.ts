@@ -179,12 +179,15 @@ const manageTool = defineTool({
 			Type.Literal("obsidian-check"),
 			Type.Literal("rebuild-retrieval"),
 			Type.Literal("write-norms-lock"),
+			Type.Literal("refine"),
 			Type.Literal("undo"),
 		]),
 		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
 		useLlm: Type.Optional(Type.Boolean()),
 		applySafe: Type.Optional(Type.Boolean()),
 		dryRun: Type.Optional(Type.Boolean()),
+		folder: Type.Optional(Type.String()),
+		note: Type.Optional(Type.String()),
 		runId: Type.Optional(Type.String()),
 	}),
 	async execute(_toolCallId, params, signal, _onUpdate, ctx) {
@@ -225,6 +228,20 @@ const manageTool = defineTool({
 				break;
 			case "write-norms-lock":
 				args.push("norms-lock", "--write");
+				break;
+			case "refine":
+				if (!params.folder && !params.note) {
+					return {
+						content: [{ type: "text", text: "folder or note is required for refine." }],
+						details: { exitCode: 1, action: params.action },
+						isError: true,
+					};
+				}
+				args.push("propose-folder-refinement");
+				if (params.folder) args.push("--folder", params.folder);
+				if (params.note) args.push("--note", params.note);
+				if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+				if (params.dryRun !== false) args.push("--dry-run");
 				break;
 			case "undo":
 				if (!params.runId) {
