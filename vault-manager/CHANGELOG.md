@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-06-26
+
+- Added a shared embedding foundation (`embeddings.py`, `embedding_index.py`) using the OpenAI-compatible `/v1/embeddings` endpoint (default `http://llms:8005`, model `embed`), with no new runtime dependency: requests use `urllib` and similarity is pure-Python cosine. The index is a rebuildable JSON cache keyed by note path and invalidated by the scanner content hash, written under `retrieval/embedding/index.json` and git-ignored.
+- Added an `embeddings:` config block (`enabled` default false, `top_k`, `min_similarity`, `excerpt_chars`); deterministic runs are unaffected when disabled.
+- Added `embed-index` to build/refresh the index; `rebuild-retrieval` also refreshes it when embeddings are enabled.
+- Added `propose-related-links`: embedding nearest-neighbor discovery that emits an append-only `related-links` proposal of `update_frontmatter` operations, applied only through `review-proposals` (never removes existing links).
+- Added `vault-search`: read-only semantic search over the embedding index returning ranked path, title, score, and snippet, with `--json`.
+- Computed similarity in a mean-centered space (corpus mean stored in the index and subtracted before ranking) to counter Qwen3's high baseline cosine; on the Memex test vault this roughly doubled neighbor-vs-random separation and demoted spurious cross-topic matches. Centering falls back to raw cosine below ~25 notes. Calibrated defaults to `min_similarity: 0.55` (centered) and `excerpt_chars: 6000`.
+- Made the embedding client resilient to per-input token caps: it splits oversized batches to isolate the offending input and truncates it by the server-reported token ratio before retrying, instead of failing a whole-vault embed.
+- Documented the embeddings approach and phased roadmap in `docs/architecture/embeddings-roadmap.md` and `DECISIONS.md`.
+- Added unit tests for the embedding client (mocked transport), cosine/ranking, incremental index rebuild, the related-links proposal shape, and search ranking.
+
 ## 2026-06-25
 
 - Added editable Markdown vault defaults at `0.024 vault defaults.md`, covering sparse core properties, controlled values, folder structure, dashboard structure, dashboard regeneration rules, agent rules, and schema-change policy.

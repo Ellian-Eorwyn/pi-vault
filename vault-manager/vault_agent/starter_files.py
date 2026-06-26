@@ -172,6 +172,18 @@ llm:
   chars_per_token: 4
   embedding_base_url: http://llms:8005
   embedding_model: embed
+embeddings:
+  # Optional embedding-backed retrieval (related-note discovery, semantic search).
+  # Disabled by default; deterministic runs are unaffected when off.
+  enabled: false
+  top_k: 5
+  # Similarity is computed in a mean-centered space (the corpus mean is removed
+  # to counter Qwen3's high baseline cosine), so 0.55 is a meaningful floor.
+  # Lower it to surface more (noisier) links, raise it for precision.
+  min_similarity: 0.55
+  # Note body chars embedded per note. Each input must fit the embedding server's
+  # physical batch (ubatch) token cap; the client truncates oversized inputs.
+  excerpt_chars: 6000
 review:
   model_warnings_block_writes: true
   warning_confidence_margin: 0.05

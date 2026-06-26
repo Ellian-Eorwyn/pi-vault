@@ -17,6 +17,10 @@ from .config import AgentConfig, load_config
 from .action_queue import run_action_plan, run_propose_action_queue
 from .artifact_import import ArtifactImportError, submit_artifact
 from .autonomous import run_autonomous
+from .embedding_index import build_or_refresh_index
+from .embeddings import embedding_client_from_config
+from .related_links import run_propose_related_links
+from .search import run_search
 from .execution import MassEditBlocked, execute_versioned
 from .hermes import run_hermes
 from .init import apply_init, render_init_dry_run
@@ -106,6 +110,9 @@ MAIN_COMMANDS = (
     "review-model-blocks",
     "submit-artifact",
     "rebuild-retrieval",
+    "embed-index",
+    "propose-related-links",
+    "vault-search",
     "status",
     "hermes-run",
     "obsidian-check",
@@ -148,6 +155,9 @@ MAIN_COMMAND_HELP = {
     "review-model-blocks": "Review blocked model stage proposals and convert safe ones.",
     "submit-artifact": "Create a validated pending proposal for an external text artifact.",
     "rebuild-retrieval": "Regenerate deterministic retrieval files.",
+    "embed-index": "Build or refresh the embedding index over vault notes.",
+    "propose-related-links": "Propose embedding-discovered related links as a pending proposal.",
+    "vault-search": "Semantic search over the embedding index (read-only).",
     "status": "Show vault-agent health and inbox status.",
     "hermes-run": "Run scheduled maintenance across vaults in a Hermes directory.",
     "obsidian-check": "Validate frontmatter and embedded Bases for Obsidian compatibility.",
@@ -757,6 +767,39 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.set_defaults(handler=_handle_submit_artifact)
         elif command == "rebuild-retrieval":
             command_parser.set_defaults(handler=_handle_rebuild_retrieval)
+        elif command == "embed-index":
+            command_parser.set_defaults(handler=_handle_embed_index)
+        elif command == "propose-related-links":
+            command_parser.add_argument(
+                "--max-notes",
+                type=int,
+                help="Maximum notes to add related links to in one run.",
+            )
+            command_parser.add_argument(
+                "--top-k",
+                type=int,
+                help="Nearest neighbors to consider per note. Defaults to the configured value.",
+            )
+            command_parser.add_argument(
+                "--min-similarity",
+                type=float,
+                help="Minimum cosine similarity for a suggested link. Defaults to the configured value.",
+            )
+            command_parser.set_defaults(handler=_handle_propose_related_links)
+        elif command == "vault-search":
+            command_parser.add_argument("query", help="Free-text query to rank notes against.")
+            command_parser.add_argument(
+                "--top-k",
+                type=int,
+                help="Number of results to return. Defaults to the configured value.",
+            )
+            command_parser.add_argument(
+                "--json",
+                action="store_true",
+                dest="json_output",
+                help="Render machine-readable search results.",
+            )
+            command_parser.set_defaults(handler=_handle_vault_search)
         elif command == "status":
             command_parser.add_argument(
                 "--json",
@@ -1085,6 +1128,70 @@ def _handle_process_vault(args: argparse.Namespace, config: AgentConfig) -> int:
 def _handle_rebuild_retrieval(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
     exit_code, output = run_rebuild_retrieval(config)
+    print(output)
+    if config.embeddings_enabled:
+        client = _embedding_client_from_config(config)
+        if client is not None:
+            try:
+                result = build_or_refresh_index(config, client, dry_run=config.dry_run)
+                print(
+                    "Embedding index "
+                    + ("preview" if config.dry_run else "refreshed")
+                    + f": {result.total} note(s), embedded {result.embedded}, "
+                    + f"reused {result.reused}, removed {result.removed}."
+                )
+            except ValueError as exc:
+                print(f"Embedding index refresh skipped: {exc}")
+    return exit_code
+
+
+def _handle_embed_index(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    client = _embedding_client_from_config(config)
+    if client is None:
+        print(
+            "vault-agent embed-index failed\n"
+            "Error: embeddings are disabled. Set `embeddings.enabled: true` and an "
+            "`embedding_base_url` in the config."
+        )
+        return 1
+    try:
+        result = build_or_refresh_index(config, client, dry_run=config.dry_run)
+    except ValueError as exc:
+        print(f"vault-agent embed-index failed\nError: {exc}")
+        return 1
+    print(
+        "vault-agent embed-index " + ("dry run" if config.dry_run else "complete") + "\n"
+        f"Notes indexed: {result.total} (embedded {result.embedded}, "
+        f"reused {result.reused}, removed {result.removed})."
+    )
+    return 0
+
+
+def _handle_propose_related_links(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    client = _embedding_client_from_config(config)
+    exit_code, output = run_propose_related_links(
+        config,
+        max_notes=getattr(args, "max_notes", None),
+        top_k=getattr(args, "top_k", None),
+        min_similarity=getattr(args, "min_similarity", None),
+        client=client,
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_vault_search(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    client = _embedding_client_from_config(config)
+    exit_code, output = run_search(
+        config,
+        query_text=getattr(args, "query", ""),
+        top_k=getattr(args, "top_k", None),
+        json_output=bool(getattr(args, "json_output", False)),
+        client=client,
+    )
     print(output)
     return exit_code
 
@@ -1615,6 +1722,10 @@ def _proposal_provider_from_args(args: argparse.Namespace):
 
 def _proposal_provider_from_config(config: AgentConfig):
     return provider_from_config(config)
+
+
+def _embedding_client_from_config(config: AgentConfig):
+    return embedding_client_from_config(config)
 
 
 def _handle_memory_placeholder(args: argparse.Namespace, config: AgentConfig) -> int:

@@ -94,7 +94,10 @@ For model-backed test batches, pass one explicit semantic stage such as `--stage
 - `process-next`: processes one eligible inbox note stage.
 - `process-inbox`: processes a bounded inbox batch.
 - `process-vault`: processes a bounded non-system, non-inbox vault batch.
-- `rebuild-retrieval`: regenerates vault map, catalog, property index, and summary brief.
+- `rebuild-retrieval`: regenerates vault map, catalog, property index, and summary brief; also refreshes the embedding index when `embeddings.enabled` is set.
+- `embed-index`: builds or incrementally refreshes the rebuildable embedding index over vault notes (requires `embeddings.enabled` and an `embedding_base_url`).
+- `propose-related-links`: generates an append-only pending proposal that adds embedding-discovered `related` wikilinks to a bounded batch of notes; applied only through `review-proposals`.
+- `vault-search`: read-only semantic search over the embedding index, returning ranked path, title, score, and snippet (`--json` for machine-readable output).
 - `status`: reports agent health, queue status, lock state, stale/blocked tracked notes, latest organization report, and whether the vault is ready for an organization pass.
 - `hermes-run`: runs bounded maintenance across vault directories in a Hermes root.
 - `schema-conversation`: turns an explicit schema/onboarding transcript into pending schema/index/template proposals and a review summary.
@@ -208,6 +211,27 @@ llm:
 ```
 
 Without an enabled provider, deterministic stages such as `frontmatter-shape`, `template-body`, scan, validate, reconcile, and retrieval rebuild still work. Type classification, property-value filling, and summary writing require a provider or a `--proposal-file`.
+
+## Embeddings
+
+Embedding-backed retrieval is optional and disabled by default. It uses an OpenAI-compatible `/v1/embeddings` endpoint for whole-vault similarity tasks (related-note discovery and semantic search). The index is a rebuildable JSON cache keyed by note path and invalidated by the scanner content hash; it is git-ignored. There is no new runtime dependency: requests use `urllib` and similarity is pure-Python cosine.
+
+```yaml
+llm:
+  embedding_base_url: http://llms:8005
+  embedding_model: embed
+embeddings:
+  enabled: true
+  top_k: 5
+  min_similarity: 0.55
+  excerpt_chars: 6000
+```
+
+With embeddings enabled, build the index with `embed-index` (or rely on `rebuild-retrieval`), then use `propose-related-links` for append-only related-link proposals and `vault-search "<query>"` for read-only semantic search. See `docs/architecture/embeddings-roadmap.md` for the phased plan (near-duplicate detection, routing pre-ranking, content clustering).
+
+The embedding server must allow each input's full token count in one physical batch. For an OpenAI-compatible llama.cpp server, set the batch sizes to at least the largest excerpt you embed (e.g. `-ub 2048 -b 2048`); the client truncates any input the server still rejects, so it degrades gracefully on smaller limits.
+
+Similarity is computed in a **mean-centered** space: Qwen3-Embedding has a high raw baseline cosine (random note pairs ~0.59, real neighbors ~0.89), so the engine subtracts the corpus mean embedding before ranking. On a ~1100-note vault this roughly doubled neighbor-vs-random separation (0.30 to 0.75) and pushed spurious cross-topic matches out of the top results. In that centered space `min_similarity: 0.55` is a good default; raise it for precision or lower it to surface more links. Centering needs a minimum corpus size (about 25 notes); smaller vaults fall back to raw cosine automatically.
 
 When testing local LLM-backed features, monitor `http://llms:8077/`: open Logs, select `Backend MoE`, click `Stream`, and confirm one `slot id 0` task completes with `release` and `all slots are idle` before the next request starts. Keep prompts serialized and stage-specific. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` automatically prompts the next queued note after the previous note stage returns and is validated. `max_input_tokens` is enforced through an estimated character budget of `max_input_tokens * chars_per_token`; set `max_input_chars` only for an explicit legacy override. Vault-agent does not set a generation-token cap; leave generation limits to the configured backend. If the model returns non-JSON or thinking text, record the failure, fall back deterministically only where safe, and improve parser/prompt tests before widening the batch.
 

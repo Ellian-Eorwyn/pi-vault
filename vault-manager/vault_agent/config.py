@@ -71,6 +71,10 @@ class AgentConfig:
     llm_max_input_chars: int
     embedding_base_url: str | None
     embedding_model: str | None
+    embeddings_enabled: bool
+    embeddings_top_k: int
+    embeddings_min_similarity: float
+    embeddings_excerpt_chars: int
     max_notes: int
     max_runtime_minutes: int
     legacy_type_aliases: dict[str, str]
@@ -129,6 +133,7 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
     review = _mapping(file_config.get("review"))
     refine = _mapping(file_config.get("refine"))
     versioning = _mapping(file_config.get("versioning"))
+    embeddings = _mapping(file_config.get("embeddings"))
     max_input_tokens = int(llm.get("max_input_tokens", 64000))
     chars_per_token = int(llm.get("chars_per_token", 4))
     max_input_chars = int(
@@ -152,6 +157,10 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         llm_max_input_chars=max_input_chars,
         embedding_base_url=_optional_string(llm.get("embedding_base_url")),
         embedding_model=_optional_string(llm.get("embedding_model", "embed")),
+        embeddings_enabled=bool(embeddings.get("enabled", False)),
+        embeddings_top_k=int(embeddings.get("top_k", 5)),
+        embeddings_min_similarity=float(embeddings.get("min_similarity", 0.55)),
+        embeddings_excerpt_chars=int(embeddings.get("excerpt_chars", 6000)),
         max_notes=int(auto_process.get("max_notes", 5)),
         max_runtime_minutes=int(auto_process.get("max_runtime_minutes", 10)),
         legacy_type_aliases=_string_mapping(

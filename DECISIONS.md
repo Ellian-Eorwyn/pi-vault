@@ -444,3 +444,17 @@ Implications:
 - Person notes use Contacts or Authors as `parent`; Contacts wins physical placement for dual-role people and Authors remains a related view.
 - Safe unattended moves require a current norms lock plus completed warning-free model stages above the confidence threshold.
 - Ambiguous routes, missing metadata, collisions, and existing-vault restructuring remain proposal-first.
+
+## 2026-06-26: Embeddings Power Retrieval And Ranking, Never Authority
+
+Decision: Embeddings (Qwen3-Embedding-0.6B at the configured `/v1/embeddings` endpoint) are used only for whole-vault similarity tasks: related-note discovery and semantic search now, with near-duplicate detection, inbox-routing pre-ranking, and content clustering as a phased roadmap. They are disabled by default and never decide constrained-vocabulary values or merge identities on their own.
+
+Reason: The single-note LLM stages cannot see the rest of the vault, so they cannot populate real cross-note `related` links or rank notes by meaning. Similarity is exactly what embeddings are good at, while type/property classification and people identity remain reasoning or rule problems where embeddings add risk, not capability.
+
+Implications:
+
+- The embedding index is derived state: a rebuildable JSON cache keyed by note path and invalidated by the scanner's content hash, stored under the retrieval folder and git-ignored (matching the reserved `retrieval/embedding*/`, `retrieval/vector*/`, and `*.sqlite` patterns).
+- Similarity is computed in a mean-centered space (the corpus mean embedding is stored in the index and subtracted before ranking) to counter the model's high baseline cosine; centering activates only above a minimum corpus size and falls back to raw cosine for tiny vaults. Defaults were calibrated against the Memex test vault.
+- No new runtime dependency: requests use `urllib` and similarity is pure-Python cosine; no vector database or ANN library at vault scale.
+- `propose-related-links` is append-only and proposal-first; it never removes links and applies only through `review-proposals`. `vault-search` is read-only.
+- The full plan and deferred phases live in `docs/architecture/embeddings-roadmap.md`.
