@@ -12,7 +12,12 @@ from .legacy import mapped_controlled_value, mapped_property_for
 from .logging_utils import append_log
 from .paths import review_path
 from .scanner import scan_vault
-from .schema import COMMON_PROPERTIES, NOTE_TYPES
+from .schema import (
+    COMMON_PROPERTIES,
+    allowed_controlled_values_from_schema,
+    allowed_note_types,
+    load_schema,
+)
 from .safety import write_text_safely
 
 
@@ -149,8 +154,15 @@ def _validate_allowed(
     allowed = COMMON_PROPERTIES[key].get("allowed")
     if not allowed:
         return
-    if key == "domain" and config is not None:
-        allowed = allowed_domains(config)
+    if config is not None:
+        if key == "domain":
+            allowed = allowed_domains(config)
+        elif key == "type":
+            allowed = [""] + sorted(allowed_note_types(config.vault_root))
+        elif key in ("source_kind", "capture_type"):
+            allowed = allowed_controlled_values_from_schema(
+                load_schema(config.vault_root), key
+            )
     if value not in allowed:
         mapped = mapped_controlled_value(key, value, config) if config else None
         if mapped and mapped in allowed:

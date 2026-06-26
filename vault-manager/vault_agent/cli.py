@@ -35,6 +35,7 @@ from .model_blocks import run_review_model_blocks
 from .norms import run_norms_lock
 from .obsidian_check import run_obsidian_check
 from .organize_pass import run_organize_vault_pass
+from .people import run_propose_people
 from .refine import run_propose_folder_refinement
 from .processor import PROCESSING_STAGES, run_process_inbox, run_process_next, run_process_vault
 from .proposals import (
@@ -44,6 +45,7 @@ from .proposals import (
     run_propose_folder_organization,
     run_propose_index,
     run_propose_inbox_sort,
+    run_propose_note_type,
     run_propose_property,
     run_propose_template,
     run_propose_topic_hubs,
@@ -88,6 +90,7 @@ MAIN_COMMANDS = (
     "action-plan",
     "propose-index",
     "propose-property",
+    "propose-note-type",
     "propose-template",
     "propose-topic-hubs",
     "propose-cleanup",
@@ -98,6 +101,7 @@ MAIN_COMMANDS = (
     "propose-action-queue",
     "propose-folder-organization",
     "propose-folder-refinement",
+    "propose-people",
     "review-proposals",
     "review-model-blocks",
     "submit-artifact",
@@ -128,6 +132,7 @@ MAIN_COMMAND_HELP = {
     "action-plan": "Report proposal-first maintenance actions available for this vault.",
     "propose-index": "Generate a pending proposal for an index note.",
     "propose-property": "Generate a pending proposal for a canonical property value.",
+    "propose-note-type": "Generate a pending schema-change proposal that adds a new note type, its template, and folder.",
     "propose-template": "Generate a pending proposal for a note-type template refresh.",
     "propose-topic-hubs": "Surface candidate topic hubs from vault notes into the approved registry.",
     "propose-cleanup": "Generate a pending proposal for one note frontmatter cleanup.",
@@ -138,6 +143,7 @@ MAIN_COMMAND_HELP = {
     "propose-action-queue": "Generate a pending proposal for queued maintenance actions.",
     "propose-folder-organization": "Generate a pending proposal to organize one folder and dashboard.",
     "propose-folder-refinement": "Generate note-body refinement proposals for a folder using the configured LLM, guarded so wording never changes.",
+    "propose-people": "Extract people from notes into deduplicated Contacts/Authors person notes with backlinks (LLM-classified).",
     "review-proposals": "Validate and apply approved deterministic proposal files.",
     "review-model-blocks": "Review blocked model stage proposals and convert safe ones.",
     "submit-artifact": "Create a validated pending proposal for an external text artifact.",
@@ -438,6 +444,27 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Generate proposal operations with if_exists fail.",
             )
             command_parser.set_defaults(handler=_handle_propose_property)
+        elif command == "propose-note-type":
+            command_parser.add_argument(
+                "--name", required=True, help="New note type slug, e.g. recipe."
+            )
+            command_parser.add_argument(
+                "--description", required=True, help="What this note type captures."
+            )
+            command_parser.add_argument(
+                "--folder", required=True, help="Preferred folder, relative to the vault root."
+            )
+            command_parser.add_argument("--title", help="Optional human title for the template.")
+            command_parser.add_argument(
+                "--template-file",
+                help="Optional path to a Markdown body for the note-type template.",
+            )
+            command_parser.add_argument(
+                "--overwrite",
+                action="store_true",
+                help="Overwrite an existing template file with the same name.",
+            )
+            command_parser.set_defaults(handler=_handle_propose_note_type)
         elif command == "propose-template":
             command_parser.add_argument(
                 "--note-type",
@@ -671,6 +698,17 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.add_argument("--max-notes", type=int)
             command_parser.add_argument("--max-runtime-minutes", type=int)
             command_parser.set_defaults(handler=_handle_propose_folder_refinement)
+        elif command == "propose-people":
+            command_parser.add_argument(
+                "--folder",
+                help="Limit mention scanning to this folder, relative to the vault root.",
+            )
+            command_parser.add_argument(
+                "--max-people",
+                type=int,
+                help="Maximum new person notes to propose in one run.",
+            )
+            command_parser.set_defaults(handler=_handle_propose_people)
         elif command == "review-proposals":
             command_parser.add_argument(
                 "--mass-edit",
@@ -1219,6 +1257,33 @@ def _handle_propose_property(args: argparse.Namespace, config: AgentConfig) -> i
     return exit_code
 
 
+def _handle_propose_note_type(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    template_body: str | None = None
+    if getattr(args, "template_file", None):
+        template_path = Path(args.template_file).expanduser()
+        if not template_path.is_absolute():
+            template_path = config.vault_root / template_path
+        if not template_path.is_file():
+            print(
+                "vault-agent propose-note-type failed\n"
+                f"Error: template file not found: {args.template_file}"
+            )
+            return 1
+        template_body = template_path.read_text(encoding="utf-8")
+    exit_code, output = run_propose_note_type(
+        config,
+        name=args.name,
+        description=args.description,
+        folder=args.folder,
+        title=args.title,
+        template_body=template_body,
+        overwrite=bool(args.overwrite),
+    )
+    print(output)
+    return exit_code
+
+
 def _handle_propose_template(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
     exit_code, output = run_propose_template(
@@ -1387,6 +1452,19 @@ def _handle_propose_folder_refinement(args: argparse.Namespace, config: AgentCon
             if args.max_runtime_minutes is not None
             else config.max_runtime_minutes
         ),
+        proposal_provider=proposal_provider,
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_propose_people(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    proposal_provider = _proposal_provider_from_config(config)
+    exit_code, output = run_propose_people(
+        config,
+        folder=args.folder,
+        max_people=args.max_people,
         proposal_provider=proposal_provider,
     )
     print(output)

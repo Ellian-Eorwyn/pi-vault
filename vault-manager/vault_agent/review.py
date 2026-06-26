@@ -16,7 +16,13 @@ from .logging_utils import append_log
 from .paths import REVIEW_DIR
 from .refine import meaning_preserved
 from .safety import atomic_write_text, backup_file, write_text_safely
-from .schema import COMMON_PROPERTIES, CORE_PROPERTY_ORDER, NOTE_TYPES, ordered_properties_for
+from .schema import (
+    COMMON_PROPERTIES,
+    CORE_PROPERTY_ORDER,
+    NOTE_TYPES,
+    allowed_note_types,
+    ordered_properties_for,
+)
 from .templates import append_missing_headings
 
 
@@ -35,6 +41,7 @@ ALLOWED_KINDS = {
     "inbox-sort",
     "vault-layout",
     "note-refinement",
+    "people-extraction",
 }
 ALLOWED_WRITE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".base"}
 
@@ -477,8 +484,10 @@ def _validate_organize_note(operation: dict[str, Any], index: int) -> list[str]:
     if not isinstance(summary, str):
         errors.append(f"operation {index} summary must be a string")
     note_type = operation.get("set", {}).get("type")
-    if apply_template and note_type not in NOTE_TYPES:
-        errors.append(f"operation {index} apply_template requires a valid type")
+    # The concrete allowed-type check (built-in or schema-defined) runs at apply time
+    # where the vault root is available; here we only require a non-empty type string.
+    if apply_template and (not isinstance(note_type, str) or not note_type):
+        errors.append(f"operation {index} apply_template requires a type")
     return errors
 
 
@@ -609,8 +618,8 @@ def _apply_organize_note(config: AgentConfig, operation: dict[str, Any]) -> list
     frontmatter.update(operation.get("set", {}))
     body = parsed.body
     note_type = frontmatter.get("type")
-    if operation.get("apply_template", False) and note_type in NOTE_TYPES:
-        body, _headings = append_missing_headings(body, note_type)
+    if operation.get("apply_template", False) and note_type in allowed_note_types(config.vault_root):
+        body, _headings = append_missing_headings(body, note_type, vault_root=config.vault_root)
     summary = operation.get("summary", "").strip()
     if summary:
         body = _apply_summary(body, summary)
@@ -740,6 +749,52 @@ def _mark_approved(proposal: Proposal) -> None:
     atomic_write_text(proposal.path, json.dumps(data, indent=2) + "\n")
 
 
+def _validate_schema_json_write(content: str) -> list[str]:
+    """Deterministic guard on model-authored `schema.json` writes.
+
+    Ensures the new schema is well-formed, keeps every built-in note type, and is
+    internally consistent (allowed types are defined and vice versa, custom type names
+    are safe slugs). This is the schema analogue of the note-body word-preservation
+    guard: a backstop so a model can extend the vault canon but never corrupt it.
+    """
+    try:
+        schema = json.loads(content)
+    except json.JSONDecodeError as exc:
+        return [f"schema.json is not valid JSON: {exc}"]
+    if not isinstance(schema, dict):
+        return ["schema.json must be a JSON object"]
+    errors: list[str] = []
+    note_types = schema.get("note_types")
+    if not isinstance(note_types, dict):
+        errors.append("schema.json note_types must be an object")
+        note_types = {}
+    core = schema.get("core_properties")
+    type_spec = core.get("type") if isinstance(core, dict) else None
+    type_allowed = type_spec.get("allowed") if isinstance(type_spec, dict) else None
+    if not isinstance(core, dict):
+        errors.append("schema.json core_properties must be an object")
+    if not isinstance(type_allowed, list):
+        errors.append("schema.json core_properties.type.allowed must be a list")
+        type_allowed = []
+    missing_builtin = sorted(t for t in NOTE_TYPES if t not in note_types)
+    if missing_builtin:
+        errors.append(
+            "schema.json must keep built-in note types: " + ", ".join(missing_builtin)
+        )
+    for value in type_allowed:
+        if isinstance(value, str) and value and value not in note_types:
+            errors.append(f"schema.json type `{value}` is allowed but not defined in note_types")
+    for name in note_types:
+        if not isinstance(name, str) or not name:
+            errors.append("schema.json note_types keys must be non-empty strings")
+            continue
+        if name not in type_allowed:
+            errors.append(f"schema.json note_type `{name}` is missing from core_properties.type.allowed")
+        if name not in NOTE_TYPES and re.fullmatch(r"[a-z][a-z0-9_-]*", name) is None:
+            errors.append(f"schema.json custom note_type `{name}` must be a lowercase slug")
+    return errors
+
+
 def _preflight_operations(
     config: AgentConfig, operations: list[dict[str, Any]]
 ) -> list[str]:
@@ -765,6 +820,11 @@ def _preflight_operations(
             if op == "write_file":
                 if target.exists() and operation.get("if_exists", "fail") == "fail":
                     errors.append(f"operation {index} target already exists: {relative.as_posix()}")
+                if relative == config.paths.agent_dir / "schema.json":
+                    errors.extend(
+                        f"operation {index} {message}"
+                        for message in _validate_schema_json_write(operation.get("content", ""))
+                    )
             else:
                 if relative.is_relative_to(config.paths.system_dir):
                     errors.append(f"operation {index} cannot edit notes under the system folder")

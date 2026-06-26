@@ -19,7 +19,12 @@ from .config import AgentConfig
 from .dashboard_layout import dashboard_directories, dashboard_shell_contents
 from .frontmatter import parse_note
 from .legacy import apply_legacy_mappings
-from .llm import ProposalProvider, provider_from_config, validate_stage_proposal
+from .llm import (
+    ProposalProvider,
+    provider_from_config,
+    schema_stage_extras,
+    validate_stage_proposal,
+)
 from .layout_routing import build_inbox_sort_proposal, route_note
 from .paths import BOOTSTRAP_FILE, render_bootstrap
 from .reconcile import infer_type_from_content
@@ -436,6 +441,9 @@ def generate_property_proposal(
         return {}, errors
 
     schema = _load_current_schema(config)
+    current_allowed = schema.get("core_properties", {}).get(property_name, {}).get("allowed", [])
+    if allowed_value in current_allowed:
+        return {}, [f"value `{allowed_value}` already exists for `{property_name}`"]
     core_properties = deepcopy(schema["core_properties"])
     core_properties.setdefault(property_name, deepcopy(COMMON_PROPERTIES[property_name]))
     core_properties[property_name]["allowed"].append(allowed_value)
@@ -513,6 +521,127 @@ def generate_template_proposal(
         ],
     }
     return proposal, []
+
+
+def run_propose_note_type(
+    config: AgentConfig,
+    *,
+    name: str,
+    description: str,
+    folder: str,
+    title: str | None = None,
+    template_body: str | None = None,
+    overwrite: bool = False,
+) -> tuple[int, str]:
+    proposal, errors = generate_note_type_proposal(
+        config=config,
+        name=name,
+        description=description,
+        folder=folder,
+        title=title,
+        template_body=template_body,
+        overwrite=overwrite,
+    )
+    if errors:
+        return 1, "vault-agent propose-note-type failed\n" + "\n".join(
+            f"Error: {error}" for error in errors
+        )
+    return _write_proposal(config, proposal, dry_run=config.dry_run)
+
+
+def generate_note_type_proposal(
+    *,
+    config: AgentConfig,
+    name: str,
+    description: str,
+    folder: str,
+    title: str | None = None,
+    template_body: str | None = None,
+    overwrite: bool = False,
+) -> tuple[dict[str, Any], list[str]]:
+    name = name.strip()
+    description = (description or "").strip()
+    folder = folder.strip().strip("/")
+    errors: list[str] = []
+    if re.fullmatch(r"[a-z][a-z0-9_-]*", name) is None:
+        errors.append("note type name must be a lowercase slug (letters, digits, - or _)")
+    if name in NOTE_TYPES:
+        errors.append(f"`{name}` is a built-in note type")
+    if not description:
+        errors.append("a description is required")
+    folder_error = _validate_note_type_folder(config, folder)
+    if folder_error:
+        errors.append(folder_error)
+    schema = _load_current_schema(config)
+    if name in schema.get("note_types", {}):
+        errors.append(f"note type `{name}` already exists in the schema")
+    if errors:
+        return {}, errors
+
+    schema = deepcopy(schema)
+    note_types = schema.setdefault("note_types", {})
+    note_types[name] = {"folder": folder, "description": description}
+    core_properties = schema.setdefault("core_properties", deepcopy(default_schema()["core_properties"]))
+    type_allowed = core_properties.setdefault("type", deepcopy(COMMON_PROPERTIES["type"]))["allowed"]
+    if name not in type_allowed:
+        type_allowed.append(name)
+    schema["common_properties"] = core_properties
+    folder_norms = schema.setdefault("folder_norms", {})
+    folder_norms[name] = {"preferred_folder": folder}
+
+    template_content = _note_type_template_content(
+        name=name, title=title or name.replace("-", " ").title(), description=description, body=template_body
+    )
+    operations = [
+        {
+            "op": "write_file",
+            "path": (config.paths.agent_dir / "schema.json").as_posix(),
+            "if_exists": "overwrite",
+            "content": json.dumps(schema, indent=2) + "\n",
+        },
+        {
+            "op": "write_file",
+            "path": (config.paths.template_dir / "note-types" / f"{name}.md").as_posix(),
+            "if_exists": "overwrite" if overwrite else "fail",
+            "content": template_content,
+        },
+        {
+            "op": "create_directory",
+            "path": folder,
+            "if_exists": "preserve",
+        },
+    ]
+    proposal = {
+        "id": f"note-type-{name}",
+        "title": f"Add note type `{name}`",
+        "kind": "schema-change",
+        "status": "pending",
+        "automation_safe": False,
+        "summary": f"Define a new `{name}` note type, its template, and preferred folder `{folder}`.",
+        "operations": operations,
+    }
+    return proposal, []
+
+
+def _validate_note_type_folder(config: AgentConfig, folder: str) -> str | None:
+    if not folder:
+        return "a preferred folder is required"
+    target = Path(folder)
+    if target.is_absolute() or ".." in target.parts:
+        return "folder must be a relative path inside the vault"
+    if target.is_relative_to(config.paths.system_dir):
+        return f"folder cannot be inside {config.paths.system_dir}"
+    return None
+
+
+def _note_type_template_content(
+    *, name: str, title: str, description: str, body: str | None
+) -> str:
+    section_body = (body or "").strip() or f"# {title}\n\n## Summary\n\n## Notes\n"
+    return (
+        f"---\ntype: {name}\nstatus:\ndomain:\nparent:\nrelated: []\ncover:\n"
+        f"source_kind:\ncapture_type:\n---\n\n{section_body.rstrip()}\n\n<!-- {description} -->\n"
+    )
 
 
 def generate_cleanup_proposal(
@@ -1116,7 +1245,9 @@ def _llm_type_for_note(
         )
     except Exception as exc:
         return [str(exc)], None
-    type_validation = validate_stage_proposal("classify-type", type_proposal)
+    type_validation = validate_stage_proposal(
+        "classify-type", type_proposal, **schema_stage_extras(config.vault_root)
+    )
     if not type_validation.valid:
         return type_validation.errors, None
     if _stage_blocked_by_review(config, type_validation.proposal):

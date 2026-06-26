@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault People"
+  short_description: "Extract people into deduplicated Contacts and Authors notes"
+  default_prompt: "Extract the people mentioned in this vault into Contacts and Authors notes for review."

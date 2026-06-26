@@ -14,7 +14,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from .schema import COMMON_PROPERTIES, NOTE_TYPES
+from .schema import (
+    COMMON_PROPERTIES,
+    NOTE_TYPES,
+    allowed_controlled_values_from_schema,
+    allowed_note_types_from_schema,
+    load_schema,
+)
 
 
 ALLOWED_PROPOSAL_KEYS = {
@@ -114,6 +120,9 @@ class OpenAICompatibleProposalProvider:
         chars_per_token: int = 4,
         max_input_chars: int | None = None,
         extra_domains: list[str] | None = None,
+        extra_note_types: list[str] | None = None,
+        extra_source_kinds: list[str] | None = None,
+        extra_capture_types: list[str] | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -127,6 +136,9 @@ class OpenAICompatibleProposalProvider:
             else max_input_tokens * chars_per_token
         )
         self.extra_domains = list(extra_domains or [])
+        self.extra_note_types = list(extra_note_types or [])
+        self.extra_source_kinds = list(extra_source_kinds or [])
+        self.extra_capture_types = list(extra_capture_types or [])
 
     def propose(self, *, note_path: Path, note_text: str) -> dict[str, Any]:
         prompt = _proposal_prompt(
@@ -134,6 +146,9 @@ class OpenAICompatibleProposalProvider:
             note_text=note_text,
             max_chars=self.max_input_chars,
             extra_domains=self.extra_domains,
+            extra_note_types=self.extra_note_types,
+            extra_source_kinds=self.extra_source_kinds,
+            extra_capture_types=self.extra_capture_types,
         )
         system = (
             "You classify Obsidian notes for vault-agent. "
@@ -163,6 +178,9 @@ class OpenAICompatibleProposalProvider:
             allowed_hubs=allowed_hubs,
             allowed_folders=allowed_folders,
             extra_domains=self.extra_domains,
+            extra_note_types=self.extra_note_types,
+            extra_source_kinds=self.extra_source_kinds,
+            extra_capture_types=self.extra_capture_types,
         )
         system = (
             "You perform one narrow Obsidian vault-agent stage. "
@@ -272,6 +290,9 @@ def provider_from_config(config: Any) -> "OpenAICompatibleProposalProvider | Non
         return None
     if config.llm_provider not in {"openai-compatible", "llama.cpp", "local-openai"}:
         raise ValueError(f"Unsupported LLM provider `{config.llm_provider}`")
+    schema = load_schema(config.vault_root)
+    builtin_source = set(COMMON_PROPERTIES["source_kind"]["allowed"])
+    builtin_capture = set(COMMON_PROPERTIES["capture_type"]["allowed"])
     return OpenAICompatibleProposalProvider(
         base_url=config.llm_base_url,
         model=config.llm_model,
@@ -281,12 +302,57 @@ def provider_from_config(config: Any) -> "OpenAICompatibleProposalProvider | Non
         chars_per_token=config.llm_chars_per_token,
         max_input_chars=config.llm_max_input_chars,
         extra_domains=list(config.paths.domain_folders),
+        extra_note_types=sorted(allowed_note_types_from_schema(schema) - set(NOTE_TYPES)),
+        extra_source_kinds=[
+            v
+            for v in allowed_controlled_values_from_schema(schema, "source_kind")
+            if v not in builtin_source
+        ],
+        extra_capture_types=[
+            v
+            for v in allowed_controlled_values_from_schema(schema, "capture_type")
+            if v not in builtin_capture
+        ],
     )
+
+
+def schema_stage_extras(vault_root: Path) -> dict[str, list[str]]:
+    """Custom note types / controlled values declared in the vault's schema.json.
+
+    Returned as keyword args for `validate_stage_proposal` / `validate_proposal` so the
+    validators accept schema-defined additions on top of the built-in vocabulary.
+    """
+    schema = load_schema(vault_root)
+    builtin_source = set(COMMON_PROPERTIES["source_kind"]["allowed"])
+    builtin_capture = set(COMMON_PROPERTIES["capture_type"]["allowed"])
+    return {
+        "extra_note_types": sorted(allowed_note_types_from_schema(schema) - set(NOTE_TYPES)),
+        "extra_source_kinds": [
+            v
+            for v in allowed_controlled_values_from_schema(schema, "source_kind")
+            if v not in builtin_source
+        ],
+        "extra_capture_types": [
+            v
+            for v in allowed_controlled_values_from_schema(schema, "capture_type")
+            if v not in builtin_capture
+        ],
+    }
 
 
 def _allowed_domain_values(extra_domains: list[str] | None) -> list[str]:
     builtin = list(COMMON_PROPERTIES["domain"]["allowed"])
     return builtin + [d for d in (extra_domains or []) if d not in builtin]
+
+
+def _allowed_note_type_values(extra_note_types: list[str] | None) -> list[str]:
+    builtin = sorted(NOTE_TYPES)
+    return builtin + sorted(t for t in set(extra_note_types or []) if t and t not in NOTE_TYPES)
+
+
+def _allowed_controlled_values(property_name: str, extra: list[str] | None) -> list[str]:
+    builtin = list(COMMON_PROPERTIES[property_name]["allowed"])
+    return builtin + [v for v in (extra or []) if v and v not in builtin]
 
 
 def _proposal_prompt(
@@ -295,14 +361,17 @@ def _proposal_prompt(
     note_text: str,
     max_chars: int,
     extra_domains: list[str] | None = None,
+    extra_note_types: list[str] | None = None,
+    extra_source_kinds: list[str] | None = None,
+    extra_capture_types: list[str] | None = None,
 ) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars
-    allowed_types = ", ".join(sorted(NOTE_TYPES))
+    allowed_types = ", ".join(_allowed_note_type_values(extra_note_types))
     allowed_statuses = ", ".join(COMMON_PROPERTIES["status"]["allowed"])
     allowed_domains = ", ".join(_allowed_domain_values(extra_domains))
-    allowed_source_kinds = ", ".join(COMMON_PROPERTIES["source_kind"]["allowed"])
-    allowed_capture_types = ", ".join(COMMON_PROPERTIES["capture_type"]["allowed"])
+    allowed_source_kinds = ", ".join(_allowed_controlled_values("source_kind", extra_source_kinds))
+    allowed_capture_types = ", ".join(_allowed_controlled_values("capture_type", extra_capture_types))
     return f"""Classify this Obsidian note and propose only schema-approved metadata.
 
 Allowed note_type values: {allowed_types}
@@ -360,14 +429,17 @@ def _stage_prompt(
     allowed_hubs: list[str] | None = None,
     allowed_folders: list[tuple[str, str]] | None = None,
     extra_domains: list[str] | None = None,
+    extra_note_types: list[str] | None = None,
+    extra_source_kinds: list[str] | None = None,
+    extra_capture_types: list[str] | None = None,
 ) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars
-    allowed_types = ", ".join(sorted(NOTE_TYPES))
+    allowed_types = ", ".join(_allowed_note_type_values(extra_note_types))
     allowed_statuses = ", ".join(COMMON_PROPERTIES["status"]["allowed"])
     allowed_domains = ", ".join(_allowed_domain_values(extra_domains))
-    allowed_source_kinds = ", ".join(COMMON_PROPERTIES["source_kind"]["allowed"])
-    allowed_capture_types = ", ".join(COMMON_PROPERTIES["capture_type"]["allowed"])
+    allowed_source_kinds = ", ".join(_allowed_controlled_values("source_kind", extra_source_kinds))
+    allowed_capture_types = ", ".join(_allowed_controlled_values("capture_type", extra_capture_types))
     common = f"""Path: {note_path.as_posix()}
 Truncated: {str(truncated).lower()}
 
@@ -455,6 +527,20 @@ Hard rules, never break them:
 - Markdown structural tokens and short heading labels are the only text you may add.
 - Preserve all existing wikilinks, URLs, and inline references verbatim.
 - Return the body only; do not include frontmatter, type, status, or other property edits.
+
+{common}"""
+    if stage == "classify-person":
+        return f"""Classify a person mentioned in this vault and draft only grounded details.
+
+The Path below is the person's name; the Note below lists how they are mentioned.
+
+Return JSON with exactly these keys:
+- kind: "contact" if this is someone the author interacts with directly (met, spoke, emailed, a meeting or conversation participant); "author" if this is a writer, researcher, or cited thinker referenced through their work
+- details: 1-4 short Markdown lines stating only facts present in the mentions (role, organization, relationship). Use an empty string if nothing concrete is stated.
+- confidence: number from 0 to 1
+- warnings: list of short strings for ambiguity or thin evidence
+
+Never invent biography, contact information, affiliations, or links that are not present in the mentions below.
 
 {common}"""
     if stage == "assign-folder":
@@ -547,7 +633,12 @@ def _first_balanced_json_object(text: str) -> str | None:
 
 
 def validate_proposal(
-    proposal: dict[str, Any], *, extra_domains: list[str] | None = None
+    proposal: dict[str, Any],
+    *,
+    extra_domains: list[str] | None = None,
+    extra_note_types: list[str] | None = None,
+    extra_source_kinds: list[str] | None = None,
+    extra_capture_types: list[str] | None = None,
 ) -> ProposalValidation:
     errors: list[str] = []
     unknown = sorted(set(proposal) - ALLOWED_PROPOSAL_KEYS)
@@ -555,9 +646,10 @@ def validate_proposal(
         errors.append("unknown proposal keys: " + ", ".join(unknown))
 
     note_type = proposal.get("note_type")
+    allowed_types = set(_allowed_note_type_values(extra_note_types))
     if not isinstance(note_type, str) or not note_type:
         errors.append("note_type is required")
-    elif note_type not in NOTE_TYPES:
+    elif note_type not in allowed_types:
         errors.append(f"unknown note_type `{note_type}`")
 
     status = proposal.get("status", "active")
@@ -574,9 +666,9 @@ def validate_proposal(
     _validate_optional_string(proposal, "domain", errors)
     _validate_allowed_domain(proposal, errors, extra_domains)
     _validate_optional_string(proposal, "source_kind", errors)
-    _validate_allowed_source_kind(proposal, errors)
+    _validate_allowed_source_kind(proposal, errors, extra_source_kinds)
     _validate_optional_string(proposal, "capture_type", errors)
-    _validate_allowed_capture_type(proposal, errors)
+    _validate_allowed_capture_type(proposal, errors, extra_capture_types)
     _validate_optional_string(proposal, "parent", errors)
     _validate_string_list(proposal, "related", errors)
     _validate_optional_string(proposal, "cover", errors)
@@ -611,15 +703,22 @@ def validate_stage_proposal(
     allowed_hubs: list[str] | None = None,
     allowed_folders: list[str] | None = None,
     extra_domains: list[str] | None = None,
+    extra_note_types: list[str] | None = None,
+    extra_source_kinds: list[str] | None = None,
+    extra_capture_types: list[str] | None = None,
 ) -> StageValidation:
     if stage == "classify-type":
-        return _validate_type_stage(proposal)
+        return _validate_type_stage(proposal, extra_note_types)
     if stage == "property-values":
-        return _validate_property_values_stage(proposal, extra_domains)
+        return _validate_property_values_stage(
+            proposal, extra_domains, extra_source_kinds, extra_capture_types
+        )
     if stage == "summary":
         return _validate_summary_stage(proposal)
     if stage == "refine-body":
         return _validate_refine_body_stage(proposal)
+    if stage == "classify-person":
+        return _validate_classify_person_stage(proposal)
     if stage == "assign-hub":
         return _validate_assign_hub_stage(proposal, allowed_hubs or [])
     if stage == "assign-folder":
@@ -682,14 +781,17 @@ def _validate_assign_hub_stage(
     )
 
 
-def _validate_type_stage(proposal: dict[str, Any]) -> StageValidation:
+def _validate_type_stage(
+    proposal: dict[str, Any], extra_note_types: list[str] | None = None
+) -> StageValidation:
     errors: list[str] = []
     unknown = sorted(set(proposal) - {"note_type", "confidence", "warnings"})
     if unknown:
         errors.append("unknown proposal keys: " + ", ".join(unknown))
+    allowed_types = _allowed_note_type_values(extra_note_types)
     note_type = proposal.get("note_type")
-    if not isinstance(note_type, str) or note_type not in NOTE_TYPES:
-        errors.append(f"note_type must be one of: {', '.join(sorted(NOTE_TYPES))}")
+    if not isinstance(note_type, str) or note_type not in set(allowed_types):
+        errors.append(f"note_type must be one of: {', '.join(allowed_types)}")
     confidence = _validate_confidence(proposal, errors)
     _validate_string_list(proposal, "warnings", errors)
     return StageValidation(
@@ -704,7 +806,10 @@ def _validate_type_stage(proposal: dict[str, Any]) -> StageValidation:
 
 
 def _validate_property_values_stage(
-    proposal: dict[str, Any], extra_domains: list[str] | None = None
+    proposal: dict[str, Any],
+    extra_domains: list[str] | None = None,
+    extra_source_kinds: list[str] | None = None,
+    extra_capture_types: list[str] | None = None,
 ) -> StageValidation:
     errors: list[str] = []
     unknown = sorted(set(proposal) - {"status", "domain", "parent", "related", "cover", "source_kind", "capture_type", "confidence", "warnings"})
@@ -717,9 +822,9 @@ def _validate_property_values_stage(
     _validate_optional_string(proposal, "domain", errors)
     _validate_allowed_domain(proposal, errors, extra_domains)
     _validate_optional_string(proposal, "source_kind", errors)
-    _validate_allowed_source_kind(proposal, errors)
+    _validate_allowed_source_kind(proposal, errors, extra_source_kinds)
     _validate_optional_string(proposal, "capture_type", errors)
-    _validate_allowed_capture_type(proposal, errors)
+    _validate_allowed_capture_type(proposal, errors, extra_capture_types)
     _validate_optional_string(proposal, "parent", errors)
     _validate_string_list(proposal, "related", errors)
     _validate_optional_string(proposal, "cover", errors)
@@ -758,6 +863,31 @@ def _validate_summary_stage(proposal: dict[str, Any]) -> StageValidation:
         not errors,
         {
             "summary": summary.strip() if isinstance(summary, str) else summary,
+            "confidence": confidence,
+            "warnings": proposal.get("warnings", []),
+        },
+        errors,
+    )
+
+
+def _validate_classify_person_stage(proposal: dict[str, Any]) -> StageValidation:
+    errors: list[str] = []
+    unknown = sorted(set(proposal) - {"kind", "details", "confidence", "warnings"})
+    if unknown:
+        errors.append("unknown proposal keys: " + ", ".join(unknown))
+    kind = proposal.get("kind")
+    if kind not in ("contact", "author"):
+        errors.append("kind must be `contact` or `author`")
+    details = proposal.get("details", "")
+    if not isinstance(details, str):
+        errors.append("details must be a string")
+    _validate_string_list(proposal, "warnings", errors)
+    confidence = _validate_confidence(proposal, errors)
+    return StageValidation(
+        not errors,
+        {
+            "kind": kind if kind in ("contact", "author") else "",
+            "details": details if isinstance(details, str) else "",
             "confidence": confidence,
             "warnings": proposal.get("warnings", []),
         },
@@ -814,16 +944,20 @@ def _validate_allowed_domain(
         errors.append(f"domain must be one of: {', '.join(allowed_domains)}")
 
 
-def _validate_allowed_source_kind(proposal: dict[str, Any], errors: list[str]) -> None:
+def _validate_allowed_source_kind(
+    proposal: dict[str, Any], errors: list[str], extra_source_kinds: list[str] | None = None
+) -> None:
     value = proposal.get("source_kind", "")
-    allowed_source_kinds = COMMON_PROPERTIES["source_kind"]["allowed"]
+    allowed_source_kinds = _allowed_controlled_values("source_kind", extra_source_kinds)
     if isinstance(value, str) and value not in allowed_source_kinds:
         errors.append(f"source_kind must be one of: {', '.join(allowed_source_kinds)}")
 
 
-def _validate_allowed_capture_type(proposal: dict[str, Any], errors: list[str]) -> None:
+def _validate_allowed_capture_type(
+    proposal: dict[str, Any], errors: list[str], extra_capture_types: list[str] | None = None
+) -> None:
     value = proposal.get("capture_type", "")
-    allowed_capture_types = COMMON_PROPERTIES["capture_type"]["allowed"]
+    allowed_capture_types = _allowed_controlled_values("capture_type", extra_capture_types)
     if isinstance(value, str) and value not in allowed_capture_types:
         errors.append(f"capture_type must be one of: {', '.join(allowed_capture_types)}")
 

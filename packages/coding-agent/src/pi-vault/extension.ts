@@ -180,6 +180,9 @@ const manageTool = defineTool({
 			Type.Literal("rebuild-retrieval"),
 			Type.Literal("write-norms-lock"),
 			Type.Literal("refine"),
+			Type.Literal("people"),
+			Type.Literal("add-property"),
+			Type.Literal("add-note-type"),
 			Type.Literal("undo"),
 		]),
 		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
@@ -188,6 +191,12 @@ const manageTool = defineTool({
 		dryRun: Type.Optional(Type.Boolean()),
 		folder: Type.Optional(Type.String()),
 		note: Type.Optional(Type.String()),
+		maxPeople: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		property: Type.Optional(Type.String()),
+		value: Type.Optional(Type.String()),
+		description: Type.Optional(Type.String()),
+		name: Type.Optional(Type.String()),
+		title: Type.Optional(Type.String()),
 		runId: Type.Optional(Type.String()),
 	}),
 	async execute(_toolCallId, params, signal, _onUpdate, ctx) {
@@ -242,6 +251,41 @@ const manageTool = defineTool({
 				if (params.note) args.push("--note", params.note);
 				if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
 				if (params.dryRun !== false) args.push("--dry-run");
+				break;
+			case "people":
+				args.push("propose-people");
+				if (params.folder) args.push("--folder", params.folder);
+				if (params.maxPeople) args.push("--max-people", String(params.maxPeople));
+				break;
+			case "add-property":
+				if (!params.property || !params.value) {
+					return {
+						content: [{ type: "text", text: "property and value are required for add-property." }],
+						details: { exitCode: 1, action: params.action },
+						isError: true,
+					};
+				}
+				args.push("propose-property", "--property", params.property, "--value", params.value);
+				if (params.description) args.push("--description", params.description);
+				break;
+			case "add-note-type":
+				if (!params.name || !params.description || !params.folder) {
+					return {
+						content: [{ type: "text", text: "name, description, and folder are required for add-note-type." }],
+						details: { exitCode: 1, action: params.action },
+						isError: true,
+					};
+				}
+				args.push(
+					"propose-note-type",
+					"--name",
+					params.name,
+					"--description",
+					params.description,
+					"--folder",
+					params.folder,
+				);
+				if (params.title) args.push("--title", params.title);
 				break;
 			case "undo":
 				if (!params.runId) {

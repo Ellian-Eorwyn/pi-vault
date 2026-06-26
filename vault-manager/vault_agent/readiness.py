@@ -14,7 +14,7 @@ from .norms import current_lock_hash
 from .processing_state import processing_summary
 from .processor import next_needed_stage
 from .scanner import scan_vault
-from .schema import CORE_PROPERTY_ORDER, NOTE_TYPES, accepted_properties_for
+from .schema import CORE_PROPERTY_ORDER, accepted_properties_for, allowed_note_types
 from .validation import issue_groups, validate_entries
 
 
@@ -135,7 +135,7 @@ def _cleanup_opportunities(
         original = dict(parsed.frontmatter)
         mapped = apply_legacy_mappings(original, config)
         has_mapping = any(mapped.get(key) != original.get(key) for key in CORE_PROPERTY_ORDER if key in mapped)
-        note_type = mapped.get("type") if mapped.get("type") in NOTE_TYPES else None
+        note_type = mapped.get("type") if mapped.get("type") in allowed_note_types(config.vault_root) else None
         accepted = accepted_properties_for(note_type)
         unknown = [key for key in mapped if key not in accepted]
         if has_mapping:

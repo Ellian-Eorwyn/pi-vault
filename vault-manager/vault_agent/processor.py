@@ -8,7 +8,12 @@ from pathlib import Path
 from .config import AgentConfig
 from .frontmatter import parse_note, render_note
 from .logging_utils import append_log
-from .llm import ProposalProvider, validate_proposal, validate_stage_proposal
+from .llm import (
+    ProposalProvider,
+    schema_stage_extras,
+    validate_proposal,
+    validate_stage_proposal,
+)
 from .model_blocks import record_model_block
 from .paths import load_bootstrap, paths_for
 from .processing_state import mark_stage, record_routed_destination, stage_complete
@@ -16,8 +21,8 @@ from .safety import write_text_safely
 from .scanner import scan_vault
 from .schema import (
     CORE_PROPERTY_ORDER,
-    NOTE_TYPES,
     accepted_properties_for,
+    allowed_note_types,
     approved_hubs_for,
     default_schema,
     ordered_properties_for,
@@ -398,18 +403,21 @@ def process_note(
     confidence: float | None = None
     warnings: list[str] = []
     extra_domains = list(paths_for(vault_root).domain_folders)
+    stage_extras = schema_stage_extras(vault_root)
 
     if stage == "frontmatter-shape":
         _apply_shape_defaults(frontmatter)
         mode = "frontmatter-shaped"
     elif stage == "template-body":
-        if frontmatter.get("type") not in NOTE_TYPES:
+        if frontmatter.get("type") not in allowed_note_types(vault_root):
             return ProcessResult(
                 changed=False,
                 mode="blocked",
                 errors=["template-body requires a schema-approved type"],
             )
-        body = _apply_template_body_for_type(body, frontmatter.get("type"))
+        body = _apply_template_body_for_type(
+            body, frontmatter.get("type"), vault_root=vault_root
+        )
         mode = "template-ready"
     elif stage == "assign-hub":
         from .topic_hubs import folder_hub_match
@@ -437,7 +445,11 @@ def process_note(
             except Exception as exc:
                 return ProcessResult(changed=False, mode="blocked", errors=[str(exc)])
             validation = validate_stage_proposal(
-                stage, proposal, allowed_hubs=approved, extra_domains=extra_domains
+                stage,
+                proposal,
+                allowed_hubs=approved,
+                extra_domains=extra_domains,
+                **stage_extras,
             )
             if not validation.valid:
                 return ProcessResult(changed=False, mode="blocked", errors=validation.errors)
@@ -552,7 +564,9 @@ def process_note(
             proposal = _stage_proposal(proposal_provider, stage, note_path, text)
         except Exception as exc:
             return ProcessResult(changed=False, mode="blocked", errors=[str(exc)])
-        validation = validate_stage_proposal(stage, proposal, extra_domains=extra_domains)
+        validation = validate_stage_proposal(
+            stage, proposal, extra_domains=extra_domains, **stage_extras
+        )
         if not validation.valid:
             return ProcessResult(changed=False, mode="blocked", errors=validation.errors)
         confidence = validation.proposal.get("confidence")
@@ -603,7 +617,7 @@ def process_note(
             frontmatter["type"] = validation.proposal["note_type"]
             mode = "type-classified"
         elif stage == "property-values":
-            if frontmatter.get("type") not in NOTE_TYPES:
+            if frontmatter.get("type") not in allowed_note_types(vault_root):
                 return ProcessResult(
                     changed=False,
                     mode="blocked",
@@ -719,9 +733,9 @@ def _stage_needed(
     if stage == "classify-type":
         if completed:
             return False
-        return not frontmatter.get("type") or frontmatter.get("type") not in NOTE_TYPES
+        return not frontmatter.get("type") or frontmatter.get("type") not in allowed_note_types(vault_root)
     if stage == "property-values":
-        if frontmatter.get("type") not in NOTE_TYPES:
+        if frontmatter.get("type") not in allowed_note_types(vault_root):
             return False
         keys = ("status", "domain", "parent", "related", "cover", "source_kind", "capture_type")
         if completed:
@@ -731,10 +745,10 @@ def _stage_needed(
         if completed:
             return False
         note_type = frontmatter.get("type")
-        if not note_type or note_type not in NOTE_TYPES:
+        if not note_type or note_type not in allowed_note_types(vault_root):
             return False
         parsed = parse_note(note_path.read_text(encoding="utf-8"))
-        _body, headings = append_missing_headings(parsed.body, note_type)
+        _body, headings = append_missing_headings(parsed.body, note_type, vault_root=vault_root)
         return bool(headings)
     if stage == "assign-hub":
         if completed:
@@ -797,10 +811,12 @@ def _stage_proposal(
     return proposal_provider.propose(note_path=note_path, note_text=text)
 
 
-def _apply_template_body_for_type(body: str, note_type: str | None) -> str:
-    if not note_type or note_type not in NOTE_TYPES:
+def _apply_template_body_for_type(
+    body: str, note_type: str | None, *, vault_root: Path
+) -> str:
+    if not note_type or note_type not in allowed_note_types(vault_root):
         return body
-    new_body, _headings = append_missing_headings(body, note_type)
+    new_body, _headings = append_missing_headings(body, note_type, vault_root=vault_root)
     return new_body
 
 

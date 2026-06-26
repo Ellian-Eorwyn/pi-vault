@@ -10,7 +10,12 @@ from typing import Any
 
 from .config import AgentConfig
 from .frontmatter import parse_note, render_note
-from .llm import ProposalProvider, validate_proposal, validate_stage_proposal
+from .llm import (
+    ProposalProvider,
+    schema_stage_extras,
+    validate_proposal,
+    validate_stage_proposal,
+)
 from .paths import REVIEW_DIR
 from .proposals import _safe_filename, _slug, _write_proposal
 from .scanner import scan_vault
@@ -596,7 +601,9 @@ def _llm_categorization_operation(
             fallback_reason=str(exc),
         )
     validation = validate_proposal(
-        proposal, extra_domains=list(config.paths.domain_folders)
+        proposal,
+        extra_domains=list(config.paths.domain_folders),
+        **schema_stage_extras(config.vault_root),
     )
     if not validation.valid:
         return _llm_staged_categorization_operation(
@@ -676,7 +683,9 @@ def _llm_staged_categorization_operation(
             note_text=contextual_text,
             stage="classify-type",
         )
-        type_validation = validate_stage_proposal("classify-type", type_proposal)
+        type_validation = validate_stage_proposal(
+            "classify-type", type_proposal, **schema_stage_extras(config.vault_root)
+        )
         if not type_validation.valid:
             return None, f"{fallback_reason}; staged classify-type failed: {'; '.join(type_validation.errors)}"
         type_error = _stage_gate_error(config, type_validation.proposal)
@@ -692,6 +701,7 @@ def _llm_staged_categorization_operation(
             "property-values",
             property_proposal,
             extra_domains=list(config.paths.domain_folders),
+            **schema_stage_extras(config.vault_root),
         )
         if not property_validation.valid:
             return None, f"{fallback_reason}; staged property-values failed: {'; '.join(property_validation.errors)}"

@@ -14,7 +14,12 @@ from .logging_utils import append_log
 from .readiness import build_readiness_report
 from .safety import write_text_safely
 from .scanner import discover_markdown
-from .schema import NOTE_TYPES, accepted_properties_for, ordered_properties_for
+from .schema import (
+    NOTE_TYPES,
+    accepted_properties_for,
+    allowed_note_types,
+    ordered_properties_for,
+)
 from .templates import append_missing_headings
 
 
@@ -36,6 +41,7 @@ def build_reconcile_plan(
     config: AgentConfig, *, properties_only: bool = False
 ) -> list[ReconcilePlanItem]:
     plan: list[ReconcilePlanItem] = []
+    allowed_types = allowed_note_types(config.vault_root)
     for note_path in discover_markdown(config.vault_root):
         relative = note_path.relative_to(config.vault_root)
         if relative.is_relative_to(config.paths.system_dir) or relative.is_relative_to(
@@ -66,7 +72,7 @@ def build_reconcile_plan(
             note_type = inferred_type
         elif not note_type:
             item.review_note = "could not infer note type; template sections not applied"
-        elif note_type and note_type not in NOTE_TYPES:
+        elif note_type and note_type not in allowed_types:
             item.skipped_reason = f"unknown type `{note_type}`"
             plan.append(item)
             continue
@@ -77,8 +83,10 @@ def build_reconcile_plan(
         for key, value in _missing_property_defaults(relative, frontmatter, note_type).items():
             item.property_updates.setdefault(key, value)
 
-        if note_type in NOTE_TYPES and not properties_only:
-            _new_body, headings = append_missing_headings(parsed.body, note_type)
+        if note_type in allowed_types and not properties_only:
+            _new_body, headings = append_missing_headings(
+                parsed.body, note_type, vault_root=config.vault_root
+            )
             item.headings_to_add = headings
         plan.append(item)
     return plan
@@ -98,6 +106,7 @@ def run_reconcile(config: AgentConfig, *, properties_only: bool = False) -> tupl
         )
 
     backup_root = config.vault_root / config.paths.agent_dir / "backups"
+    allowed_types = allowed_note_types(config.vault_root)
     applied = 0
     for item in changed:
         note_path = config.vault_root / item.path
@@ -114,8 +123,10 @@ def run_reconcile(config: AgentConfig, *, properties_only: bool = False) -> tupl
             preserve_unknown_properties=config.preserve_unknown_properties,
         )
         body = parsed.body
-        if note_type in NOTE_TYPES and not properties_only:
-            body, _headings = append_missing_headings(body, note_type)
+        if note_type in allowed_types and not properties_only:
+            body, _headings = append_missing_headings(
+                body, note_type, vault_root=config.vault_root
+            )
         new_text = render_note(
             frontmatter, body, property_order=ordered_properties_for(note_type)
         )

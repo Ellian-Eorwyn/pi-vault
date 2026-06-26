@@ -34,7 +34,9 @@ Each request routes to a pi skill, which drives the engine commands beneath it:
 - "Organize this vault" → **vault-organization** skill: lock norms first, run readiness, then bounded stage-scoped passes with reports (engine: `norms-lock`, `organization-readiness --json`, `autonomous-run`, `organize-vault-pass`).
 - "Process the inbox" → **vault-inbox** skill: bounded classification followed by deterministic destination proposals; apply only current, warning-free, high-confidence routes automatically (engine: `process-inbox`, `propose-inbox-sort`, `autonomous-run --apply-safe`).
 - "Adopt the default layout" → **vault-organization** skill: generate and review a dashboard-first migration without moving existing notes automatically (engine: `propose-vault-layout`).
-- "Change canonical properties / plan schema / templates" → **vault-schema** skill: update schema, templates, validators, and docs together, then validate (engine: `propose-property`, `propose-template`, `validate`).
+- "Change canonical properties / plan schema / templates / discuss schema improvements" → **vault-schema** skill: talk through the change against the live vault, then update schema, templates, validators, and docs together and validate (engine: `propose-property` for `domain`/`source_kind`/`capture_type`, `propose-template`, `validate`).
+- "Define a new note type" → **vault-schema** skill: draft the type's template sections from what it captures, then add it data-drivenly so classification, routing, and template application accept it (engine: `propose-note-type`, then re-lock norms).
+- "Extract people / build Contacts and Authors" → **vault-people** skill: detect people across notes, deduplicate against existing person notes, classify each into Contacts or Authors with the configured backend, and create person notes with backlinks (engine: `propose-people`).
 - "Build an index for a type/project/topic" → **vault-schema** / **vault-organization**: create or update an `index` note using sparse properties, Bases, links, and retrieval files; do not add new YAML fields unless the user approves a schema change (engine: `propose-index`).
 - "Build a hierarchy of Bases" → **vault-organization** skill: generate pending domain and parent/project dashboards with embedded Bases; keep coverage prose in Markdown dashboard bodies, not frontmatter (engine: `propose-base-hierarchy`).
 - "Organize one project/folder" → **vault-organization** skill: generate a pending proposal with sparse metadata cleanup and a dashboard; keep mutation inside the target folder plus `99 System` review/log/backup files (engine: `propose-folder-organization`).
@@ -254,6 +256,16 @@ refinement) is produced by that configured backend, returned as a validated
 structured proposal, and applied by deterministic code — never by an outside model
 and never as direct file edits.
 
+Note types and controlled values are data-driven from `99 System/0.01 agent/schema.json`:
+built-in types and values are always present, and approved additions (a new note type via
+`propose-note-type`, or a new `domain`/`source_kind`/`capture_type` via `propose-property`)
+extend them at runtime once applied and re-locked. A deterministic guard validates every
+`schema.json` write before it is applied — it must stay valid JSON, keep every built-in note
+type and controlled value, and remain internally consistent — so the model can extend the
+canon but never corrupt or shrink it. People extraction (`propose-people`) creates
+deduplicated `person` notes routed to Contacts or Authors with details drafted by the
+configured backend strictly from existing mentions.
+
 Note-body refinement (`propose-folder-refinement`, the **vault-analysis** skill) lets
 the configured backend reformat a note's body for structure and Obsidian Markdown.
 It must never change wording or meaning: a deterministic word-preservation guard
@@ -279,4 +291,6 @@ If the model returns non-JSON or thinking text, the provider extracts the first 
 - Preserve unknown legacy metadata unless explicitly configured otherwise.
 - LLM output must be validated structured proposals, not direct file edits.
 - Refine note bodies only through `note-refinement` proposals; the word-preservation guard must pass, frontmatter stays byte-identical, and wording and meaning are never changed.
+- Extend the schema only through reviewed proposals; the schema-change guard must pass, and built-in note types and controlled values are never dropped.
+- Create person notes only through `people-extraction` proposals; never recreate an existing person, and ground all drafted details in the notes that mention them.
 - Run all model inference through the configured pi/engine LLM backend; never route note content to a third-party model unless the user explicitly configured it.

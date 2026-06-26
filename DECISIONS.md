@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-06-26: Note Types Are Data-Driven; Schema Changes Are Guarded; People Are Extracted
+
+Decision: Note types and the `source_kind`/`capture_type` controlled values are now
+data-driven from `99 System/0.01 agent/schema.json` rather than hardcoded Python
+constants only. Built-in types/values are always merged in and can never be dropped;
+approved additions extend the runtime vocabulary once a schema-change proposal is applied
+and norms are re-locked. Adding a note type (`propose-note-type`) writes the schema delta,
+an on-disk `note-types/<slug>.md` template, and the preferred folder; template application
+falls back to that on-disk template for custom types. A deterministic schema-change guard
+validates every `schema.json` write (valid JSON, built-ins preserved, internally
+consistent) — the schema analogue of the note-body word-preservation guard. People
+extraction (`propose-people`, **vault-people** skill) detects people across notes,
+deduplicates against existing person notes, classifies each clearly-identified new person
+as Contact or Author via the configured backend, and creates person notes with grounded
+details and backlinks. The **vault-schema** skill drives schema discussions and note-type
+definitions; all model work stays on the configured pi/engine backend and proposal-gated.
+
+Rationale: the user wanted to discuss and evolve the schema (including inventing new note
+types) and to turn scattered mentions into real Contacts/Authors. Hardcoded `NOTE_TYPES`
+blocked runtime type creation, so the foundation was to make types schema-driven while
+keeping the built-in vocabulary inviolable through a guard plus mandatory review. Status
+stays fixed because its four values drive control flow.
+
 ## 2026-06-26: LLM-Led Note Refinement Is Guarded And Backend-Only
 
 Decision: pi-vault can refine a note's *body* — structure, coherence, skimmability,

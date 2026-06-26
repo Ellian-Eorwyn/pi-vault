@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
+
+from .paths import paths_for
 
 
 SCHEMA_VERSION = "1.0.0"
@@ -290,6 +293,64 @@ def all_hub_names(schema: dict[str, Any]) -> set[str]:
             if name:
                 names.add(name)
     return names
+
+
+def note_types_from_schema(schema: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """Built-in note types overlaid with any custom types from an on-disk schema.
+
+    Built-ins always win and are always present; the schema-change guard prevents a
+    loaded schema from dropping them. Custom types declared in ``schema["note_types"]``
+    (or ``core_properties.type.allowed``) are added on top.
+    """
+    result: dict[str, dict[str, Any]] = {
+        name: dict(spec) for name, spec in NOTE_TYPES.items()
+    }
+    if isinstance(schema, dict):
+        extra = schema.get("note_types")
+        if isinstance(extra, dict):
+            for name, spec in extra.items():
+                if isinstance(name, str) and name and name not in result:
+                    result[name] = dict(spec) if isinstance(spec, dict) else {}
+        core = schema.get("core_properties")
+        type_spec = core.get("type") if isinstance(core, dict) else None
+        for value in type_spec.get("allowed", []) if isinstance(type_spec, dict) else []:
+            if isinstance(value, str) and value and value not in result:
+                result[value] = {}
+    return result
+
+
+def allowed_note_types_from_schema(schema: dict[str, Any] | None) -> set[str]:
+    """Return the set of allowed note-type names for a loaded schema."""
+    return set(note_types_from_schema(schema))
+
+
+def load_schema(vault_root: Path) -> dict[str, Any]:
+    """Load the on-disk vault schema.json, or {} when missing or malformed."""
+    path = vault_root / paths_for(vault_root).agent_dir / "schema.json"
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def allowed_note_types(vault_root: Path) -> set[str]:
+    """Allowed note-type names for a vault: built-ins plus on-disk custom types."""
+    return allowed_note_types_from_schema(load_schema(vault_root))
+
+
+def allowed_controlled_values_from_schema(
+    schema: dict[str, Any] | None, property_name: str
+) -> list[str]:
+    """Built-in allowed values for a controlled property plus schema additions."""
+    values = list(COMMON_PROPERTIES.get(property_name, {}).get("allowed", []))
+    if isinstance(schema, dict):
+        core = schema.get("core_properties")
+        prop = core.get(property_name) if isinstance(core, dict) else None
+        for value in prop.get("allowed", []) if isinstance(prop, dict) else []:
+            if isinstance(value, str) and value not in values:
+                values.append(value)
+    return values
 
 
 def accepted_properties_for(note_type: str | None = None) -> set[str]:

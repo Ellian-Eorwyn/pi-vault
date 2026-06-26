@@ -115,6 +115,8 @@ Uninitialized noninteractive commands fail with an initialization instruction. S
 - All model inference runs through the user-configured pi/engine LLM backend; pi-vault never calls Claude, Codex, or any third-party model unless you explicitly point the harness at that provider's API.
 - Moves and renames use `move_note` operations with collision checks, inbound wikilink updates, backups, and versioned rollback.
 - Note-body refinement reformats only: a deterministic word-preservation guard rejects any rewrite that drops or substitutes the author's words, frontmatter is preserved byte-for-byte, and wording and meaning never change.
+- Note types and controlled values are data-driven from `schema.json`: new types (`propose-note-type`) and values (`propose-property`) extend the vault at runtime once applied, and a schema-change guard rejects any write that is malformed or drops a built-in.
+- People extraction (`propose-people`) builds deduplicated Contacts/Authors person notes with backlinks; classification and details come from the configured backend, grounded only in existing mentions.
 - Notes are never deleted automatically.
 - Broad work requires current locked norms and readiness checks.
 - Every write run records changed files and an undo command.
