@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { CONFIG_DIR_NAME, ENV_AGENT_DIR, ENV_DEBUG_LOG, ENV_SESSION_DIR, USER_CONFIG_DIR_NAME } from "../src/config.ts";
 import piVaultExtension, {
+	buildVaultManageArgs,
 	findVaultRoot,
 	loadVaultContext,
 	readBootstrap,
@@ -70,6 +71,53 @@ describe("pi-vault extension", () => {
 		expect(returning).toContain("follow the schema exactly");
 		expect(onboarding).toContain("Begin onboarding now");
 		expect(onboarding).toContain("default schema is provisional");
+	});
+
+	it("routes embedding manage actions through safe vault-agent commands", () => {
+		expect(buildVaultManageArgs("/vault", { action: "embed-index" })).toEqual([
+			"--vault-root",
+			"/vault",
+			"embed-index",
+		]);
+		expect(buildVaultManageArgs("/vault", { action: "semantic-search", query: "buddhist ethics", topK: 7 })).toEqual([
+			"--vault-root",
+			"/vault",
+			"vault-search",
+			"buddhist ethics",
+			"--json",
+			"--top-k",
+			"7",
+		]);
+		expect(
+			buildVaultManageArgs("/vault", {
+				action: "related-links",
+				maxNotes: 3,
+				topK: 4,
+				minSimilarity: 0.65,
+			}),
+		).toEqual([
+			"--vault-root",
+			"/vault",
+			"--dry-run",
+			"propose-related-links",
+			"--max-notes",
+			"3",
+			"--top-k",
+			"4",
+			"--min-similarity",
+			"0.65",
+		]);
+		expect(buildVaultManageArgs("/vault", { action: "related-links", dryRun: false })).toEqual([
+			"--vault-root",
+			"/vault",
+			"propose-related-links",
+		]);
+	});
+
+	it("requires a query for semantic search", () => {
+		expect(buildVaultManageArgs("/vault", { action: "semantic-search" })).toEqual({
+			error: "query is required for semantic-search.",
+		});
 	});
 
 	it("rejects bootstrap folders that escape the vault", () => {

@@ -48,6 +48,15 @@ class FakeEmbeddingClient:
         return [float(lowered.count(word)) for word in _VOCAB]
 
 
+class IdentifiedFakeEmbeddingClient(FakeEmbeddingClient):
+    def __init__(self, identity):
+        super().__init__()
+        self._identity = identity
+
+    def model_identity(self):
+        return self._identity
+
+
 class _FakeResponse:
     def __init__(self, payload):
         self._payload = json.dumps(payload).encode("utf-8")
@@ -169,6 +178,43 @@ class EmbeddingClientTests(unittest.TestCase):
             )
         self.assertIsNone(embeddings.embedding_client_from_config(config))
 
+    def test_client_from_config_uses_batch_size(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_dir = root / "99 System" / "0.01 agent"
+            config_dir.mkdir(parents=True)
+            (config_dir / "config.yaml").write_text(
+                "llm:\n  embedding_base_url: http://x\n  embedding_model: m\n"
+                "embeddings:\n  enabled: true\n  batch_size: 7\n",
+                encoding="utf-8",
+            )
+            config = load_config(
+                Namespace(vault_root=directory, config=None, dry_run=False, verbose=False)
+            )
+            client = embeddings.embedding_client_from_config(config)
+        self.assertIsNotNone(client)
+        self.assertEqual(client.batch_size, 7)
+
+    def test_model_identity_from_models_endpoint(self):
+        payload = {
+            "data": [
+                {
+                    "id": "embed",
+                    "aliases": ["embed"],
+                    "meta": {"n_embd": 2560, "n_ctx": 8192, "n_params": 4021774336},
+                }
+            ]
+        }
+        client = EmbeddingClient(base_url="http://x", model="embed")
+        with mock.patch(
+            "vault_agent.embeddings.urllib.request.urlopen",
+            return_value=_FakeResponse(payload),
+        ):
+            identity = client.model_identity()
+        self.assertEqual(identity["id"], "embed")
+        self.assertEqual(identity["dimensions"], 2560)
+        self.assertEqual(identity["context"], 8192)
+
 
 class EmbeddingIndexTests(unittest.TestCase):
     def _config(self, directory):
@@ -228,6 +274,28 @@ class EmbeddingIndexTests(unittest.TestCase):
             fourth = build_or_refresh_index(config, client4)
             self.assertEqual(fourth.total, 2)
             self.assertEqual(fourth.removed, 1)
+
+    def test_model_identity_change_rebuilds_unchanged_notes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._seed(root)
+            config = self._config(directory)
+
+            first_client = IdentifiedFakeEmbeddingClient({"id": "embed", "dimensions": 1024})
+            first = build_or_refresh_index(config, first_client)
+            self.assertEqual(first.embedded, 3)
+
+            same_client = IdentifiedFakeEmbeddingClient({"id": "embed", "dimensions": 1024})
+            same = build_or_refresh_index(config, same_client)
+            self.assertEqual(same.embedded, 0)
+            self.assertEqual(same.reused, 3)
+
+            upgraded_client = IdentifiedFakeEmbeddingClient(
+                {"id": "embed", "dimensions": 2560, "parameters": 4021774336}
+            )
+            upgraded = build_or_refresh_index(config, upgraded_client)
+            self.assertEqual(upgraded.embedded, 3)
+            self.assertEqual(upgraded.reused, 0)
 
 
 class CenteringTests(unittest.TestCase):
@@ -433,6 +501,36 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["results"][0]["path"], "06 Thoughts/garden.md")
         self.assertGreater(payload["results"][0]["score"], payload["results"][1]["score"])
+
+    def test_lexical_boost_breaks_semantic_ties(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            generic = root / "01 A"
+            project = root / "09 Z"
+            generic.mkdir(parents=True)
+            project.mkdir(parents=True)
+            (generic / "Generic.md").write_text(
+                "---\ntype: note\n---\n# Generic\n\nunrelated\n", encoding="utf-8"
+            )
+            (project / "CalNEXT DataCenters.md").write_text(
+                "---\ntype: note\n---\n# CalNEXT DataCenters\n\nunrelated\n",
+                encoding="utf-8",
+            )
+            config = self._config(directory)
+            client = FakeEmbeddingClient()
+            build_or_refresh_index(config, client)
+            exit_code, output = run_search(
+                config,
+                query_text="CalNEXT data centers interview",
+                top_k=2,
+                json_output=True,
+                client=client,
+            )
+            payload = json.loads(output)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["results"][0]["path"], "09 Z/CalNEXT DataCenters.md")
+        self.assertGreater(payload["results"][0]["lexical_boost"], 0)
 
 
 if __name__ == "__main__":

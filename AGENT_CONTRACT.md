@@ -24,15 +24,15 @@ This document defines the operating contract for working in a vault managed by p
    - `99 System/0.01 agent/retrieval/02 note-catalog.md`
    - `99 System/0.01 agent/retrieval/03 property-index.md`
    - `99 System/0.01 agent/retrieval/04 summary-brief.md`
-   - When embeddings are enabled, use `vault-search "<query>"` for read-only semantic ranking by meaning; build the index first with `embed-index` if it is empty.
+   - When embeddings are enabled, use `vault_manage` action `semantic-search` for read-only semantic ranking by meaning; build the index first with action `embed-index` if it is empty.
 
 ## User Request Routing
 
 Each request routes to a pi skill, which drives the engine commands beneath it:
 
 - "Onboard / initialize this vault" → **vault-onboarding** skill: bootstrap `.pi-vault/config.yaml`, scan existing conventions, plan norms with the user (engine: `init`, `scan`, `validate`).
-- "Find / retrieve notes" → **vault-retrieval** skill: read the generated vault map, catalog, property index, and summary brief, and use semantic search when embeddings are enabled (engine: `status`, retrieval files, `vault-search`).
-- "Suggest related links / connect related notes" → **vault-retrieval** / **vault-organization**: propose embedding-discovered `related` links append-only, then review and apply (engine: `embed-index`, `propose-related-links`, `review-proposals`).
+- "Find / retrieve notes" → **vault-retrieval** skill: read the generated vault map, catalog, property index, and summary brief, and use semantic search when embeddings are enabled (tool: `vault_manage` action `semantic-search`; engine: `vault-search`).
+- "Suggest related links / connect related notes" → **vault-retrieval** / **vault-organization**: propose embedding-discovered `related` links append-only, then review and apply (tool: `vault_manage` actions `embed-index`, `related-links`, and `review`; engine: `embed-index`, `propose-related-links`, `review-proposals`).
 - "Organize this vault" → **vault-organization** skill: lock norms first, run readiness, then bounded stage-scoped passes with reports (engine: `norms-lock`, `organization-readiness --json`, `autonomous-run`, `organize-vault-pass`).
 - "Process the inbox" → **vault-inbox** skill: bounded classification followed by deterministic destination proposals; apply only current, warning-free, high-confidence routes automatically (engine: `process-inbox`, `propose-inbox-sort`, `autonomous-run --apply-safe`).
 - "Adopt the default layout" → **vault-organization** skill: generate and review a dashboard-first migration without moving existing notes automatically (engine: `propose-vault-layout`).

@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added explicit pi-vault embedding actions to `vault_manage` for `embed-index`, read-only semantic search, and review-gated related-link proposals.
 - Added dashboard-first bootstrap metadata to the vault extension, including configured dashboard/content paths and the new `00 Inbox` / `99 System` startup defaults.
 - Added a read-only model startup assessment that surfaces resumed work, schema state, vault health, inbox changes, pending review, and concrete next actions.
 - Added the pi-vault application identity, bundled Obsidian vault skills and extension, interactive onboarding, vault-local context loading, validated vault tools, and namespaced automation commands.

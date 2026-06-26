@@ -131,11 +131,15 @@ def build_or_refresh_index(
 ) -> IndexResult:
     """Embed new/changed notes, reuse unchanged vectors, drop deleted notes."""
     excerpt_chars = getattr(config, "embeddings_excerpt_chars", DEFAULT_EXCERPT_CHARS)
-    existing = {
-        record["path"]: record
-        for record in index_records(load_index(config))
-        if isinstance(record.get("path"), str)
-    }
+    loaded_index = load_index(config)
+    model_identity = _client_model_identity(client)
+    existing = {}
+    if _index_matches_model(loaded_index, client, model_identity):
+        existing = {
+            record["path"]: record
+            for record in index_records(loaded_index)
+            if isinstance(record.get("path"), str)
+        }
 
     scan = scan_vault(config.vault_root)
     records: list[dict[str, Any]] = []
@@ -191,6 +195,7 @@ def build_or_refresh_index(
     index = {
         "generated_by": "vault-agent",
         "model": client.model,
+        "model_identity": model_identity,
         "dimensions": dimensions,
         "note_count": len(records),
         "centered": centered,
@@ -224,3 +229,20 @@ def _note_body(path: Path) -> str:
         return ""
     parsed = parse_note(text)
     return parsed.body if parsed.body else text
+
+
+def _client_model_identity(client: EmbeddingClient) -> dict[str, Any]:
+    identity_method = getattr(client, "model_identity", None)
+    if callable(identity_method):
+        identity = identity_method()
+        if isinstance(identity, dict):
+            return identity
+    return {"id": client.model}
+
+
+def _index_matches_model(
+    index: dict[str, Any],
+    client: EmbeddingClient,
+    model_identity: dict[str, Any],
+) -> bool:
+    return index.get("model") == client.model and index.get("model_identity") == model_identity

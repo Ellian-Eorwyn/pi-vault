@@ -43,7 +43,9 @@ def run_propose_related_links(
     limit = max_notes if max_notes is not None else max(config.max_notes, 5)
     neighbors = top_k if top_k is not None else config.embeddings_top_k
     threshold = (
-        min_similarity if min_similarity is not None else config.embeddings_min_similarity
+        min_similarity
+        if min_similarity is not None
+        else config.embeddings_related_min_similarity
     )
 
     try:

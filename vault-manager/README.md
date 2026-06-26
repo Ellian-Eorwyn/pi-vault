@@ -224,14 +224,17 @@ embeddings:
   enabled: true
   top_k: 5
   min_similarity: 0.55
+  related_min_similarity: 0.65
+  duplicate_min_similarity: 0.97
+  batch_size: 32
   excerpt_chars: 6000
 ```
 
 With embeddings enabled, build the index with `embed-index` (or rely on `rebuild-retrieval`), then use `propose-related-links` for append-only related-link proposals and `vault-search "<query>"` for read-only semantic search. See `docs/architecture/embeddings-roadmap.md` for the phased plan (near-duplicate detection, routing pre-ranking, content clustering).
 
-The embedding server must allow each input's full token count in one physical batch. For an OpenAI-compatible llama.cpp server, set the batch sizes to at least the largest excerpt you embed (e.g. `-ub 2048 -b 2048`); the client truncates any input the server still rejects, so it degrades gracefully on smaller limits.
+The embedding server must allow each input's full token count in one physical batch. For an OpenAI-compatible llama.cpp server, set the batch sizes to at least the largest excerpt you embed (e.g. `-ub 2048 -b 2048`); the client truncates any input the server still rejects, so it degrades gracefully on smaller limits. `embeddings.batch_size` controls how many notes are sent per HTTP request; keep it modest on shared GPU hosts.
 
-Similarity is computed in a **mean-centered** space: Qwen3-Embedding has a high raw baseline cosine (random note pairs ~0.59, real neighbors ~0.89), so the engine subtracts the corpus mean embedding before ranking. On a ~1100-note vault this roughly doubled neighbor-vs-random separation (0.30 to 0.75) and pushed spurious cross-topic matches out of the top results. In that centered space `min_similarity: 0.55` is a good default; raise it for precision or lower it to surface more links. Centering needs a minimum corpus size (about 25 notes); smaller vaults fall back to raw cosine automatically.
+Similarity is computed in a **mean-centered** space: Qwen3-Embedding has a high raw baseline cosine, so the engine subtracts the corpus mean embedding before ranking. On a ~1100-note Memex vault with Qwen3-Embedding-4B, random centered pairs had median similarity near zero while nearest neighbors had median similarity around 0.70. In that centered space `min_similarity: 0.55` is a search floor, `related_min_similarity: 0.65` is the default for reviewable related-link proposals, and `duplicate_min_similarity: 0.97` is reserved for near-duplicate candidates. Centering needs a minimum corpus size (about 25 notes); smaller vaults fall back to raw cosine automatically.
 
 When testing local LLM-backed features, monitor `http://llms:8077/`: open Logs, select `Backend MoE`, click `Stream`, and confirm one `slot id 0` task completes with `release` and `all slots are idle` before the next request starts. Keep prompts serialized and stage-specific. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` automatically prompts the next queued note after the previous note stage returns and is validated. `max_input_tokens` is enforced through an estimated character budget of `max_input_tokens * chars_per_token`; set `max_input_chars` only for an explicit legacy override. Vault-agent does not set a generation-token cap; leave generation limits to the configured backend. If the model returns non-JSON or thinking text, record the failure, fall back deterministically only where safe, and improve parser/prompt tests before widening the batch.
 

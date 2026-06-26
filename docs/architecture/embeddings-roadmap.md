@@ -17,7 +17,8 @@ They are deliberately **not** used for constrained-vocabulary judgments
 ## Model and configuration
 
 - Endpoint: OpenAI-compatible `/v1/embeddings` (default `http://llms:8005`).
-- Model: Qwen3-Embedding-0.6B (config `embedding_model`, default id `embed`).
+- Model: Qwen3-Embedding via the configured local alias (currently validated
+  against Qwen3-Embedding-4B at `embedding_model: embed`).
 - No new runtime dependency: requests use `urllib`; similarity is pure-Python cosine.
 - Config block (`99 System/0.01 agent/config.yaml`):
 
@@ -25,7 +26,10 @@ They are deliberately **not** used for constrained-vocabulary judgments
 embeddings:
   enabled: false        # off by default; deterministic runs are unaffected
   top_k: 5              # neighbors / results
-  min_similarity: 0.55  # floor in the mean-centered space (tuned for Qwen3)
+  min_similarity: 0.55  # search floor in the mean-centered space
+  related_min_similarity: 0.65
+  duplicate_min_similarity: 0.97
+  batch_size: 32        # keep modest on shared GPU hosts
   excerpt_chars: 6000   # note body chars embedded per note
 llm:
   embedding_base_url: http://llms:8005
@@ -54,20 +58,18 @@ excerpt's token count (e.g. `-ub 2048 -b 2048`). The client tolerates smaller
 caps: on a "too large" rejection it splits the batch to isolate the offending
 input and truncates that input by the server-reported token ratio before retrying.
 
-### Calibration (Qwen3-Embedding-0.6B)
+### Calibration (Qwen3-Embedding-4B)
 
 A calibration over the ~1100-note Memex test vault informs the defaults:
 
-- Raw cosine is high and compressed: every note's nearest neighbor is ~0.89
-  median while random pairs sit ~0.59 (separation ~0.30). An absolute raw floor
-  is blunt - 0.85 pruned good same-topic clusters, 0.80 admitted noise.
-- Mean-centering fixes this: separation rises to ~0.75 (random pairs ~0), and
-  spurious cross-topic matches drop out of the top-k.
-- In the centered space, `min_similarity: 0.55` with `top_k: 5` keeps strong
-  same-topic neighbors while excluding loose matches. Raise for precision, lower
-  to surface more.
-- Near-duplicates cluster at the very top (raw >= 0.97: file copies, repeated
-  medical summaries) - the basis for the Phase 2 default below.
+- Raw cosine remains high and compressed: nearest-neighbor median was ~0.91
+  while random pairs sat around ~0.69. An absolute raw floor is still blunt.
+- Mean-centering remains necessary: random centered pairs had median similarity
+  near zero, while nearest-neighbor median was ~0.70.
+- `min_similarity: 0.55` remains useful for search candidate filtering, but
+  related-link proposals use `related_min_similarity: 0.65` for better precision.
+- Near-duplicates and repeated extracted artifacts cluster at the top; use
+  `duplicate_min_similarity: 0.97` for duplicate-candidate surfacing.
 
 ## Architecture
 
@@ -82,8 +84,9 @@ flowchart TD
   index -.future.-> hubs["Phase 4: content clustering"]
 ```
 
-The index is keyed by note path and invalidated by the scanner's content hash, so
-only new or changed notes are re-embedded. It lives under
+The index is keyed by note path and invalidated by the scanner's content hash and
+the embedding backend's model metadata, so model upgrades re-embed stale vectors
+even when the configured alias stays `embed`. It lives under
 `99 System/0.01 agent/retrieval/embedding/index.json` and is excluded from
 versioning, matching the reserved `retrieval/embedding*/`, `retrieval/vector*/`,
 and `*.sqlite` git-ignore patterns.
@@ -102,12 +105,13 @@ and `*.sqlite` git-ignore patterns.
 ### Phase 1 - Related links and semantic search (implemented)
 
 - **Related-note discovery** (`propose-related-links`): for a bounded batch of
-  notes, take nearest neighbors above `min_similarity`, drop the note itself,
-  existing `related`, and `parent`, and emit append-only `update_frontmatter`
-  operations as a pending `related-links` proposal. Never removes links; applied
-  only through the normal `review-proposals` path.
+  notes, take nearest neighbors above `related_min_similarity`, drop the note
+  itself, existing `related`, and `parent`, and emit append-only
+  `update_frontmatter` operations as a pending `related-links` proposal. Never
+  removes links; applied only through the normal `review-proposals` path.
 - **Semantic search** (`vault-search`): embed a free-text query and rank notes by
-  cosine similarity. Read-only; complements the deterministic retrieval files.
+  mean-centered cosine with a bounded title/path lexical boost for entity and
+  project names. Read-only; complements the deterministic retrieval files.
 
 ### Phase 2 - Near-duplicate / merge-candidate detection (planned)
 

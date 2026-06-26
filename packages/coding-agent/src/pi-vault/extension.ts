@@ -19,6 +19,26 @@ export interface BootstrapConfig {
 const extensionDirectory = dirname(fileURLToPath(import.meta.url));
 const skillsDirectory = join(extensionDirectory, "skills");
 
+export interface VaultManageParams {
+	action: string;
+	maxNotes?: number;
+	useLlm?: boolean;
+	applySafe?: boolean;
+	dryRun?: boolean;
+	folder?: string;
+	note?: string;
+	maxPeople?: number;
+	property?: string;
+	value?: string;
+	description?: string;
+	name?: string;
+	title?: string;
+	runId?: string;
+	query?: string;
+	topK?: number;
+	minSimilarity?: number;
+}
+
 export function findVaultRoot(cwd: string): string | undefined {
 	let current = resolve(cwd);
 	while (true) {
@@ -141,6 +161,98 @@ export function startupAssessmentPrompt(status: string, newlyInitialized: boolea
 	].join("\n");
 }
 
+export function buildVaultManageArgs(vaultRoot: string, params: VaultManageParams): string[] | { error: string } {
+	const args = ["--vault-root", vaultRoot];
+	const addGlobalDryRun = () => {
+		if (!args.includes("--dry-run")) args.push("--dry-run");
+	};
+	switch (params.action) {
+		case "scan":
+			args.push("scan");
+			break;
+		case "readiness":
+			args.push("organization-readiness", "--json");
+			break;
+		case "maintain":
+			args.push("autonomous-run", "--create-lock");
+			if (params.applySafe) args.push("--apply-safe");
+			if (params.useLlm) args.push("--use-llm");
+			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+			if (params.dryRun !== false) args.push("--dry-run");
+			break;
+		case "review":
+			args.push("review-proposals", "--dry-run");
+			break;
+		case "apply-approved":
+			args.push("review-proposals", "--apply-approved");
+			break;
+		case "obsidian-check":
+			args.push("obsidian-check", "--json");
+			break;
+		case "rebuild-retrieval":
+			args.push("rebuild-retrieval");
+			break;
+		case "embed-index":
+			args.push("embed-index");
+			break;
+		case "semantic-search":
+			if (!params.query?.trim()) return { error: "query is required for semantic-search." };
+			args.push("vault-search", params.query, "--json");
+			if (params.topK) args.push("--top-k", String(params.topK));
+			break;
+		case "related-links":
+			if (params.dryRun !== false) addGlobalDryRun();
+			args.push("propose-related-links");
+			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+			if (params.topK) args.push("--top-k", String(params.topK));
+			if (params.minSimilarity !== undefined) args.push("--min-similarity", String(params.minSimilarity));
+			break;
+		case "write-norms-lock":
+			args.push("norms-lock", "--write");
+			break;
+		case "refine":
+			if (!params.folder && !params.note) return { error: "folder or note is required for refine." };
+			args.push("propose-folder-refinement");
+			if (params.folder) args.push("--folder", params.folder);
+			if (params.note) args.push("--note", params.note);
+			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+			if (params.dryRun !== false) args.push("--dry-run");
+			break;
+		case "people":
+			args.push("propose-people");
+			if (params.folder) args.push("--folder", params.folder);
+			if (params.maxPeople) args.push("--max-people", String(params.maxPeople));
+			break;
+		case "add-property":
+			if (!params.property || !params.value) return { error: "property and value are required for add-property." };
+			args.push("propose-property", "--property", params.property, "--value", params.value);
+			if (params.description) args.push("--description", params.description);
+			break;
+		case "add-note-type":
+			if (!params.name || !params.description || !params.folder) {
+				return { error: "name, description, and folder are required for add-note-type." };
+			}
+			args.push(
+				"propose-note-type",
+				"--name",
+				params.name,
+				"--description",
+				params.description,
+				"--folder",
+				params.folder,
+			);
+			if (params.title) args.push("--title", params.title);
+			break;
+		case "undo":
+			if (!params.runId) return { error: "runId is required for undo." };
+			args.push("version", "undo-run", params.runId);
+			break;
+		default:
+			return { error: `unsupported vault_manage action: ${params.action}` };
+	}
+	return args;
+}
+
 const statusTool = defineTool({
 	name: "vault_status",
 	label: "Vault Status",
@@ -178,6 +290,9 @@ const manageTool = defineTool({
 			Type.Literal("apply-approved"),
 			Type.Literal("obsidian-check"),
 			Type.Literal("rebuild-retrieval"),
+			Type.Literal("embed-index"),
+			Type.Literal("semantic-search"),
+			Type.Literal("related-links"),
 			Type.Literal("write-norms-lock"),
 			Type.Literal("refine"),
 			Type.Literal("people"),
@@ -198,6 +313,9 @@ const manageTool = defineTool({
 		name: Type.Optional(Type.String()),
 		title: Type.Optional(Type.String()),
 		runId: Type.Optional(Type.String()),
+		query: Type.Optional(Type.String()),
+		topK: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		minSimilarity: Type.Optional(Type.Number({ minimum: -1, maximum: 1 })),
 	}),
 	async execute(_toolCallId, params, signal, _onUpdate, ctx) {
 		const vaultRoot = findVaultRoot(ctx.cwd);
@@ -208,95 +326,13 @@ const manageTool = defineTool({
 				isError: true,
 			};
 		}
-		const args = ["--vault-root", vaultRoot];
-		switch (params.action) {
-			case "scan":
-				args.push("scan");
-				break;
-			case "readiness":
-				args.push("organization-readiness", "--json");
-				break;
-			case "maintain":
-				args.push("autonomous-run", "--create-lock");
-				if (params.applySafe) args.push("--apply-safe");
-				if (params.useLlm) args.push("--use-llm");
-				if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
-				if (params.dryRun !== false) args.push("--dry-run");
-				break;
-			case "review":
-				args.push("review-proposals", "--dry-run");
-				break;
-			case "apply-approved":
-				args.push("review-proposals", "--apply-approved");
-				break;
-			case "obsidian-check":
-				args.push("obsidian-check", "--json");
-				break;
-			case "rebuild-retrieval":
-				args.push("rebuild-retrieval");
-				break;
-			case "write-norms-lock":
-				args.push("norms-lock", "--write");
-				break;
-			case "refine":
-				if (!params.folder && !params.note) {
-					return {
-						content: [{ type: "text", text: "folder or note is required for refine." }],
-						details: { exitCode: 1, action: params.action },
-						isError: true,
-					};
-				}
-				args.push("propose-folder-refinement");
-				if (params.folder) args.push("--folder", params.folder);
-				if (params.note) args.push("--note", params.note);
-				if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
-				if (params.dryRun !== false) args.push("--dry-run");
-				break;
-			case "people":
-				args.push("propose-people");
-				if (params.folder) args.push("--folder", params.folder);
-				if (params.maxPeople) args.push("--max-people", String(params.maxPeople));
-				break;
-			case "add-property":
-				if (!params.property || !params.value) {
-					return {
-						content: [{ type: "text", text: "property and value are required for add-property." }],
-						details: { exitCode: 1, action: params.action },
-						isError: true,
-					};
-				}
-				args.push("propose-property", "--property", params.property, "--value", params.value);
-				if (params.description) args.push("--description", params.description);
-				break;
-			case "add-note-type":
-				if (!params.name || !params.description || !params.folder) {
-					return {
-						content: [{ type: "text", text: "name, description, and folder are required for add-note-type." }],
-						details: { exitCode: 1, action: params.action },
-						isError: true,
-					};
-				}
-				args.push(
-					"propose-note-type",
-					"--name",
-					params.name,
-					"--description",
-					params.description,
-					"--folder",
-					params.folder,
-				);
-				if (params.title) args.push("--title", params.title);
-				break;
-			case "undo":
-				if (!params.runId) {
-					return {
-						content: [{ type: "text", text: "runId is required for undo." }],
-						details: { exitCode: 1, action: params.action },
-						isError: true,
-					};
-				}
-				args.push("version", "undo-run", params.runId);
-				break;
+		const args = buildVaultManageArgs(vaultRoot, params);
+		if (!Array.isArray(args)) {
+			return {
+				content: [{ type: "text", text: args.error }],
+				details: { exitCode: 1, action: params.action },
+				isError: true,
+			};
 		}
 		const result = await runVaultAgent(args, vaultRoot, signal);
 		return {

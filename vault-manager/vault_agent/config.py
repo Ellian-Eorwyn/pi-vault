@@ -74,7 +74,10 @@ class AgentConfig:
     embeddings_enabled: bool
     embeddings_top_k: int
     embeddings_min_similarity: float
+    embeddings_related_min_similarity: float
+    embeddings_duplicate_min_similarity: float
     embeddings_excerpt_chars: int
+    embeddings_batch_size: int
     max_notes: int
     max_runtime_minutes: int
     legacy_type_aliases: dict[str, str]
@@ -160,7 +163,17 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         embeddings_enabled=bool(embeddings.get("enabled", False)),
         embeddings_top_k=int(embeddings.get("top_k", 5)),
         embeddings_min_similarity=float(embeddings.get("min_similarity", 0.55)),
+        embeddings_related_min_similarity=float(
+            embeddings.get(
+                "related_min_similarity",
+                embeddings.get("min_similarity", 0.65),
+            )
+        ),
+        embeddings_duplicate_min_similarity=float(
+            embeddings.get("duplicate_min_similarity", 0.97)
+        ),
         embeddings_excerpt_chars=int(embeddings.get("excerpt_chars", 6000)),
+        embeddings_batch_size=max(1, int(embeddings.get("batch_size", 32))),
         max_notes=int(auto_process.get("max_notes", 5)),
         max_runtime_minutes=int(auto_process.get("max_runtime_minutes", 10)),
         legacy_type_aliases=_string_mapping(

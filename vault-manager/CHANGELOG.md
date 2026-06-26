@@ -2,6 +2,7 @@
 
 ## 2026-06-26
 
+- Retuned embedding retrieval for the Qwen3-Embedding-4B local backend: index caches now store backend model metadata so alias-preserving model upgrades force re-embedding, `embeddings.batch_size` is configurable, related-link and duplicate thresholds are split from the search floor, and `vault-search` uses a bounded title/path lexical boost on top of centered cosine.
 - Added a shared embedding foundation (`embeddings.py`, `embedding_index.py`) using the OpenAI-compatible `/v1/embeddings` endpoint (default `http://llms:8005`, model `embed`), with no new runtime dependency: requests use `urllib` and similarity is pure-Python cosine. The index is a rebuildable JSON cache keyed by note path and invalidated by the scanner content hash, written under `retrieval/embedding/index.json` and git-ignored.
 - Added an `embeddings:` config block (`enabled` default false, `top_k`, `min_similarity`, `excerpt_chars`); deterministic runs are unaffected when disabled.
 - Added `embed-index` to build/refresh the index; `rebuild-retrieval` also refreshes it when embeddings are enabled.

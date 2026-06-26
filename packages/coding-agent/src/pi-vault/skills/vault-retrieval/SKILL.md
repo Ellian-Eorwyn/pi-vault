@@ -8,8 +8,9 @@ description: Retrieve notes from a pi-vault managed Obsidian vault with minimal 
 1. Run `vault_status` and read the vault purpose and conventions paths supplied in the pi-vault context.
 2. Read the generated vault map and summary brief before broad search.
 3. Use the note catalog and property index to shortlist by path, title, type, domain, parent, and aliases.
-4. When embeddings are enabled, use `vault-search "<query>"` for semantic ranking by meaning rather than keyword; it is read-only and returns ranked path, title, score, and snippet. Fall back to the catalog/property index when embeddings are disabled or the index is empty (build it with `embed-index`).
+4. When embeddings are enabled, use `vault_manage` with `action: "semantic-search"` and a focused `query` for semantic ranking by meaning rather than keyword; it is read-only and returns ranked path, title, score, semantic score, lexical boost, and snippet. If the index is empty, use `vault_manage` with `action: "embed-index"`, then retry search.
 5. Read shortlisted frontmatter before full note bodies.
 6. Follow meaningful wikilinks only when they improve the answer.
+7. To suggest note connections, use `vault_manage` with `action: "related-links"` and a small `maxNotes` first. This creates or previews append-only `related` proposals; apply only through review.
 
 Do not mutate notes during retrieval. If generated retrieval files are stale, report that and use `vault_manage` with `rebuild-retrieval` only after confirming no organizational write is implied.

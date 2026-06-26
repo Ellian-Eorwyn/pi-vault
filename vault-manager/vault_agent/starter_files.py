@@ -178,9 +178,15 @@ embeddings:
   enabled: false
   top_k: 5
   # Similarity is computed in a mean-centered space (the corpus mean is removed
-  # to counter Qwen3's high baseline cosine), so 0.55 is a meaningful floor.
-  # Lower it to surface more (noisier) links, raise it for precision.
+  # to counter Qwen3's high baseline cosine), so 0.55 is a meaningful search floor.
   min_similarity: 0.55
+  # Related-link proposals use a stricter default than search so suggested
+  # frontmatter links stay precise.
+  related_min_similarity: 0.65
+  # Near-duplicate candidates should be much tighter than ordinary neighbors.
+  duplicate_min_similarity: 0.97
+  # Keep local embedding requests modest when the GPU host is serving other models.
+  batch_size: 32
   # Note body chars embedded per note. Each input must fit the embedding server's
   # physical batch (ubatch) token cap; the client truncates oversized inputs.
   excerpt_chars: 6000
@@ -535,6 +541,11 @@ Start with generated retrieval files before opening full notes.
 2. `02 note-catalog.md`
 3. `03 property-index.md`
 4. `04 summary-brief.md`
+
+When embeddings are enabled, use `vault_manage` action `semantic-search` for
+read-only semantic ranking. If the index is empty, use action `embed-index` and
+retry. To suggest note connections, use action `related-links` and apply only
+through proposal review.
 
 Open full notes only after selecting likely candidates. Do not edit notes during retrieval.
 """,
