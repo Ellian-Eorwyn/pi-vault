@@ -1,5 +1,51 @@
 # Decisions
 
+## 2026-06-26: Organization & Processing Legs Get First-Class Tools + Structured Engine Output
+
+Decision: the organization, dashboard, inbox, and note-processing engine commands — previously
+reachable only as raw CLI through skill prose — are promoted to typed tools `vault_organize_propose`
+(layout, base-hierarchy, folder-organization, cleanup-queue, inbox-sort, index, action-queue) and
+`vault_process_notes` (bounded inbox/vault/organize-pass/reconcile over the seven `PROCESSING_STAGES`).
+`vault_schema_propose` and `vault_review_apply` gain operations (templates, topic-hubs,
+schema-conversation, defaults; blocked model-stage review). The `propose-*` and `process-*` engine
+commands gain an opt-in `--json` flag (threaded via `AgentConfig.json_output` and a centralized
+`_write_proposal` payload) so the tools return machine-readable results. A new `vault-transform`
+skill provides one checkpointed end-to-end playbook.
+
+Scope/safety: proposal→review→apply stays structural (organize/propose tools never apply); broad
+`vault_process_notes` runs require `maxNotes`; `--mass-edit` is opt-in only and never implicit; the
+engine guards are untouched. New embedding features (near-duplicate detection, embedding-assisted
+inbox routing) are explicitly deferred to a later engine pass.
+
+Rationale: the backend is Qwen3.6-27B (Terminal-Bench 2.0 59.3, SWE-bench Verified 77.2, 262K context)
+with Qwen3-Embedding-4B — strong enough that the org legs were never a capability gap. This expansion
+is about enforcing the trust boundary structurally on those legs, giving the model structured results
+to reason over, and giving it one clear end-to-end playbook. The 262K context window removes the
+always-on tool-budget concern that constrained the earlier decompose-only decision.
+
+## 2026-06-26: First-Class Typed Vault Tools Replace The `vault_manage` God-Tool
+
+Decision: the single `vault_manage` tool (one `action` string union over 16 workflows plus
+17 shared optional params) is decomposed into focused, typed pi tools: `vault_status`,
+`vault_readiness`, `vault_search`, `vault_retrieval`, `vault_schema_propose`,
+`vault_content_propose`, `vault_maintain`, `vault_review_apply`, and `vault_recovery`. Each
+carries only its own parameters, and the proposal→review→apply boundary is now structural —
+propose tools only ever write pending proposals, and apply lives solely behind
+`vault_review_apply` `operation: "apply-approved"`. `vault_search` is deliberately read-only
+with no write path so a future memory-retrieval agent (or restricted MCP profile) can be
+given the read-only set — `vault_search` + `vault_status` + `vault_readiness` — with zero
+ability to rewrite the vault.
+
+Scope: this is a decompose-only refactor. No new engine commands are exposed, the Python
+engine is unchanged, and every tool produces byte-identical `vault-agent` argv and the same
+safe defaults (dry-run on `maintain`/`refine`/`related-links`; no auto-apply) as the old
+actions. `vault_manage` remains registered as a deprecated shim that delegates through the
+same arg builders so it cannot drift, and will be removed in a later pass.
+
+Rationale: a string-enum god-tool forces the local model to infer which params pair with
+which action and hides the trust boundary. Narrow typed tools make selection reliable and
+the safety contract legible without expanding surface or always-on context.
+
 ## 2026-06-26: Note Types Are Data-Driven; Schema Changes Are Guarded; People Are Extracted
 
 Decision: Note types and the `source_kind`/`capture_type` controlled values are now

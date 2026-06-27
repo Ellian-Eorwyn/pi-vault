@@ -6,7 +6,7 @@ agent files, scans notes, validates sparse metadata, applies conservative templa
 rebuilds retrieval indexes, and runs bounded processing passes with backups and logs.
 
 **pi drives this engine.** The primary way to use it is to launch `pi-vault` at a vault
-root: the agent loads the `vault-*` skills and the `vault_status` / `vault_manage` tools on
+root: the agent loads the `vault-*` skills and the `vault_*` tools on
 startup and calls the commands below on your behalf. The `vault-agent` CLI and the
 `pi-vault vault <command>` wrapper documented here are the engine layer beneath those skills
 and tools — useful for automation, scripting, and development. See the repo-root

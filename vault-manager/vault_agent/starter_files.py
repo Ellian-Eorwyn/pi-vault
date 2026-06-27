@@ -136,8 +136,10 @@ version: 1
 auto_process:
   # Inbox and whole-vault processing are both bounded by these limits.
   # Folder placement is advisory outside 99 System and 00 Inbox.
-  max_notes: 5
-  max_runtime_minutes: 10
+  # Keep batches modest: the LLM runs on a single inference slot, so each note is
+  # several serialized calls. Bounded passes with review checkpoints are the pattern.
+  max_notes: 10
+  max_runtime_minutes: 20
 versioning:
   enabled: true
   auto_init: true
@@ -159,23 +161,30 @@ versioning:
   ignored_paths: []
   protected_paths: []
 llm:
-  enabled: false
-  provider: none
+  # Semantic stages (classify-type, property-values, summary, refine, people) run
+  # through this single OpenAI-compatible backend. Enabled by default for a working
+  # transform; set enabled: false to restrict the engine to deterministic work only.
+  enabled: true
+  provider: openai-compatible
   base_url: http://llms:8008
   model: code
   confidence_threshold: 0.75
-  timeout_seconds: 120
+  # A single inference slot serves one capable model, so calls are serialized and
+  # the model is thorough; allow generous headroom before timing out.
+  timeout_seconds: 180
   # Token-budget cap for note content sent to the model. The local backend has
   # a large context window; the character budget is estimated as
   # max_input_tokens * chars_per_token unless max_input_chars is explicitly set.
+  # 64000 (~256k chars) covers any single note; raising it only grows per-call
+  # KV-cache on the shared slot, so increase only for unusually large notes.
   max_input_tokens: 64000
   chars_per_token: 4
   embedding_base_url: http://llms:8005
   embedding_model: embed
 embeddings:
-  # Optional embedding-backed retrieval (related-note discovery, semantic search).
-  # Disabled by default; deterministic runs are unaffected when off.
-  enabled: false
+  # Embedding-backed retrieval (related-note discovery, semantic search). Enabled by
+  # default; deterministic runs are unaffected if the embedding backend is offline.
+  enabled: true
   top_k: 5
   # Similarity is computed in a mean-centered space (the corpus mean is removed
   # to counter Qwen3's high baseline cosine), so 0.55 is a meaningful search floor.
@@ -266,7 +275,7 @@ Generated scans may refresh this section without changing the provisional or loc
 """,
         "99 System/0.01 agent/AGENT_HANDOFF.md": """# Agent Handoff
 
-This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and the agent loads the `vault-*` skills (onboarding, retrieval, inbox, schema, organization, review, recovery) and the `vault_status` / `vault_manage` tools on startup — use those first. They drive `vault-agent`, a local-first engine that keeps generated state under `99 System/0.01 agent/` and human-editable templates under `99 System/0.02 templates/`. The `vault-agent` commands below are the engine layer beneath the skills and tools.
+This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and the agent loads the `vault-*` skills (onboarding, retrieval, inbox, schema, analysis, organization, people, review, recovery, and the `vault-transform` end-to-end playbook) and the typed `vault_*` tools (`vault_status`, `vault_readiness`, `vault_search`, `vault_retrieval`, `vault_schema_propose`, `vault_content_propose`, `vault_organize_propose`, `vault_process_notes`, `vault_maintain`, `vault_review_apply`, `vault_recovery`) on startup — use those first. They drive `vault-agent`, a local-first engine that keeps generated state under `99 System/0.01 agent/` and human-editable templates under `99 System/0.02 templates/`. The `vault-agent` commands below are the engine layer beneath the skills and tools.
 
 ## Operating Order
 
@@ -290,9 +299,9 @@ This vault is managed via **pi-vault**. Launch `pi-vault` at this vault root and
 - Generated reports live under `99 System/0.01 agent/reports/`; use them to explain what was done and what remains.
 - Startup assessment is read-only. It may offer to process inbox files or continue prior work, but it does not authorize mutations.
 
-## Local LLM Monitoring
+## Local LLM Behavior
 
-When using the local LLM, monitor `http://llms:8077/`: open Logs, select `Backend MoE`, click `Stream`, and confirm one `slot id 0` task completes with `release` and `all slots are idle` before the next prompt starts. Vault-agent does not set a generation-token cap; leave generation limits to the configured backend. If output is non-JSON or thinking text, vault-agent extracts the first balanced JSON object, sends one repair prompt, and records structured failure details when repair fails.
+The configured backend serves one capable model on a single inference slot, so semantic stages are processed one note/stage at a time by design — this is the expected operating mode, not a limitation. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` performs that sequencing automatically. Keep batches bounded with review checkpoints rather than large unattended runs. Vault-agent does not set a generation-token cap; leave generation limits to the configured backend. If output is non-JSON or thinking text, vault-agent extracts the first balanced JSON object, sends one repair prompt, and records structured failure details when repair fails. To debug a constrained single-slot backend, you can watch its server logs for a `slot id 0` task to release and idle before the next prompt.
 
 ## Recovery
 
@@ -302,7 +311,7 @@ Backups live in `99 System/0.01 agent/backups/`. Daily command logs live in `99 
 """,
         "99 System/0.01 agent/AGENT_CONTRACT.md": """# Agent Contract
 
-pi is the primary driver of this vault: launch `pi-vault` and the agent loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, which drive the `vault-agent` engine. These rules still apply to any other runner (a scheduler, a cron job, or another agent framework), but pi is the default front end.
+pi is the primary driver of this vault: launch `pi-vault` and the agent loads the `vault-*` skills and the typed `vault_*` tools (`vault_status`, `vault_search`, `vault_retrieval`, `vault_schema_propose`, `vault_content_propose`, `vault_organize_propose`, `vault_process_notes`, `vault_maintain`, `vault_review_apply`, `vault_readiness`, `vault_recovery`), which drive the `vault-agent` engine. For a full messy-to-organized overhaul, the `vault-transform` skill sequences them end to end. These rules still apply to any other runner (a scheduler, a cron job, or another agent framework), but pi is the default front end.
 
 ## Source Of Truth
 
@@ -505,7 +514,7 @@ When LLM processing is disabled, scheduled maintenance should only perform deter
 
 ## Local LLM Monitoring
 
-When testing local LLM-backed behavior, use the configured vault provider and send one prompt at a time. Monitor `http://llms:8077/`: click Logs, select `Backend MoE`, click `Stream`, and watch for a single `slot id 0` task. Wait for `release` and `all slots are idle` before sending another prompt. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` performs that sequencing automatically inside one run. Vault-agent does not set a generation-token cap; leave generation limits to the configured backend.
+The configured backend serves one capable model on a single inference slot, so LLM-backed work is serialized one note/stage at a time by design. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` performs that sequencing automatically inside one run; prefer bounded passes with review checkpoints over large unattended runs. Vault-agent does not set a generation-token cap; leave generation limits to the configured backend. When debugging a constrained single-slot server, you can watch its logs for a `slot id 0` task to release and idle before the next prompt.
 
 If the model returns non-JSON or thinking text, record the failure, fall back deterministically only where safe, and add prompt/parser tests before widening the batch.
 
@@ -542,10 +551,10 @@ Start with generated retrieval files before opening full notes.
 3. `03 property-index.md`
 4. `04 summary-brief.md`
 
-When embeddings are enabled, use `vault_manage` action `semantic-search` for
-read-only semantic ranking. If the index is empty, use action `embed-index` and
-retry. To suggest note connections, use action `related-links` and apply only
-through proposal review.
+When embeddings are enabled, use the `vault_search` tool for read-only semantic
+ranking. If the index is empty, use `vault_retrieval` `operation: "embed-index"` and
+retry. To suggest note connections, use `vault_retrieval` `operation: "related-links"`
+and apply only through proposal review (`vault_review_apply`).
 
 Open full notes only after selecting likely candidates. Do not edit notes during retrieval.
 """,

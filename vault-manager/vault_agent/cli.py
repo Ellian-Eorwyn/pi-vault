@@ -211,6 +211,30 @@ def _add_shared_options(
     )
 
 
+# Commands that gain an opt-in `--json` flag emitting a machine-readable result to stdout.
+# Excludes commands that already define their own `--json` (status, validate,
+# organization-readiness, action-plan, vault-search, obsidian-check, submit-artifact).
+JSON_OUTPUT_COMMANDS = frozenset(
+    {
+        "propose-property",
+        "propose-note-type",
+        "propose-template",
+        "propose-topic-hubs",
+        "propose-vault-layout",
+        "propose-base-hierarchy",
+        "propose-folder-organization",
+        "propose-cleanup-queue",
+        "propose-inbox-sort",
+        "propose-index",
+        "propose-action-queue",
+        "process-inbox",
+        "process-vault",
+        "organize-vault-pass",
+        "reconcile",
+    }
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="vault-agent",
@@ -226,6 +250,13 @@ def build_parser() -> argparse.ArgumentParser:
             help=MAIN_COMMAND_HELP[command],
         )
         _add_shared_options(command_parser, defaults=False)
+        if command in JSON_OUTPUT_COMMANDS:
+            command_parser.add_argument(
+                "--json",
+                action="store_true",
+                dest="json_output",
+                help="Emit a machine-readable JSON result to stdout.",
+            )
         if command == "init":
             command_parser.add_argument(
                 "--system-dir",
@@ -529,7 +560,7 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.add_argument(
                 "--max-items",
                 type=int,
-                default=25,
+                default=50,
                 help="Maximum cleanup operations to include in the generated proposal.",
             )
             command_parser.add_argument(
@@ -562,7 +593,7 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.add_argument(
                 "--llm-limit",
                 type=int,
-                default=3,
+                default=6,
                 help="Maximum domains to include in the optional coverage wording prompt.",
             )
             command_parser.add_argument(
@@ -606,7 +637,7 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.add_argument(
                 "--llm-limit",
                 type=int,
-                default=1,
+                default=4,
                 help="Maximum notes to consult with the configured LLM.",
             )
             command_parser.add_argument(
@@ -692,7 +723,7 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.add_argument(
                 "--llm-limit",
                 type=int,
-                default=3,
+                default=6,
                 help="Maximum notes to consult the configured LLM for when --use-llm is set.",
             )
             command_parser.set_defaults(handler=_handle_propose_folder_organization)
@@ -1083,6 +1114,31 @@ def _handle_process_next(args: argparse.Namespace, config: AgentConfig) -> int:
     return exit_code
 
 
+def _emit_run_summary(
+    config: AgentConfig,
+    scope: str,
+    args: argparse.Namespace,
+    exit_code: int,
+    output: str,
+) -> int:
+    """Print a processing run result: a JSON envelope under --json, else the prose output."""
+    if getattr(config, "json_output", False):
+        summary = {
+            "status": "ok" if exit_code == 0 else "error",
+            "scope": scope,
+            "stage": getattr(args, "stage", None),
+            "folder": getattr(args, "folder", None),
+            "note": getattr(args, "note", None),
+            "dry_run": config.dry_run,
+            "exit_code": exit_code,
+            "output": output,
+        }
+        print(json.dumps(summary))
+    else:
+        print(output)
+    return exit_code
+
+
 def _handle_process_inbox(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
     exit_code, output = run_process_inbox(
@@ -1100,8 +1156,7 @@ def _handle_process_inbox(args: argparse.Namespace, config: AgentConfig) -> int:
         stage=getattr(args, "stage", None),
         note=getattr(args, "note", None),
     )
-    print(output)
-    return exit_code
+    return _emit_run_summary(config, "inbox", args, exit_code, output)
 
 
 def _handle_process_vault(args: argparse.Namespace, config: AgentConfig) -> int:
@@ -1121,8 +1176,7 @@ def _handle_process_vault(args: argparse.Namespace, config: AgentConfig) -> int:
         stage=getattr(args, "stage", None),
         note=getattr(args, "note", None),
     )
-    print(output)
-    return exit_code
+    return _emit_run_summary(config, "vault", args, exit_code, output)
 
 
 def _handle_rebuild_retrieval(args: argparse.Namespace, config: AgentConfig) -> int:
@@ -1201,8 +1255,7 @@ def _handle_reconcile(args: argparse.Namespace, config: AgentConfig) -> int:
     exit_code, output = run_reconcile(
         config, properties_only=bool(getattr(args, "properties_only", False))
     )
-    print(output)
-    return exit_code
+    return _emit_run_summary(config, "reconcile", args, exit_code, output)
 
 
 def _handle_norms_lock(args: argparse.Namespace, config: AgentConfig) -> int:
@@ -1237,8 +1290,7 @@ def _handle_organize_vault_pass(args: argparse.Namespace, config: AgentConfig) -
         stage=getattr(args, "stage", None),
         create_lock=bool(getattr(args, "create_lock", False)),
     )
-    print(output)
-    return exit_code
+    return _emit_run_summary(config, "organize-pass", args, exit_code, output)
 
 
 def _handle_autonomous_run(args: argparse.Namespace, config: AgentConfig) -> int:

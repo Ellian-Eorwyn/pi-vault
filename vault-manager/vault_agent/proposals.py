@@ -105,16 +105,20 @@ def run_propose_topic_hubs(
         system_dir=config.paths.system_dir,
     )
     if not added:
-        return (
+        return _early_result(
+            config,
             0,
+            "empty",
             "vault-agent propose-topic-hubs\n"
             "No new hubs surfaced (clusters below the minimum or already registered).",
         )
     exit_code, output = _write_proposal(
         config, proposal, dry_run=config.dry_run, overwrite_existing=overwrite_proposal
     )
-    return exit_code, output + "\n" + f"Hubs surfaced: {len(added)}\n" + "\n".join(
-        f"- {label}" for label in added
+    return exit_code, _augment_output(
+        config,
+        output,
+        f"Hubs surfaced: {len(added)}\n" + "\n".join(f"- {label}" for label in added),
     )
 
 
@@ -169,8 +173,12 @@ def run_propose_cleanup_queue(
         remove_unknown=remove_unknown,
     )
     if errors:
-        return 1, "vault-agent propose-cleanup-queue failed\n" + "\n".join(
-            f"Error: {error}" for error in errors
+        return _early_result(
+            config,
+            1,
+            "error",
+            "vault-agent propose-cleanup-queue failed\n"
+            + "\n".join(f"Error: {error}" for error in errors),
         )
     exit_code, output = _write_proposal(
         config,
@@ -178,11 +186,10 @@ def run_propose_cleanup_queue(
         dry_run=config.dry_run,
         overwrite_existing=overwrite_proposal,
     )
-    return (
-        exit_code,
-        output
-        + "\n"
-        + f"Cleanup operations: {stats['operations']}\n"
+    return exit_code, _augment_output(
+        config,
+        output,
+        f"Cleanup operations: {stats['operations']}\n"
         + f"Validation issues considered: {stats['issues']}",
     )
 
@@ -320,11 +327,10 @@ def run_propose_base_hierarchy(
         dry_run=config.dry_run,
         overwrite_existing=overwrite_proposal,
     )
-    return (
-        exit_code,
-        output
-        + "\n"
-        + f"Domains: {stats['domains']}\n"
+    return exit_code, _augment_output(
+        config,
+        output,
+        f"Domains: {stats['domains']}\n"
         + f"Parent/project dashboards: {stats['parent_dashboards']}\n"
         + f"Needs metadata: {stats['needs_metadata']}\n"
         + f"LLM coverage used: {stats['llm_used']}",
@@ -371,11 +377,10 @@ def run_propose_folder_organization(
         dry_run=config.dry_run,
         overwrite_existing=overwrite_proposal or checkpoint,
     )
-    return (
-        exit_code,
-        output
-        + "\n"
-        + f"Notes organized: {stats['notes']}\n"
+    return exit_code, _augment_output(
+        config,
+        output,
+        f"Notes organized: {stats['notes']}\n"
         + f"LLM notes consulted: {stats['llm_notes']}\n"
         + f"Dashboard: {proposal['operations'][-1]['path']}",
     )
@@ -977,6 +982,28 @@ def generate_folder_organization_proposal(
     return proposal, [], {"notes": len(note_paths), "llm_notes": llm_notes}
 
 
+def _early_result(config: AgentConfig, exit_code: int, status: str, message: str) -> tuple[int, str]:
+    """Return a no-op/error proposal outcome as JSON under --json, else the prose message.
+
+    Keeps stdout valid JSON for the typed tools even when a generator short-circuits
+    before writing a proposal (e.g. no candidates found, or a precondition error).
+    """
+    if getattr(config, "json_output", False):
+        return exit_code, json.dumps({"status": status, "message": message})
+    return exit_code, message
+
+
+def _augment_output(config: AgentConfig, output: str, extra: str) -> str:
+    """Append a human-readable summary to a proposal message, unless emitting JSON.
+
+    Under `--json` the proposal message is a single JSON object; appending prose would
+    make stdout unparseable, so the summary is dropped in that mode.
+    """
+    if getattr(config, "json_output", False):
+        return output
+    return output + "\n" + extra
+
+
 def _write_proposal(
     config: AgentConfig,
     proposal: dict[str, Any],
@@ -987,7 +1014,26 @@ def _write_proposal(
     proposal_dir = config.vault_root / config.paths.review_dir / "proposals"
     path = proposal_dir / f"{proposal['id']}.json"
     content = json.dumps(proposal, indent=2) + "\n"
+    json_output = getattr(config, "json_output", False)
+
+    def _payload(status: str, *, error: str | None = None) -> str:
+        body: dict[str, Any] = {
+            "status": status,
+            "id": proposal.get("id"),
+            "title": proposal.get("title"),
+            "kind": proposal.get("kind"),
+            "proposal_status": proposal.get("status"),
+            "path": str(path),
+            "operations": len(proposal.get("operations", [])),
+            "summary": proposal.get("summary"),
+        }
+        if error is not None:
+            body["error"] = error
+        return json.dumps(body)
+
     if dry_run:
+        if json_output:
+            return 0, _payload("dry-run")
         return (
             0,
             "vault-agent proposal dry run\n"
@@ -996,9 +1042,13 @@ def _write_proposal(
             "No files were changed.",
         )
     if path.exists() and not overwrite_existing:
+        if json_output:
+            return 1, _payload("error", error=f"proposal already exists: {path}")
         return 1, f"vault-agent proposal failed\nError: proposal already exists: {path}"
     proposal_dir.mkdir(parents=True, exist_ok=True)
     atomic_write_text(path, content)
+    if json_output:
+        return 0, _payload("ok")
     return (
         0,
         "vault-agent proposal complete\n"

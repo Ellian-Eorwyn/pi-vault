@@ -25,8 +25,8 @@ inbox pipeline. Everything stays proposal-first, schema-bound, and git-backed.
    - Schema-compliant file renames: `move_note` operations (which rewrite inbound
      wikilinks). Only rename to fit approved conventions, never to restyle a title.
    - Note-internal refinement (structure, coherence, skimmability, Obsidian Markdown):
-     `vault_manage` with `action: "refine"` and the `folder` (or `note`), which runs
-     `propose-folder-refinement`.
+     `vault_content_propose` with `operation: "refine"` and the `folder` (or `note`),
+     which runs `propose-folder-refinement`.
 5. Provider boundary — important: all model work, including every note-body rewrite,
    is performed by the vault's configured pi/engine LLM backend through the engine
    commands above. Do not author, rewrite, or reformat note bodies yourself in this
@@ -36,9 +36,9 @@ inbox pipeline. Everything stays proposal-first, schema-bound, and git-backed.
    deterministic word-preservation guard rejects any rewrite that drops or substitutes
    the author's words, and blocked rewrites are reported with a word-diff instead of
    applied. State this guarantee to the user; never offer to bypass it.
-7. Dry-run the proposal review (`vault_manage action: "review"`). Walk the user
-   through the diffs. Apply only approved bounded operations
-   (`vault_manage action: "apply-approved"`).
+7. Dry-run the proposal review (`vault_review_apply` with `operation: "review"`). Walk
+   the user through the diffs. Apply only approved bounded operations
+   (`vault_review_apply` with `operation: "apply-approved"`).
 8. Rebuild retrieval, run validation and Obsidian checks, then report the changed
    files, any blocked refinements with their word-diff reasons, the run ID, and the
    undo command.

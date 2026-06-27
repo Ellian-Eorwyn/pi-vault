@@ -1,6 +1,6 @@
 # Agent Contract
 
-This document defines the operating contract for working in a vault managed by pi-vault. pi is the primary driver: launch `pi-vault` at the vault root and the agent loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, which drive the `vault-agent` engine underneath. The same contract still applies to any other runner (a scheduler, a cron job, or another agent framework), but pi is the default. Lead with the skills and tools; the raw `vault-agent` / `pi-vault vault …` commands shown below are the engine layer they call.
+This document defines the operating contract for working in a vault managed by pi-vault. pi is the primary driver: launch `pi-vault` at the vault root and the agent loads the `vault-*` skills and the `vault_*` tools (`vault_status`, `vault_readiness`, `vault_search`, `vault_retrieval`, `vault_schema_propose`, `vault_content_propose`, `vault_maintain`, `vault_review_apply`, `vault_recovery`), which drive the `vault-agent` engine underneath. The same contract still applies to any other runner (a scheduler, a cron job, or another agent framework), but pi is the default. Lead with the skills and tools; the raw `vault-agent` / `pi-vault vault …` commands shown below are the engine layer they call.
 
 ## Source Of Truth
 
@@ -13,7 +13,7 @@ This document defines the operating contract for working in a vault managed by p
 
 ## Startup Sequence
 
-1. On launch from the vault root or any descendant, pi-vault resolves the vault root, resumes the latest vault-local session unless explicitly overridden, loads the `vault-*` skills and the `vault_status` / `vault_manage` tools, and injects purpose, conventions, contract, schema, norms lock, template norms, and retrieval context into the system prompt; start there.
+1. On launch from the vault root or any descendant, pi-vault resolves the vault root, resumes the latest vault-local session unless explicitly overridden, loads the `vault-*` skills and the `vault_*` tools, and injects purpose, conventions, contract, schema, norms lock, template norms, and retrieval context into the system prompt; start there.
 2. Treat the automatic startup assessment as read-only context. Summarize prior work, health, schema state, inbox changes, and pending review, then offer specific next actions without treating it as mutation approval.
 3. Read `99 System/0.01 agent/AGENT_HANDOFF.md` and `99 System/0.01 agent/AGENT_CONTRACT.md` if present.
 4. Check health with the `vault_status` tool (engine: `vault-agent --vault-root <vault> status` and `vault-agent --vault-root <vault> version status`).
@@ -24,31 +24,32 @@ This document defines the operating contract for working in a vault managed by p
    - `99 System/0.01 agent/retrieval/02 note-catalog.md`
    - `99 System/0.01 agent/retrieval/03 property-index.md`
    - `99 System/0.01 agent/retrieval/04 summary-brief.md`
-   - When embeddings are enabled, use `vault_manage` action `semantic-search` for read-only semantic ranking by meaning; build the index first with action `embed-index` if it is empty.
+   - When embeddings are enabled, use the `vault_search` tool for read-only semantic ranking by meaning; build the index first with `vault_retrieval` `operation: "embed-index"` if it is empty.
 
 ## User Request Routing
 
 Each request routes to a pi skill, which drives the engine commands beneath it:
 
+- "Transform / organize my whole vault / set it up from scratch / make it beautiful" → **vault-transform** skill: the end-to-end playbook that sequences onboarding → schema → norms lock → dashboards → folder organization → property/type/hub passes → inbox → cleanup → retrieval rebuild → validation, with a review checkpoint between every mutating phase.
 - "Onboard / initialize this vault" → **vault-onboarding** skill: bootstrap `.pi-vault/config.yaml`, scan existing conventions, plan norms with the user (engine: `init`, `scan`, `validate`).
-- "Find / retrieve notes" → **vault-retrieval** skill: read the generated vault map, catalog, property index, and summary brief, and use semantic search when embeddings are enabled (tool: `vault_manage` action `semantic-search`; engine: `vault-search`).
-- "Suggest related links / connect related notes" → **vault-retrieval** / **vault-organization**: propose embedding-discovered `related` links append-only, then review and apply (tool: `vault_manage` actions `embed-index`, `related-links`, and `review`; engine: `embed-index`, `propose-related-links`, `review-proposals`).
-- "Organize this vault" → **vault-organization** skill: lock norms first, run readiness, then bounded stage-scoped passes with reports (engine: `norms-lock`, `organization-readiness --json`, `autonomous-run`, `organize-vault-pass`).
-- "Process the inbox" → **vault-inbox** skill: bounded classification followed by deterministic destination proposals; apply only current, warning-free, high-confidence routes automatically (engine: `process-inbox`, `propose-inbox-sort`, `autonomous-run --apply-safe`).
-- "Adopt the default layout" → **vault-organization** skill: generate and review a dashboard-first migration without moving existing notes automatically (engine: `propose-vault-layout`).
-- "Change canonical properties / plan schema / templates / discuss schema improvements" → **vault-schema** skill: talk through the change against the live vault, then update schema, templates, validators, and docs together and validate (engine: `propose-property` for `domain`/`source_kind`/`capture_type`, `propose-template`, `validate`).
-- "Define a new note type" → **vault-schema** skill: draft the type's template sections from what it captures, then add it data-drivenly so classification, routing, and template application accept it (engine: `propose-note-type`, then re-lock norms).
+- "Find / retrieve notes" → **vault-retrieval** skill: read the generated vault map, catalog, property index, and summary brief, and use semantic search when embeddings are enabled (tool: `vault_search`; engine: `vault-search`).
+- "Suggest related links / connect related notes" → **vault-retrieval** / **vault-organization**: propose embedding-discovered `related` links append-only, then review and apply (tools: `vault_retrieval` `operation: "embed-index"` and `"related-links"`, then `vault_review_apply` `operation: "review"`; engine: `embed-index`, `propose-related-links`, `review-proposals`).
+- "Organize this vault" → **vault-organization** skill: lock norms first, run readiness, then bounded stage-scoped passes with reports (tools: `vault_maintain` `operation: "write-norms-lock"`, `vault_readiness`, `vault_organize_propose`, `vault_process_notes`; engine: `norms-lock`, `organization-readiness --json`, `organize-vault-pass`).
+- "Process the inbox" → **vault-inbox** skill: bounded classification followed by deterministic destination proposals; apply only current, warning-free, high-confidence routes automatically (tools: `vault_process_notes` `scope: "inbox"`, `vault_organize_propose` `operation: "inbox-sort"`; engine: `process-inbox`, `propose-inbox-sort`).
+- "Adopt the default layout" → **vault-organization** skill: generate and review a dashboard-first migration without moving existing notes automatically (tool: `vault_organize_propose` `operation: "vault-layout"`; engine: `propose-vault-layout`).
+- "Change canonical properties / plan schema / templates / discuss schema improvements" → **vault-schema** skill: talk through the change against the live vault, then update schema, templates, validators, and docs together and validate (tool: `vault_schema_propose` `operation: "property"|"template"`; engine: `propose-property`, `propose-template`, `validate`).
+- "Define a new note type" → **vault-schema** skill: draft the type's template sections from what it captures, then add it data-drivenly so classification, routing, and template application accept it (tool: `vault_schema_propose` `operation: "note-type"`, then re-lock norms).
 - "Extract people / build Contacts and Authors" → **vault-people** skill: detect people across notes, deduplicate against existing person notes, classify each into Contacts or Authors with the configured backend, and create person notes with backlinks (engine: `propose-people`).
 - "Build an index for a type/project/topic" → **vault-schema** / **vault-organization**: create or update an `index` note using sparse properties, Bases, links, and retrieval files; do not add new YAML fields unless the user approves a schema change (engine: `propose-index`).
-- "Build a hierarchy of Bases" → **vault-organization** skill: generate pending domain and parent/project dashboards with embedded Bases; keep coverage prose in Markdown dashboard bodies, not frontmatter (engine: `propose-base-hierarchy`).
-- "Organize one project/folder" → **vault-organization** skill: generate a pending proposal with sparse metadata cleanup and a dashboard; keep mutation inside the target folder plus `99 System` review/log/backup files (engine: `propose-folder-organization`).
+- "Build a hierarchy of Bases" → **vault-organization** skill: generate pending domain and parent/project dashboards with embedded Bases; keep coverage prose in Markdown dashboard bodies, not frontmatter (tool: `vault_organize_propose` `operation: "base-hierarchy"`; engine: `propose-base-hierarchy`).
+- "Organize one project/folder" → **vault-organization** skill: generate a pending proposal with sparse metadata cleanup and a dashboard; keep mutation inside the target folder plus `99 System` review/log/backup files (tool: `vault_organize_propose` `operation: "folder-organization"`; engine: `propose-folder-organization`).
 - "Analyze / refine this folder; clean up the notes themselves" → **vault-analysis** skill: read whole notes in one folder for context, apply schema-compliant defaults and renames, and refine note bodies for structure, skimmability, and Obsidian Markdown without changing wording or meaning, all through reviewable proposals (engine: `organize-vault-pass --folder`, `propose-folder-refinement`).
 - "What can be done here?" → **vault-review** skill: list the machine-readable queue of transcript cleanup, people extraction, and categorization actions (engine: `action-plan --json`).
 - "Run queued maintenance" → **vault-inbox** / **vault-organization**: generate pending action proposals; for fuzzy categorization use `--use-llm --llm-limit 1 --max-items 1` first, then increase only after review (engine: `propose-action-queue`).
 - "Extract people" → **vault-organization** skill: keep sparse person frontmatter and put relationship details in the note body. Treat author and `Key thinkers` lists as referenced people; treat meeting, call, speaker, and direct interaction contexts as direct contacts with contact-detail scaffolding.
 - "Clean up notes" → **vault-inbox** / **vault-organization**: prefer `autonomous-run`, `reconcile`, `propose-cleanup-queue`, `process-inbox`, `process-vault`, and `organize-vault-pass` in small batches with backups.
 - "Run recurring maintenance" → schedule pi (or a scheduler around `pi-vault vault maintain` / `hermes-run`) with bounded `--max-notes`.
-- "Inspect / approve / apply a change" → **vault-review** skill via the `vault_manage` tool: prefer the `propose-*` generators, otherwise write proposal JSON under `99 System/0.01 agent/review/proposals/`, run `review-proposals --dry-run`, optionally `review-proposals --agent-review --approve-safe`, then `review-proposals --apply-approved`.
+- "Inspect / approve / apply a change" → **vault-review** skill via the `vault_review_apply` tool: prefer the `propose-*` generators (`vault_schema_propose`, `vault_content_propose`, `vault_retrieval`), otherwise write proposal JSON under `99 System/0.01 agent/review/proposals/`, run `vault_review_apply` `operation: "review"` (engine `review-proposals --dry-run`), optionally `review-proposals --agent-review --approve-safe`, then `vault_review_apply` `operation: "apply-approved"`.
 - "Undo / recover a change" → **vault-recovery** skill: inspect and roll back versioned runs (engine: `version status`, `version diff`, `version undo-run`).
 
 ## Versioning Protocol
