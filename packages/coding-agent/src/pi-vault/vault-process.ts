@@ -16,6 +16,35 @@ export interface VaultAgentResult {
 	stderr: string;
 }
 
+export interface VaultToolResult {
+	content: Array<{ type: "text"; text: string }>;
+	details: Record<string, unknown>;
+	isError: boolean;
+}
+
+/**
+ * Run a vault-agent invocation and shape it into the standard tool result.
+ * Parses stdout as JSON into `details.json` when the engine emitted JSON, otherwise
+ * the raw stdout (or stderr on failure) is returned as text — matching the prior behavior.
+ */
+export async function runVaultTool(args: string[], vaultRoot: string, signal?: AbortSignal): Promise<VaultToolResult> {
+	const result = await runVaultAgent(args, vaultRoot, signal);
+	const details: Record<string, unknown> = { exitCode: result.exitCode, command: args };
+	const trimmed = result.stdout.trim();
+	if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+		try {
+			details.json = JSON.parse(trimmed);
+		} catch {
+			// Not JSON after all; leave the text content as-is.
+		}
+	}
+	return {
+		content: [{ type: "text", text: result.stdout || result.stderr }],
+		details,
+		isError: result.exitCode !== 0,
+	};
+}
+
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
 
 function bundledEngineDirectory(): string | undefined {

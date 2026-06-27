@@ -1,13 +1,14 @@
 # Project Status
 
-Last updated: 2026-06-25
+Last updated: 2026-06-26
 
 ## Current Focus
 
-New vaults are dashboard-first: capture begins in `00 Inbox`, navigation begins in `01 Dashboards`, content uses purpose-based folders, and infrastructure lives under `99 System`. Inbox moves remain deterministic, confidence-gated, proposal-backed, and reversible. Existing vaults receive reviewed layout migrations rather than automatic restructuring.
+The pi tool surface is the primary interface: eleven focused, typed `vault_*` tools (`vault_status`, `vault_readiness`, `vault_search`, `vault_retrieval`, `vault_schema_propose`, `vault_content_propose`, `vault_organize_propose`, `vault_process_notes`, `vault_maintain`, `vault_review_apply`, `vault_recovery`) drive the `vault-agent` engine, and the `vault-transform` skill sequences them end to end from a messy vault to an organized one. New vaults stay dashboard-first and proposal-gated; the engine's LLM/embeddings are enabled by default and tuned for a single-slot Qwen3.6-27B + Qwen3-Embedding-4B backend.
 
 ## Completed
 
+- Replaced the broad `vault_manage` god-tool with eleven first-class typed pi tools plus structured `--json` engine output, added the `vault-transform` orchestration skill, removed the deprecated shim, and tuned engine defaults (enabled LLM/embeddings, single-slot-aware batch/timeout limits, kept confidence and word-preservation guards strict) for the Qwen3.6-27B + Qwen3-Embedding-4B backend. The proposal→review→apply boundary, all guards, and graceful deterministic degradation are preserved. Verified with 28 pi-vault vitest cases, 264 Python tests, and `npm run check`.
 - Implemented the complete dashboard-first default layout, configurable bootstrap paths, preserved-curation dashboard shells, domain hierarchy output under `01 Dashboards`, deterministic purpose-based routing, safe-only inbox sorting, and proposal-first existing-vault migration. Clean external initialization reports 0 validation issues and `obsidian-check --json` reports 0 errors/0 warnings.
 - Added editable Markdown vault defaults: initialized vaults now include `99 System/0.02 templates/0.024 vault defaults.md`, `export-schema-defaults` writes a portable schema/layout contract, and `import-schema-defaults` converts edited defaults into a pending `schema-change` proposal without mutating active schema files. Verified with 208 Python tests and `npm run check`.
 - Added streamlined startup/onboarding: automatic vault-local continuation with explicit flag precedence, bootstrap session persistence/migration, one-step default/custom folder selection, automatic read-only model briefs, expanded status/inbox deltas, and provisional/locked/drifted schema semantics.
@@ -21,7 +22,7 @@ New vaults are dashboard-first: capture begins in `00 Inbox`, navigation begins 
 - Proved the Memex model-block review loop with a fresh tiny `autonomous-run --create-lock --use-llm --stage classify-type --max-notes 2`: the run produced 2 blocked model proposals, `review-model-blocks --dry-run --approve-safe` reported 1 safe conversion and 1 unsafe skip, `review-model-blocks --approve-safe` created only the safe pending proposal for `01 Inbox/New Images.md`, and `review-proposals --dry-run` validated the converted proposal without note mutation. Tightened `--approve-safe` so below-threshold blocks stay pending instead of being promoted. Expanded tests to 153 passing unit/workflow cases.
 - Created project-control files.
 - Read and synthesized the two source specification documents.
-- Refactored the project docs to be pi-first: promoted the dev-control docs (`START_HERE.md`, `PROJECT_*`, `DECISIONS.md`, `NEXT_ACTIONS.md`, `AGENT_CONTRACT.md`) to the repo root, moved the source specification documents under `docs/architecture/`, and reframed the engine README plus the baked-in vault `AGENT_HANDOFF`/`AGENT_CONTRACT` templates so pi (skills + `vault_status`/`vault_manage` tools) is the primary interface and the Python CLI is the engine.
+- Refactored the project docs to be pi-first: promoted the dev-control docs (`START_HERE.md`, `PROJECT_*`, `DECISIONS.md`, `NEXT_ACTIONS.md`, `AGENT_CONTRACT.md`) to the repo root, moved the source specification documents under `docs/architecture/`, and reframed the engine README plus the baked-in vault `AGENT_HANDOFF`/`AGENT_CONTRACT` templates so pi (skills + `vault_*` tools) is the primary interface and the Python CLI is the engine.
 - Created the initial Python CLI skeleton and package layout.
 - Added no-op command routing for main vault commands and memory subcommands.
 - Added smoke tests for CLI help and placeholder command behavior.
@@ -157,7 +158,7 @@ Publish the repository at its final Git URL, substitute that URL into the docume
 - SQLite is optional and must remain a rebuildable cache, not canonical state.
 - LLM behavior must stay proposal-only; deterministic scripts must validate and apply changes.
 - Model-backed work is now staged; future prompts should stay narrow and stage-specific rather than returning full-note decisions, and warning-bearing proposals require review by default. Valid but blocked staged output is persisted as model-block review artifacts and must still pass through normal proposal review before any note mutation.
-- Local LLM-backed organization must stay serialized: one prompt at a time, with Backend MoE logs monitored at `http://llms:8077/` when testing. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` now performs the queue progression automatically inside one run.
+- Local LLM-backed organization is serialized by design because the backend serves one capable model on a single inference slot: process one note/stage at a time. `organize-vault-pass --use-llm --max-notes N --stage <semantic-stage>` performs the queue progression automatically inside one run; prefer bounded passes with review checkpoints over large unattended runs.
 - The HoMEDUCS pilot proved folder-scoped organization works through proposals, but classification quality is not yet fully autonomous; six of sixty notes fell back deterministically after non-JSON model responses. The shared repair path reduces this failure mode, but broad LLM runs still need report-driven pilots.
 - `organize-vault-pass` now provides the lock/report/readiness infrastructure for expensive first passes. The first real Memex pass succeeded at one targeted note/stage with 0 blocked stages; the next test shape is a small stage-scoped serialized LLM batch, not a broad unscoped vault pass.
 - `propose-cleanup-queue` generates bounded cleanup proposals from validation groups, but unknown-property removal remains explicit through `--remove-unknown`.

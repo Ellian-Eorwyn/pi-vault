@@ -110,6 +110,7 @@ class AgentConfig:
     versioning_protected_paths: list[str]
     routing_mode: str
     routing_fallback: str
+    json_output: bool = False
 
 
 def load_config(args: argparse.Namespace) -> AgentConfig:
@@ -148,13 +149,14 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         config_path=config_path,
         dry_run=bool(getattr(args, "dry_run", False)),
         verbose=bool(getattr(args, "verbose", False)),
+        json_output=bool(getattr(args, "json_output", False)),
         llm_enabled=bool(llm.get("enabled", False)),
         llm_provider=str(llm.get("provider", "none")),
         llm_base_url=str(llm.get("base_url", "http://llms:8008")),
         llm_model=str(llm.get("model", "code")),
         llm_api_key=_optional_string(llm.get("api_key")),
         llm_confidence_threshold=float(llm.get("confidence_threshold", 0.75)),
-        llm_timeout_seconds=int(llm.get("timeout_seconds", 120)),
+        llm_timeout_seconds=int(llm.get("timeout_seconds", 180)),
         llm_max_input_tokens=max_input_tokens,
         llm_chars_per_token=chars_per_token,
         llm_max_input_chars=max_input_chars,
@@ -174,8 +176,8 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         ),
         embeddings_excerpt_chars=int(embeddings.get("excerpt_chars", 6000)),
         embeddings_batch_size=max(1, int(embeddings.get("batch_size", 32))),
-        max_notes=int(auto_process.get("max_notes", 5)),
-        max_runtime_minutes=int(auto_process.get("max_runtime_minutes", 10)),
+        max_notes=int(auto_process.get("max_notes", 10)),
+        max_runtime_minutes=int(auto_process.get("max_runtime_minutes", 20)),
         legacy_type_aliases=_string_mapping(
             legacy.get("type_aliases"), DEFAULT_TYPE_ALIASES
         ),

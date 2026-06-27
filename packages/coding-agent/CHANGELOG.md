@@ -4,7 +4,15 @@
 
 ### Added
 
-- Added explicit pi-vault embedding actions to `vault_manage` for `embed-index`, read-only semantic search, and review-gated related-link proposals.
+- Promoted the organization, dashboard, inbox, and note-processing engine commands to first-class typed tools: `vault_organize_propose` (vault-layout, base-hierarchy, folder-organization, cleanup-queue, inbox-sort, index, action-queue) and `vault_process_notes` (bounded inbox/vault/organize-pass/reconcile across the semantic stages, requiring `maxNotes` for broad runs). Extended `vault_schema_propose` (templates, topic-hubs, schema-conversation, schema defaults) and `vault_review_apply` (blocked model-stage review/approval). Added machine-readable `--json` output to the `propose-*` and `process-*` engine commands so the tools return structured results. Added a `vault-transform` orchestration skill: a checkpointed end-to-end playbook from messy vault to organized vault.
+
+### Changed
+
+- Decomposed the `vault_manage` god-tool into focused, typed vault tools (`vault_readiness`, `vault_search`, `vault_retrieval`, `vault_schema_propose`, `vault_content_propose`, `vault_maintain`, `vault_review_apply`, `vault_recovery`) beside the existing `vault_status`. Each tool carries only its own parameters, the proposal→review→apply boundary is now structural (propose tools cannot apply), and `vault_search` is read-only with no write path. `vault_manage` remains as a deprecated shim that produces identical engine argv.
+
+### Added
+
+- Added read-only semantic search (`vault_search`) plus index-build and review-gated related-link proposals (`vault_retrieval`) over the pi-vault embedding index.
 - Added dashboard-first bootstrap metadata to the vault extension, including configured dashboard/content paths and the new `00 Inbox` / `99 System` startup defaults.
 - Added a read-only model startup assessment that surfaces resumed work, schema state, vault health, inbox changes, pending review, and concrete next actions.
 - Added the pi-vault application identity, bundled Obsidian vault skills and extension, interactive onboarding, vault-local context loading, validated vault tools, and namespaced automation commands.

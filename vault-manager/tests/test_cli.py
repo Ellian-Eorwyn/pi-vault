@@ -250,14 +250,14 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.llm_model, "code")
         self.assertIsNone(config.llm_api_key)
         self.assertEqual(config.llm_confidence_threshold, 0.75)
-        self.assertEqual(config.llm_timeout_seconds, 120)
+        self.assertEqual(config.llm_timeout_seconds, 180)
         self.assertEqual(config.llm_max_input_tokens, 64000)
         self.assertEqual(config.llm_chars_per_token, 4)
         self.assertEqual(config.llm_max_input_chars, 256000)
         self.assertIsNone(config.embedding_base_url)
         self.assertEqual(config.embedding_model, "embed")
-        self.assertEqual(config.max_notes, 5)
-        self.assertEqual(config.max_runtime_minutes, 10)
+        self.assertEqual(config.max_notes, 10)
+        self.assertEqual(config.max_runtime_minutes, 20)
         self.assertTrue(config.preserve_unknown_properties)
         self.assertTrue(config.review_on_warnings)
         self.assertEqual(config.warning_confidence_margin, 0.05)
@@ -343,6 +343,29 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.llm_max_input_tokens, 64000)
         self.assertEqual(config.llm_chars_per_token, 4)
         self.assertEqual(config.llm_max_input_chars, 256000)
+
+    def test_scaffolded_config_enables_llm_and_embeddings_by_default(self):
+        from vault_agent.starter_files import starter_file_contents
+
+        parser = main_parser_for_tests()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            contents = starter_file_contents()
+            agent_config = root / "99 System" / "0.01 agent" / "config.yaml"
+            agent_config.parent.mkdir(parents=True, exist_ok=True)
+            agent_config.write_text(
+                contents["99 System/0.01 agent/config.yaml"], encoding="utf-8"
+            )
+            args = parser.parse_args(["--vault-root", str(root), "scan"])
+
+            config = load_config(args)
+
+        self.assertTrue(config.llm_enabled)
+        self.assertEqual(config.llm_provider, "openai-compatible")
+        self.assertTrue(config.embeddings_enabled)
+        self.assertEqual(config.llm_timeout_seconds, 180)
+        self.assertEqual(config.max_notes, 10)
+        self.assertEqual(config.max_runtime_minutes, 20)
 
 
 def main_parser_for_tests():

@@ -2,7 +2,7 @@
 
 This repo is **pi-vault**: an Obsidian vault agent built on the pi harness. pi is the
 primary interface — you launch `pi-vault` at a vault root, the agent loads the `vault-*`
-skills and the `vault_status` / `vault_manage` tools on startup, and those drive a
+skills and the `vault_*` tools on startup, and those drive a
 deterministic Python engine (`vault_agent`) underneath. The Python CLI is the engine, not
 the front door.
 
@@ -35,11 +35,11 @@ Startup checklist:
 ## How pi-vault is wired
 
 - The pi extension lives in `packages/coding-agent/src/pi-vault/`. `extension.ts` registers
-  the `vault_status` / `vault_manage` tools, exposes the `skills/` directory through the
+  the `vault_*` tools, exposes the `skills/` directory through the
   harness `resources_discover` event, injects vault context into the system prompt, resumes
   the latest vault-local session, and triggers a read-only startup assessment.
 - The deterministic engine lives in `vault-manager/vault_agent/` (Python). pi drives it
-  through the `vault_manage` tool and the `pi-vault vault <command>` standalone CLI; the
+  through the `vault_*` tools and the `pi-vault vault <command>` standalone CLI; the
   build bundles the engine and skills into `dist/`.
 - The seven skills (`vault-onboarding`, `vault-retrieval`, `vault-inbox`, `vault-schema`,
   `vault-organization`, `vault-review`, `vault-recovery`) are the routing layer the agent
@@ -47,7 +47,7 @@ Startup checklist:
 
 ## Operating Rules
 
-- Drive the vault through pi's skills and the `vault_status` / `vault_manage` tools first;
+- Drive the vault through pi's skills and the `vault_*` tools first;
   reach for raw `vault-agent` / `pi-vault vault …` commands as the engine layer beneath.
 - Avoid re-planning the entire project unless the user asks.
 - Continue from the project-control files if they exist.

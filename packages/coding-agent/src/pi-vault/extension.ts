@@ -6,7 +6,7 @@ import { parse } from "yaml";
 import { defineTool, type ExtensionAPI } from "../core/extensions/types.ts";
 import { submitArtifactTool } from "./artifact-tool.ts";
 import { loadPiForgeIntegration, PiForgeMcpClient } from "./mcp-client.ts";
-import { runVaultAgent } from "./vault-process.ts";
+import { runVaultAgent, runVaultTool, type VaultToolResult } from "./vault-process.ts";
 
 export interface BootstrapConfig {
 	version: 1;
@@ -18,26 +18,6 @@ export interface BootstrapConfig {
 
 const extensionDirectory = dirname(fileURLToPath(import.meta.url));
 const skillsDirectory = join(extensionDirectory, "skills");
-
-export interface VaultManageParams {
-	action: string;
-	maxNotes?: number;
-	useLlm?: boolean;
-	applySafe?: boolean;
-	dryRun?: boolean;
-	folder?: string;
-	note?: string;
-	maxPeople?: number;
-	property?: string;
-	value?: string;
-	description?: string;
-	name?: string;
-	title?: string;
-	runId?: string;
-	query?: string;
-	topK?: number;
-	minSimilarity?: number;
-}
 
 export function findVaultRoot(cwd: string): string | undefined {
 	let current = resolve(cwd);
@@ -161,76 +141,174 @@ export function startupAssessmentPrompt(status: string, newlyInitialized: boolea
 	].join("\n");
 }
 
-export function buildVaultManageArgs(vaultRoot: string, params: VaultManageParams): string[] | { error: string } {
+type ArgsResult = string[] | { error: string };
+
+export interface VaultSearchParams {
+	query: string;
+	topK?: number;
+}
+
+export interface VaultReadinessParams {
+	report: "readiness" | "obsidian";
+}
+
+export interface VaultRetrievalParams {
+	operation: "embed-index" | "rebuild-retrieval" | "related-links";
+	maxNotes?: number;
+	topK?: number;
+	minSimilarity?: number;
+	dryRun?: boolean;
+}
+
+export interface VaultSchemaProposeParams {
+	operation:
+		| "property"
+		| "note-type"
+		| "template"
+		| "topic-hubs"
+		| "schema-conversation"
+		| "export-defaults"
+		| "import-defaults";
+	property?: string;
+	value?: string;
+	description?: string;
+	name?: string;
+	folder?: string;
+	title?: string;
+	noteType?: string;
+	domain?: string;
+	minCluster?: number;
+	conversationFile?: string;
+	includeCurrentSchemaSummary?: boolean;
+	output?: string;
+	schemaFile?: string;
+}
+
+export interface VaultOrganizeProposeParams {
+	operation:
+		| "vault-layout"
+		| "base-hierarchy"
+		| "folder-organization"
+		| "cleanup-queue"
+		| "inbox-sort"
+		| "index"
+		| "action-queue";
+	folder?: string;
+	project?: string;
+	domain?: string;
+	dashboardTitle?: string;
+	indexType?: "type" | "project" | "parent" | "domain";
+	value?: string;
+	title?: string;
+	maxItems?: number;
+	maxNotes?: number;
+	minChildNotes?: number;
+	llmLimit?: number;
+	useLlm?: boolean;
+	safeOnly?: boolean;
+	removeLegacy?: boolean;
+	checkpoint?: boolean;
+	resume?: boolean;
+	massEdit?: boolean;
+	dryRun?: boolean;
+}
+
+export type VaultProcessStage =
+	| "frontmatter-shape"
+	| "classify-type"
+	| "property-values"
+	| "template-body"
+	| "assign-hub"
+	| "assign-folder"
+	| "summary";
+
+export interface VaultProcessNotesParams {
+	scope: "inbox" | "vault" | "organize-pass" | "reconcile";
+	stage?: VaultProcessStage;
+	folder?: string;
+	note?: string;
+	maxNotes?: number;
+	maxRuntimeMinutes?: number;
+	useLlm?: boolean;
+	createLock?: boolean;
+	propertiesOnly?: boolean;
+	massEdit?: boolean;
+	dryRun?: boolean;
+}
+
+export interface VaultContentProposeParams {
+	operation: "people" | "refine";
+	folder?: string;
+	note?: string;
+	maxNotes?: number;
+	maxPeople?: number;
+	dryRun?: boolean;
+}
+
+export interface VaultMaintainParams {
+	operation: "scan" | "maintain" | "write-norms-lock";
+	applySafe?: boolean;
+	useLlm?: boolean;
+	maxNotes?: number;
+	dryRun?: boolean;
+}
+
+export interface VaultReviewApplyParams {
+	operation: "review" | "apply-approved" | "approve-safe" | "review-blocks" | "approve-blocks-safe";
+	stage?: VaultProcessStage;
+	note?: string;
+}
+
+export interface VaultRecoveryParams {
+	runId: string;
+}
+
+// Read-only semantic search. Deliberately has no flag that can reach a write path so this
+// tool can back a write-incapable memory-retrieval surface.
+export function buildSearchArgs(vaultRoot: string, params: VaultSearchParams): ArgsResult {
+	if (!params.query?.trim()) return { error: "query is required for search." };
+	const args = ["--vault-root", vaultRoot, "vault-search", params.query, "--json"];
+	if (params.topK) args.push("--top-k", String(params.topK));
+	return args;
+}
+
+export function buildReadinessArgs(vaultRoot: string, params: VaultReadinessParams): ArgsResult {
 	const args = ["--vault-root", vaultRoot];
-	const addGlobalDryRun = () => {
-		if (!args.includes("--dry-run")) args.push("--dry-run");
-	};
-	switch (params.action) {
-		case "scan":
-			args.push("scan");
-			break;
-		case "readiness":
-			args.push("organization-readiness", "--json");
-			break;
-		case "maintain":
-			args.push("autonomous-run", "--create-lock");
-			if (params.applySafe) args.push("--apply-safe");
-			if (params.useLlm) args.push("--use-llm");
-			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
-			if (params.dryRun !== false) args.push("--dry-run");
-			break;
-		case "review":
-			args.push("review-proposals", "--dry-run");
-			break;
-		case "apply-approved":
-			args.push("review-proposals", "--apply-approved");
-			break;
-		case "obsidian-check":
-			args.push("obsidian-check", "--json");
-			break;
-		case "rebuild-retrieval":
-			args.push("rebuild-retrieval");
-			break;
-		case "embed-index":
-			args.push("embed-index");
-			break;
-		case "semantic-search":
-			if (!params.query?.trim()) return { error: "query is required for semantic-search." };
-			args.push("vault-search", params.query, "--json");
-			if (params.topK) args.push("--top-k", String(params.topK));
-			break;
-		case "related-links":
-			if (params.dryRun !== false) addGlobalDryRun();
-			args.push("propose-related-links");
-			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
-			if (params.topK) args.push("--top-k", String(params.topK));
-			if (params.minSimilarity !== undefined) args.push("--min-similarity", String(params.minSimilarity));
-			break;
-		case "write-norms-lock":
-			args.push("norms-lock", "--write");
-			break;
-		case "refine":
-			if (!params.folder && !params.note) return { error: "folder or note is required for refine." };
-			args.push("propose-folder-refinement");
-			if (params.folder) args.push("--folder", params.folder);
-			if (params.note) args.push("--note", params.note);
-			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
-			if (params.dryRun !== false) args.push("--dry-run");
-			break;
-		case "people":
-			args.push("propose-people");
-			if (params.folder) args.push("--folder", params.folder);
-			if (params.maxPeople) args.push("--max-people", String(params.maxPeople));
-			break;
-		case "add-property":
-			if (!params.property || !params.value) return { error: "property and value are required for add-property." };
+	if (params.report === "obsidian") args.push("obsidian-check", "--json");
+	else args.push("organization-readiness", "--json");
+	return args;
+}
+
+export function buildRetrievalArgs(vaultRoot: string, params: VaultRetrievalParams): ArgsResult {
+	const args = ["--vault-root", vaultRoot];
+	if (params.operation === "embed-index") {
+		args.push("embed-index");
+	} else if (params.operation === "rebuild-retrieval") {
+		args.push("rebuild-retrieval");
+	} else {
+		if (params.dryRun !== false) args.push("--dry-run");
+		args.push("propose-related-links");
+		if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+		if (params.topK) args.push("--top-k", String(params.topK));
+		if (params.minSimilarity !== undefined) args.push("--min-similarity", String(params.minSimilarity));
+	}
+	return args;
+}
+
+export function buildSchemaProposeArgs(vaultRoot: string, params: VaultSchemaProposeParams): ArgsResult {
+	const args = ["--vault-root", vaultRoot];
+	switch (params.operation) {
+		case "property":
+			if (!params.property || !params.value) {
+				return { error: "property and value are required to propose a property." };
+			}
 			args.push("propose-property", "--property", params.property, "--value", params.value);
 			if (params.description) args.push("--description", params.description);
+			args.push("--json");
 			break;
-		case "add-note-type":
+		case "note-type":
 			if (!params.name || !params.description || !params.folder) {
-				return { error: "name, description, and folder are required for add-note-type." };
+				return { error: "name, description, and folder are required to propose a note type." };
 			}
 			args.push(
 				"propose-note-type",
@@ -242,15 +320,212 @@ export function buildVaultManageArgs(vaultRoot: string, params: VaultManageParam
 				params.folder,
 			);
 			if (params.title) args.push("--title", params.title);
+			args.push("--json");
 			break;
-		case "undo":
-			if (!params.runId) return { error: "runId is required for undo." };
-			args.push("version", "undo-run", params.runId);
+		case "template":
+			if (!params.noteType) return { error: "noteType is required to propose a template." };
+			args.push("propose-template", "--note-type", params.noteType, "--json");
 			break;
-		default:
-			return { error: `unsupported vault_manage action: ${params.action}` };
+		case "topic-hubs":
+			args.push("propose-topic-hubs");
+			if (params.domain) args.push("--domain", params.domain);
+			if (params.minCluster) args.push("--min-cluster", String(params.minCluster));
+			args.push("--json");
+			break;
+		case "schema-conversation":
+			if (!params.conversationFile) return { error: "conversationFile is required for schema-conversation." };
+			args.push("schema-conversation", "--conversation-file", params.conversationFile);
+			if (params.includeCurrentSchemaSummary) args.push("--include-current-schema-summary");
+			break;
+		case "export-defaults":
+			args.push("export-schema-defaults");
+			if (params.output) args.push("--output", params.output);
+			break;
+		case "import-defaults":
+			args.push("import-schema-defaults");
+			if (params.schemaFile) args.push("--schema-file", params.schemaFile);
+			break;
 	}
 	return args;
+}
+
+export function buildOrganizeProposeArgs(vaultRoot: string, params: VaultOrganizeProposeParams): ArgsResult {
+	const args = ["--vault-root", vaultRoot];
+	if (params.dryRun) args.push("--dry-run");
+	switch (params.operation) {
+		case "vault-layout":
+			args.push("propose-vault-layout");
+			break;
+		case "base-hierarchy":
+			args.push("propose-base-hierarchy");
+			if (params.useLlm) args.push("--use-llm");
+			if (params.llmLimit) args.push("--llm-limit", String(params.llmLimit));
+			if (params.minChildNotes) args.push("--min-child-notes", String(params.minChildNotes));
+			break;
+		case "folder-organization":
+			if (!params.folder) return { error: "folder is required for folder-organization." };
+			args.push("propose-folder-organization", "--folder", params.folder);
+			if (params.project) args.push("--project", params.project);
+			if (params.domain) args.push("--domain", params.domain);
+			if (params.dashboardTitle) args.push("--dashboard-title", params.dashboardTitle);
+			if (params.useLlm) args.push("--use-llm");
+			if (params.llmLimit) args.push("--llm-limit", String(params.llmLimit));
+			if (params.removeLegacy) args.push("--remove-legacy");
+			if (params.checkpoint) args.push("--checkpoint");
+			if (params.resume) args.push("--resume");
+			if (params.massEdit) args.push("--mass-edit");
+			break;
+		case "cleanup-queue":
+			args.push("propose-cleanup-queue");
+			if (params.folder) args.push("--folder", params.folder);
+			if (params.maxItems) args.push("--max-items", String(params.maxItems));
+			if (params.massEdit) args.push("--mass-edit");
+			break;
+		case "inbox-sort":
+			args.push("propose-inbox-sort");
+			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+			if (params.safeOnly) args.push("--safe-only");
+			break;
+		case "index":
+			if (!params.indexType || !params.value) return { error: "indexType and value are required for index." };
+			args.push("propose-index", "--index-type", params.indexType, "--value", params.value);
+			if (params.title) args.push("--title", params.title);
+			break;
+		case "action-queue":
+			args.push("propose-action-queue");
+			if (params.folder) args.push("--folder", params.folder);
+			if (params.maxItems) args.push("--max-items", String(params.maxItems));
+			if (params.useLlm) args.push("--use-llm");
+			if (params.llmLimit) args.push("--llm-limit", String(params.llmLimit));
+			if (params.checkpoint) args.push("--checkpoint");
+			if (params.resume) args.push("--resume");
+			if (params.massEdit) args.push("--mass-edit");
+			break;
+	}
+	args.push("--json");
+	return args;
+}
+
+export function buildProcessNotesArgs(vaultRoot: string, params: VaultProcessNotesParams): ArgsResult {
+	// `--folder` only scopes organize-pass; process-inbox/process-vault accept only --note.
+	const scoped = Boolean(params.note) || (params.scope === "organize-pass" && Boolean(params.folder));
+	if (params.scope !== "reconcile" && !scoped && !params.maxNotes) {
+		return { error: `maxNotes is required for a broad ${params.scope} run (no folder or note scope).` };
+	}
+	const args = ["--vault-root", vaultRoot];
+	if (params.dryRun) args.push("--dry-run");
+	if (params.scope === "reconcile") {
+		args.push("reconcile");
+		if (params.propertiesOnly) args.push("--properties-only");
+		if (params.massEdit) args.push("--mass-edit");
+		args.push("--json");
+		return args;
+	}
+	if (params.scope === "inbox") args.push("process-inbox");
+	else if (params.scope === "vault") args.push("process-vault");
+	else args.push("organize-vault-pass");
+	if (params.stage) args.push("--stage", params.stage);
+	if (params.folder && params.scope === "organize-pass") args.push("--folder", params.folder);
+	if (params.note) args.push("--note", params.note);
+	if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+	if (params.maxRuntimeMinutes) args.push("--max-runtime-minutes", String(params.maxRuntimeMinutes));
+	if (params.useLlm && params.scope === "organize-pass") args.push("--use-llm");
+	if (params.createLock && params.scope === "organize-pass") args.push("--create-lock");
+	if (params.massEdit) args.push("--mass-edit");
+	args.push("--json");
+	return args;
+}
+
+export function buildContentProposeArgs(vaultRoot: string, params: VaultContentProposeParams): ArgsResult {
+	const args = ["--vault-root", vaultRoot];
+	if (params.operation === "people") {
+		args.push("propose-people");
+		if (params.folder) args.push("--folder", params.folder);
+		if (params.maxPeople) args.push("--max-people", String(params.maxPeople));
+	} else {
+		if (!params.folder && !params.note) return { error: "folder or note is required to refine." };
+		args.push("propose-folder-refinement");
+		if (params.folder) args.push("--folder", params.folder);
+		if (params.note) args.push("--note", params.note);
+		if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+		if (params.dryRun !== false) args.push("--dry-run");
+	}
+	return args;
+}
+
+export function buildMaintainArgs(vaultRoot: string, params: VaultMaintainParams): ArgsResult {
+	const args = ["--vault-root", vaultRoot];
+	if (params.operation === "scan") {
+		args.push("scan");
+	} else if (params.operation === "write-norms-lock") {
+		args.push("norms-lock", "--write");
+	} else {
+		args.push("autonomous-run", "--create-lock");
+		if (params.applySafe) args.push("--apply-safe");
+		if (params.useLlm) args.push("--use-llm");
+		if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+		if (params.dryRun !== false) args.push("--dry-run");
+	}
+	return args;
+}
+
+export function buildReviewApplyArgs(vaultRoot: string, params: VaultReviewApplyParams): ArgsResult {
+	const args = ["--vault-root", vaultRoot];
+	switch (params.operation) {
+		case "apply-approved":
+			args.push("review-proposals", "--apply-approved");
+			break;
+		case "approve-safe":
+			args.push("review-proposals", "--agent-review", "--approve-safe");
+			break;
+		case "review-blocks":
+			args.push("review-model-blocks", "--dry-run");
+			if (params.stage) args.push("--stage", params.stage);
+			if (params.note) args.push("--note", params.note);
+			break;
+		case "approve-blocks-safe":
+			args.push("review-model-blocks", "--approve-safe");
+			if (params.stage) args.push("--stage", params.stage);
+			if (params.note) args.push("--note", params.note);
+			break;
+		default:
+			args.push("review-proposals", "--dry-run");
+			break;
+	}
+	return args;
+}
+
+export function buildRecoveryArgs(vaultRoot: string, params: VaultRecoveryParams): ArgsResult {
+	if (!params.runId) return { error: "runId is required to undo a run." };
+	return ["--vault-root", vaultRoot, "version", "undo-run", params.runId];
+}
+
+const NOT_INITIALIZED: VaultToolResult = {
+	content: [{ type: "text", text: "This directory is not an initialized pi-vault. Run onboarding first." }],
+	details: { exitCode: 1 },
+	isError: true,
+};
+
+/** Resolve the vault root and confirm it is bootstrapped, or return a standard error result. */
+export function resolveInitializedVault(cwd: string): { vaultRoot: string } | { error: VaultToolResult } {
+	const vaultRoot = findVaultRoot(cwd);
+	if (!vaultRoot || !readBootstrap(vaultRoot)) return { error: NOT_INITIALIZED };
+	return { vaultRoot };
+}
+
+/** Resolve the vault, build argv, and run it — the shared body of every first-class vault tool. */
+async function runVaultBuilder(
+	cwd: string,
+	signal: AbortSignal | undefined,
+	build: (vaultRoot: string) => string[] | { error: string },
+): Promise<VaultToolResult> {
+	const resolved = resolveInitializedVault(cwd);
+	if ("error" in resolved) return resolved.error;
+	const args = build(resolved.vaultRoot);
+	if (!Array.isArray(args)) {
+		return { content: [{ type: "text", text: args.error }], details: { exitCode: 1 }, isError: true };
+	}
+	return runVaultTool(args, resolved.vaultRoot, signal);
 }
 
 const statusTool = defineTool({
@@ -258,88 +533,255 @@ const statusTool = defineTool({
 	label: "Vault Status",
 	description: "Read machine-readable pi-vault status for the current Obsidian vault.",
 	parameters: Type.Object({}),
-	async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
-		const vaultRoot = findVaultRoot(ctx.cwd);
-		if (!vaultRoot || !readBootstrap(vaultRoot)) {
-			return {
-				content: [{ type: "text", text: "This directory is not an initialized pi-vault. Run onboarding first." }],
-				details: { exitCode: 1 },
-				isError: true,
-			};
-		}
-		const result = await runVaultAgent(["--vault-root", vaultRoot, "status", "--json"], vaultRoot, signal);
-		return {
-			content: [{ type: "text", text: result.stdout || result.stderr }],
-			details: { exitCode: result.exitCode },
-			isError: result.exitCode !== 0,
-		};
+	execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => ["--vault-root", vaultRoot, "status", "--json"]);
 	},
 });
 
-const manageTool = defineTool({
-	name: "vault_manage",
-	label: "Manage Vault",
+const readinessTool = defineTool({
+	name: "vault_readiness",
+	label: "Vault Readiness",
 	description:
-		"Run a validated pi-vault workflow. Use dry-run and review before mutations; apply-approved only after explicit user approval.",
+		"Read-only pre-flight checks before broad work: organization readiness or static Obsidian compatibility. Never mutates the vault.",
 	parameters: Type.Object({
-		action: Type.Union([
-			Type.Literal("scan"),
-			Type.Literal("readiness"),
-			Type.Literal("maintain"),
-			Type.Literal("review"),
-			Type.Literal("apply-approved"),
-			Type.Literal("obsidian-check"),
-			Type.Literal("rebuild-retrieval"),
+		report: Type.Union([Type.Literal("readiness"), Type.Literal("obsidian")]),
+	}),
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildReadinessArgs(vaultRoot, params));
+	},
+});
+
+const searchTool = defineTool({
+	name: "vault_search",
+	label: "Search Vault",
+	description:
+		"Read-only semantic search over the embedding index. Returns ranked notes by meaning and never writes, rebuilds, or proposes anything.",
+	parameters: Type.Object({
+		query: Type.String({ minLength: 1 }),
+		topK: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+	}),
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildSearchArgs(vaultRoot, params));
+	},
+});
+
+const retrievalTool = defineTool({
+	name: "vault_retrieval",
+	label: "Vault Retrieval Index",
+	description:
+		"Build or refresh retrieval state and propose related links. `embed-index` and `rebuild-retrieval` regenerate indices; `related-links` writes an append-only pending proposal (dry-run by default) — never applies.",
+	parameters: Type.Object({
+		operation: Type.Union([
 			Type.Literal("embed-index"),
-			Type.Literal("semantic-search"),
+			Type.Literal("rebuild-retrieval"),
 			Type.Literal("related-links"),
-			Type.Literal("write-norms-lock"),
-			Type.Literal("refine"),
-			Type.Literal("people"),
-			Type.Literal("add-property"),
-			Type.Literal("add-note-type"),
-			Type.Literal("undo"),
 		]),
 		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
-		useLlm: Type.Optional(Type.Boolean()),
-		applySafe: Type.Optional(Type.Boolean()),
+		topK: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		minSimilarity: Type.Optional(Type.Number({ minimum: -1, maximum: 1 })),
 		dryRun: Type.Optional(Type.Boolean()),
-		folder: Type.Optional(Type.String()),
-		note: Type.Optional(Type.String()),
-		maxPeople: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+	}),
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildRetrievalArgs(vaultRoot, params));
+	},
+});
+
+const schemaProposeTool = defineTool({
+	name: "vault_schema_propose",
+	label: "Propose Schema Change",
+	description:
+		"Author the schema/norms through pending proposals: a canonical property value (`property`), a new note type (`note-type`), a note-type template refresh (`template`), candidate topic hubs (`topic-hubs`), an onboarding/schema transcript (`schema-conversation`), or export/import of editable Markdown defaults. Writes pending proposals only — never approves or applies. Review and apply separately.",
+	parameters: Type.Object({
+		operation: Type.Union([
+			Type.Literal("property"),
+			Type.Literal("note-type"),
+			Type.Literal("template"),
+			Type.Literal("topic-hubs"),
+			Type.Literal("schema-conversation"),
+			Type.Literal("export-defaults"),
+			Type.Literal("import-defaults"),
+		]),
 		property: Type.Optional(Type.String()),
 		value: Type.Optional(Type.String()),
 		description: Type.Optional(Type.String()),
 		name: Type.Optional(Type.String()),
+		folder: Type.Optional(Type.String()),
 		title: Type.Optional(Type.String()),
-		runId: Type.Optional(Type.String()),
-		query: Type.Optional(Type.String()),
-		topK: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
-		minSimilarity: Type.Optional(Type.Number({ minimum: -1, maximum: 1 })),
+		noteType: Type.Optional(Type.String()),
+		domain: Type.Optional(Type.String()),
+		minCluster: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		conversationFile: Type.Optional(Type.String()),
+		includeCurrentSchemaSummary: Type.Optional(Type.Boolean()),
+		output: Type.Optional(Type.String()),
+		schemaFile: Type.Optional(Type.String()),
 	}),
-	async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-		const vaultRoot = findVaultRoot(ctx.cwd);
-		if (!vaultRoot || !readBootstrap(vaultRoot)) {
-			return {
-				content: [{ type: "text", text: "This directory is not an initialized pi-vault. Run onboarding first." }],
-				details: { exitCode: 1, action: params.action },
-				isError: true,
-			};
-		}
-		const args = buildVaultManageArgs(vaultRoot, params);
-		if (!Array.isArray(args)) {
-			return {
-				content: [{ type: "text", text: args.error }],
-				details: { exitCode: 1, action: params.action },
-				isError: true,
-			};
-		}
-		const result = await runVaultAgent(args, vaultRoot, signal);
-		return {
-			content: [{ type: "text", text: result.stdout || result.stderr }],
-			details: { exitCode: result.exitCode, action: params.action },
-			isError: result.exitCode !== 0,
-		};
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildSchemaProposeArgs(vaultRoot, params));
+	},
+});
+
+const contentProposeTool = defineTool({
+	name: "vault_content_propose",
+	label: "Propose Content Change",
+	description:
+		"Generate a pending content proposal: extract people into Contacts/Authors, or refine note bodies for structure (the word-preservation guard forbids changing wording or meaning). Writes a pending proposal only — never applies. Refine is dry-run by default.",
+	parameters: Type.Object({
+		operation: Type.Union([Type.Literal("people"), Type.Literal("refine")]),
+		folder: Type.Optional(Type.String()),
+		note: Type.Optional(Type.String()),
+		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		maxPeople: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		dryRun: Type.Optional(Type.Boolean()),
+	}),
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildContentProposeArgs(vaultRoot, params));
+	},
+});
+
+const maintainTool = defineTool({
+	name: "vault_maintain",
+	label: "Maintain Vault",
+	description:
+		"Run bounded maintenance: `scan` updates the manifest, `maintain` runs a bounded autonomous pass (dry-run by default; pass dryRun:false and applySafe only after review), `write-norms-lock` snapshots the current norms. Use dry-run before broad changes.",
+	parameters: Type.Object({
+		operation: Type.Union([Type.Literal("scan"), Type.Literal("maintain"), Type.Literal("write-norms-lock")]),
+		applySafe: Type.Optional(Type.Boolean()),
+		useLlm: Type.Optional(Type.Boolean()),
+		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
+		dryRun: Type.Optional(Type.Boolean()),
+	}),
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildMaintainArgs(vaultRoot, params));
+	},
+});
+
+const reviewApplyTool = defineTool({
+	name: "vault_review_apply",
+	label: "Review and Apply Proposals",
+	description:
+		"Inspect or apply pending proposals. `review` is a read-only dry-run that validates the proposal queue; `apply-approved` applies only proposals already marked approved; `approve-safe` marks valid bounded non-schema proposals approved; `review-blocks` previews blocked model-stage proposals and `approve-blocks-safe` converts the safe ones. Dry-run and review before mutations; apply only after explicit approval.",
+	parameters: Type.Object({
+		operation: Type.Union([
+			Type.Literal("review"),
+			Type.Literal("apply-approved"),
+			Type.Literal("approve-safe"),
+			Type.Literal("review-blocks"),
+			Type.Literal("approve-blocks-safe"),
+		]),
+		stage: Type.Optional(
+			Type.Union([
+				Type.Literal("frontmatter-shape"),
+				Type.Literal("classify-type"),
+				Type.Literal("property-values"),
+				Type.Literal("template-body"),
+				Type.Literal("assign-hub"),
+				Type.Literal("assign-folder"),
+				Type.Literal("summary"),
+			]),
+		),
+		note: Type.Optional(Type.String()),
+	}),
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildReviewApplyArgs(vaultRoot, params));
+	},
+});
+
+const recoveryTool = defineTool({
+	name: "vault_recovery",
+	label: "Recover Vault Run",
+	description: "Undo a previous versioned run, restoring only the files that run touched.",
+	parameters: Type.Object({
+		runId: Type.String({ minLength: 1 }),
+	}),
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildRecoveryArgs(vaultRoot, params));
+	},
+});
+
+const processStageSchema = Type.Union([
+	Type.Literal("frontmatter-shape"),
+	Type.Literal("classify-type"),
+	Type.Literal("property-values"),
+	Type.Literal("template-body"),
+	Type.Literal("assign-hub"),
+	Type.Literal("assign-folder"),
+	Type.Literal("summary"),
+]);
+
+const organizeProposeTool = defineTool({
+	name: "vault_organize_propose",
+	label: "Propose Organization",
+	description:
+		"Generate pending organization proposals: dashboard-first layout migration (`vault-layout`), a hierarchy of Bases dashboards (`base-hierarchy`), one folder's organization + dashboard (`folder-organization`), a bounded frontmatter cleanup queue (`cleanup-queue`), deterministic inbox move proposals (`inbox-sort`), an index note (`index`), or a queued-maintenance action plan (`action-queue`). Writes pending proposals only — never applies. Review and apply through vault_review_apply.",
+	parameters: Type.Object({
+		operation: Type.Union([
+			Type.Literal("vault-layout"),
+			Type.Literal("base-hierarchy"),
+			Type.Literal("folder-organization"),
+			Type.Literal("cleanup-queue"),
+			Type.Literal("inbox-sort"),
+			Type.Literal("index"),
+			Type.Literal("action-queue"),
+		]),
+		folder: Type.Optional(Type.String()),
+		project: Type.Optional(Type.String()),
+		domain: Type.Optional(Type.String()),
+		dashboardTitle: Type.Optional(Type.String()),
+		indexType: Type.Optional(
+			Type.Union([Type.Literal("type"), Type.Literal("project"), Type.Literal("parent"), Type.Literal("domain")]),
+		),
+		value: Type.Optional(Type.String()),
+		title: Type.Optional(Type.String()),
+		maxItems: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
+		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
+		minChildNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		llmLimit: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
+		useLlm: Type.Optional(Type.Boolean()),
+		safeOnly: Type.Optional(Type.Boolean()),
+		removeLegacy: Type.Optional(Type.Boolean()),
+		checkpoint: Type.Optional(Type.Boolean()),
+		resume: Type.Optional(Type.Boolean()),
+		massEdit: Type.Optional(Type.Boolean()),
+		dryRun: Type.Optional(Type.Boolean()),
+	}),
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildOrganizeProposeArgs(vaultRoot, params));
+	},
+});
+
+const processNotesTool = defineTool({
+	name: "vault_process_notes",
+	label: "Process Notes",
+	description:
+		"Run a bounded, lock-aware processing pass over notes — `inbox`, `vault`, an `organize-pass` (folder/stage-scoped), or `reconcile` (apply approved defaults). One semantic `stage` per LLM run (frontmatter-shape, classify-type, property-values, template-body, assign-hub, assign-folder, summary). Emits review-gated stage proposals; never bypasses apply. A broad run (no folder/note) requires maxNotes; keep batches small until review queues are clean. `massEdit` is opt-in only.",
+	parameters: Type.Object({
+		scope: Type.Union([
+			Type.Literal("inbox"),
+			Type.Literal("vault"),
+			Type.Literal("organize-pass"),
+			Type.Literal("reconcile"),
+		]),
+		stage: Type.Optional(processStageSchema),
+		folder: Type.Optional(Type.String()),
+		note: Type.Optional(Type.String()),
+		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
+		maxRuntimeMinutes: Type.Optional(Type.Integer({ minimum: 1, maximum: 120 })),
+		useLlm: Type.Optional(Type.Boolean()),
+		createLock: Type.Optional(Type.Boolean()),
+		propertiesOnly: Type.Optional(Type.Boolean()),
+		massEdit: Type.Optional(Type.Boolean()),
+		dryRun: Type.Optional(Type.Boolean()),
+	}),
+	executionMode: "sequential",
+	execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildProcessNotesArgs(vaultRoot, params));
 	},
 });
 
@@ -418,7 +860,16 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 		}),
 	);
 	pi.registerTool(statusTool);
-	pi.registerTool(manageTool);
+	pi.registerTool(readinessTool);
+	pi.registerTool(searchTool);
+	pi.registerTool(retrievalTool);
+	pi.registerTool(schemaProposeTool);
+	pi.registerTool(contentProposeTool);
+	pi.registerTool(organizeProposeTool);
+	pi.registerTool(processNotesTool);
+	pi.registerTool(maintainTool);
+	pi.registerTool(reviewApplyTool);
+	pi.registerTool(recoveryTool);
 	pi.registerTool(submitArtifactTool);
 	pi.on("session_shutdown", async () => {
 		const client = forgeClient;

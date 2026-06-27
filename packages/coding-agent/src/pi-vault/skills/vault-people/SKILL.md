@@ -14,8 +14,8 @@ sorted into Contacts and Authors, without duplicates, all through reviewable pro
    and `parent: [[Authors]]` are what route a person note to each folder.
 2. Confirm scope with the user: the whole vault or one folder, and roughly how many
    people to process this pass.
-3. Run `propose-people` (optionally `--folder <path>` and `--max-people <n>`), or
-   `vault_manage` with `action: "people"`. The engine:
+3. Run `vault_content_propose` with `operation: "people"` (optionally `folder` and
+   `maxPeople`); the engine command is `propose-people`. The engine:
    - detects person mentions deterministically,
    - deduplicates against existing person notes by normalized name (never recreating
      one — it extends `related` backlinks instead),
