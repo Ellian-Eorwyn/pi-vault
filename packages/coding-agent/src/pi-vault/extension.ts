@@ -97,11 +97,13 @@ export function loadVaultContext(vaultRoot: string): string | undefined {
 		["Agent handoff", "0.01 agent/AGENT_HANDOFF.md", join(agentDir, "AGENT_HANDOFF.md")],
 		["Agent contract", "0.01 agent/AGENT_CONTRACT.md", join(agentDir, "AGENT_CONTRACT.md")],
 		["Norms lock", "0.01 agent/norms-lock.json", join(agentDir, "norms-lock.json")],
+		// The canonical, user-editable schema note (top of the system folder) plus the
+		// compact structured schema.json are the single source of categories +
+		// definitions. The generated `0.020/0.021/0.023` template docs are projections of
+		// the same data and are intentionally NOT injected here (token efficiency).
+		["Schema (editable canonical note)", "0.00 Vault Schema.md", join(vaultRoot, bootstrap.systemDir, "0.00 Vault Schema.md")],
 		["Canonical schema", "0.01 agent/schema.json", join(agentDir, "schema.json")],
-		["Vault schema", "0.02 templates/0.020 vault schema.md", join(templateDir, "0.020 vault schema.md")],
-		["Property values", "0.02 templates/0.021 property values.md", join(templateDir, "0.021 property values.md")],
 		["Folder norms", "0.02 templates/0.022 folder norms.md", join(templateDir, "0.022 folder norms.md")],
-		["Topic hubs", "0.02 templates/0.023 topic hubs.md", join(templateDir, "0.023 topic hubs.md")],
 		[
 			"Retrieval instructions",
 			"0.01 agent/retrieval/00 retrieval-readme.md",
@@ -120,6 +122,7 @@ export function loadVaultContext(vaultRoot: string): string | undefined {
 		`Inbox folder: ${bootstrap.inboxDir}`,
 		"All vault-specific policy, state, sessions, and generated context belong under the configured system folder.",
 		"Use vault tools and pending proposals for mutations. Do not bypass proposal review for organization changes.",
+		`Schema source of truth: the user edits "${bootstrap.systemDir}/0.00 Vault Schema.md" (categories + definitions). If vault_status reports schema_note.changed, run vault_schema_sync FIRST to ingest the user's edits before any other work, then use the refreshed schema.`,
 		existsSync(join(agentDir, "norms-lock.json"))
 			? "Schema policy: the norms-lock snapshot is authoritative. Follow a current lock exactly; if vault_status reports drifted, block broad processing until the drift is reviewed and re-locked. Recommendations must remain proposal-first and preserve the approved intent."
 			: "Schema policy: no norms lock exists, so the bundled schema and templates are provisional defaults for discussion only. Do not enforce them on existing notes. Use vault evidence to help the user decide, then apply approved proposals and write the lock.",
@@ -134,6 +137,7 @@ export function startupAssessmentPrompt(status: string, newlyInitialized: boolea
 	return [
 		"pi-vault generated this read-only startup assessment. It is context, not user authorization to modify files.",
 		instructions,
+		"First, if schema_note.changed is true in the status below, run vault_schema_sync to ingest the user's edits to the canonical schema note before anything else, so you work against current categories and definitions.",
 		"If schema_state is provisional, treat defaults only as recommendations. If locked, follow the schema exactly. If drifted, do not perform broad processing until the drift is reviewed.",
 		"Do not process inbox files, apply proposals, write a lock, or otherwise mutate the vault unless the user explicitly approves the work.",
 		"",
@@ -538,6 +542,17 @@ const statusTool = defineTool({
 	},
 });
 
+const schemaSyncTool = defineTool({
+	name: "vault_schema_sync",
+	label: "Sync Schema Note",
+	description:
+		"Ingest the user-editable canonical schema note (top of the system folder) into the structured schema, applying only what changed. Run this first when vault_status reports the schema note changed. Applies additions and definition edits directly (the user authored them); refuses to remove a value still used by notes.",
+	parameters: Type.Object({}),
+	execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => ["--vault-root", vaultRoot, "schema-sync", "--json"]);
+	},
+});
+
 const readinessTool = defineTool({
 	name: "vault_readiness",
 	label: "Vault Readiness",
@@ -860,6 +875,7 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 		}),
 	);
 	pi.registerTool(statusTool);
+	pi.registerTool(schemaSyncTool);
 	pi.registerTool(readinessTool);
 	pi.registerTool(searchTool);
 	pi.registerTool(retrievalTool);

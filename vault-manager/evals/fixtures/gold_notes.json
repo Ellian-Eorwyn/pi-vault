@@ -1,0 +1,103 @@
+{
+  "_about": "Fresh Claude-authored gold labels for a stratified Memex sample. Labels reflect judgement from note CONTENT (frontmatter is stripped before the model sees a note and is not trusted as ground truth). `folder` is the top-level Memex folder the note should live in (used for assign-folder). Expand this set toward ~45 notes by adding entries in the same shape. Optional keys: person_kind (person notes), summary (reference for cosine), refine (include in refine-body), hub (enables assign-hub), people (extraction gold).",
+  "vault": "test_vaults/Memex",
+  "notes": [
+    {
+      "path": "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+      "labels": {"type": "note", "status": "active", "domain": "philosophy", "source_kind": "", "capture_type": "", "folder": "02 Journal"},
+      "summary": "A structured outline for a Buddhist meditation session, walking through refuge in the Three Jewels, the Four Noble Truths, and somatic awareness cues."
+    },
+    {
+      "path": "02 Journal/2.02 Therapy/2025-04-15 Therapy.md",
+      "labels": {"type": "daily", "status": "active", "domain": "health", "source_kind": "", "capture_type": "manual", "folder": "02 Journal"},
+      "summary": "Dated therapy journal entry reflecting on family conflict, an absent advisor, and a self-critical habit of dwelling on how finished work could have been done better.",
+      "refine": true
+    },
+    {
+      "path": "02 Journal/2.03 Journaling/12.01 Daily/2013/Of Sleep Disturbances and Academia 9 6 2013.md",
+      "labels": {"type": "daily", "status": "active", "domain": "personal", "source_kind": "", "capture_type": "", "folder": "02 Journal"},
+      "summary": "A 2013 journal entry describing recurring half-awake sleep disturbances in which the author tries to solve problems or perform tasks like making caramel brittle.",
+      "refine": true
+    },
+    {
+      "path": "03 Notes/Vehicle-to-Grid (V2G).md",
+      "labels": {"type": "note", "status": "active", "domain": "technology", "source_kind": "", "capture_type": "", "folder": "03 Notes"}
+    },
+    {
+      "path": "03 Notes/Data Sources.md",
+      "labels": {"type": "note", "status": "active", "domain": "work", "source_kind": "", "capture_type": "", "folder": "03 Notes"}
+    },
+    {
+      "path": "04 Sources/Secondary/Dissertation/Games/Peterson_2012_Playing at the World.md",
+      "labels": {"type": "source", "status": "active", "domain": "academic", "source_kind": "book", "capture_type": "imported", "folder": "04 Sources"},
+      "summary": "Jon Peterson's 2012 book Playing at the World, a detailed history of wargaming and role-playing games."
+    },
+    {
+      "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md",
+      "labels": {"type": "source", "status": "active", "domain": "academic", "source_kind": "article", "capture_type": "imported", "folder": "04 Sources"},
+      "summary": "A 2021 journal article by Priteegandha Naik analysing Priya Sarukkai Chabria's novel Generation 14 through Dalit feminism and Indian science fiction."
+    },
+    {
+      "path": "05 Projects/EEI/4.06 Energy CBPR/Deep Research Prompt.md",
+      "labels": {"type": "note", "status": "active", "domain": "work", "source_kind": "", "capture_type": "", "folder": "05 Projects"},
+      "summary": "A reusable LLM deep-research prompt for finding practical how-to resources on community-based participatory and community-engaged energy research."
+    },
+    {
+      "path": "05 Projects/Hobbies/Games/Card Games/MTG/BG.md",
+      "labels": {"type": "note", "status": "active", "domain": "craft", "source_kind": "", "capture_type": "", "folder": "05 Projects"}
+    },
+    {
+      "path": "06 People/Lindsay Baker.md",
+      "labels": {"type": "person", "status": "active", "domain": "work", "source_kind": "", "capture_type": "", "folder": "06 People"},
+      "person_kind": "contact",
+      "summary": "Lindsay Baker, VP and Head of Sustainability & Wellbeing at WeWork, an industry veteran in healthy and sustainable buildings.",
+      "refine": true
+    },
+    {
+      "path": "06 People/Edward Mazria.md",
+      "labels": {"type": "person", "status": "active", "domain": "work", "source_kind": "", "capture_type": "", "folder": "06 People"},
+      "person_kind": "author",
+      "summary": "Edward Mazria, architect, author, and researcher who founded Architecture 2030 and is known for seminal work on the built environment's energy use and emissions."
+    },
+    {
+      "path": "06 People/Alan K Meier.md",
+      "labels": {"type": "person", "status": "active", "domain": "work", "source_kind": "", "capture_type": "", "folder": "06 People"},
+      "person_kind": "contact"
+    },
+    {
+      "path": "07 Organizations/Intergovernmental Panel on Climate Change.md",
+      "labels": {"type": "organization", "status": "active", "domain": "academic", "source_kind": "", "capture_type": "", "folder": "07 Organizations"},
+      "summary": "The Intergovernmental Panel on Climate Change (IPCC), the United Nations body for assessing climate science."
+    },
+    {
+      "path": "07 Organizations/UC Davis.md",
+      "labels": {"type": "organization", "status": "active", "domain": "academic", "source_kind": "", "capture_type": "", "folder": "07 Organizations"}
+    },
+    {
+      "path": "08 Reference/Tech/4.09 Knowledge Management/Data Storage and Retrieval Guidelines.md",
+      "labels": {"type": "note", "status": "active", "domain": "meta", "source_kind": "", "capture_type": "", "folder": "08 Reference"},
+      "summary": "Guidelines for durable personal data storage and retrieval, favouring plain-text and open standards, normalization, canonical forms, and round-trippability.",
+      "refine": true
+    },
+    {
+      "path": "09 Administrative/Health/Data/Sutter/DOC0006 - Summary of Care.md",
+      "labels": {"type": "note", "status": "active", "domain": "health", "source_kind": "", "capture_type": "imported", "folder": "09 Administrative"}
+    },
+    {
+      "path": "01 Inbox/Living Well.md",
+      "labels": {"type": "note", "status": "active", "domain": "personal", "source_kind": "", "capture_type": "", "folder": "03 Notes"},
+      "summary": "A personal checklist of wellbeing and ethical-living commitments across body, environment, and charitable giving.",
+      "refine": true
+    },
+    {
+      "path": "01 Inbox/Buddhism.md",
+      "labels": {"type": "note", "status": "active", "domain": "philosophy", "source_kind": "", "capture_type": "", "folder": "03 Notes"},
+      "summary": "An explainer of the Four Noble Truths and the Noble Eightfold Path in Buddhism.",
+      "refine": true
+    },
+    {
+      "path": "01 Inbox/Saturday, June 13th – To Do.md",
+      "labels": {"type": "task", "status": "active", "domain": "household", "source_kind": "", "capture_type": "", "folder": "01 Inbox"}
+    }
+  ]
+}

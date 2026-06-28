@@ -1,0 +1,55 @@
+# Main instruction models, served one-at-a-time at llms:8008.
+#
+# Only one large model fits in VRAM at a time, so runs are sequential: serve a
+# model, run `python evals/runners/run_main.py --model <key>`, switch the served
+# model, repeat. Each run writes evals/results/main_<key>.json and report.py
+# aggregates whatever result files exist, so order does not matter.
+#
+# `model` is the id sent in the /v1/chat/completions payload. llama.cpp-style
+# servers accept any string and serve whatever GGUF is loaded, so the default
+# "code" works for all keys; set it explicitly if your server routes by name.
+# `vram_gb` is recorded by hand (nvidia-smi while the model is served) and shown
+# in the leaderboard next to quality and speed.
+
+endpoint: http://llms:8008
+timeout_seconds: 180
+# Client-side input cap. Kept at ~64k tokens so a prompt always leaves generation
+# headroom inside a 128k server window (observed input high-water ~64k on Memex).
+# Do NOT raise above ~half the smallest served window or generation-heavy stages
+# could overflow it.
+max_input_tokens: 64000
+chars_per_token: 4
+
+# server_context_tokens = the window the GGUF is actually served with (llama.cpp
+# -c). Recorded per model so the leaderboard shows what each was tested at, and so
+# report.py can flag any run whose context high-water approached its window. The
+# 35B-A3B is served at 128k to save VRAM; the 27B at the full 262k.
+models:
+  - key: qwen3.6-27b-q6
+    model: code
+    label: "Qwen3.6-27B q6"
+    arch: "27b"
+    quant: "q6"
+    server_context_tokens: 262144
+    vram_gb: null
+  - key: qwen3.6-27b-q4
+    model: code
+    label: "Qwen3.6-27B q4"
+    arch: "27b"
+    quant: "q4"
+    server_context_tokens: 262144
+    vram_gb: null
+  - key: qwen3.6-35ba3b-q6
+    model: code
+    label: "Qwen3.6-35B-A3B q6"
+    arch: "35ba3b"
+    quant: "q6"
+    server_context_tokens: 131072
+    vram_gb: null
+  - key: qwen3.6-35ba3b-q4
+    model: code
+    label: "Qwen3.6-35B-A3B q4"
+    arch: "35ba3b"
+    quant: "q4"
+    server_context_tokens: 131072
+    vram_gb: null

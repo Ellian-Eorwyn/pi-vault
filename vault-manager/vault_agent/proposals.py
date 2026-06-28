@@ -33,6 +33,7 @@ from .scanner import scan_vault
 from .schema import (
     COMMON_PROPERTIES,
     CORE_PROPERTY_ORDER,
+    DEFINITION_SCHEMA_KEYS,
     NOTE_TYPES,
     accepted_properties_for,
     default_schema,
@@ -457,6 +458,13 @@ def generate_property_proposal(
     common_properties[property_name]["allowed"].append(allowed_value)
     schema["core_properties"] = core_properties
     schema["common_properties"] = common_properties
+    # Record the definition structurally so it becomes the single source of truth
+    # the classifier prompts read — not only the human-readable markdown doc.
+    definition_key = DEFINITION_SCHEMA_KEYS.get(property_name)
+    if definition_key and description and description.strip():
+        definitions = dict(schema.get(definition_key) or {})
+        definitions[allowed_value] = description.strip()
+        schema[definition_key] = definitions
     definition_text = _property_definition_markdown(
         config=config,
         property_name=property_name,

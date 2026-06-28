@@ -11,7 +11,7 @@ from typing import Any
 from .config import AgentConfig
 from .paths import AGENT_DIR, paths_for
 from .safety import write_text_safely
-from .schema import default_schema
+from .schema import default_schema, missing_definitions
 
 
 NORMS_LOCK = AGENT_DIR / "norms-lock.json"
@@ -62,14 +62,32 @@ def current_lock_hash(vault_root: Path) -> str | None:
 def run_norms_lock(config: AgentConfig, *, write: bool = False) -> tuple[int, str]:
     lock = build_norms_lock(config)
     path = norms_lock_path(config.vault_root)
+    # Every controlled value must carry a confirmed definition before the schema is
+    # locked, so the classifier always has aligned meaning to work from.
+    undefined = missing_definitions(lock.get("schema"))
     if config.dry_run or not write:
-        return (
-            0,
+        message = (
             "vault-agent norms-lock dry run\n"
             f"Would write: {path}\n"
             f"Lock hash: {lock['lock_hash']}\n"
             f"Templates: {len(lock['templates'])}\n"
-            "No files were changed.",
+            "No files were changed."
+        )
+        if undefined:
+            message += (
+                f"\nWARNING: {len(undefined)} controlled value(s) lack a definition "
+                "and will block the lock: " + ", ".join(undefined[:20])
+            )
+        return 0, message
+    if undefined:
+        return (
+            1,
+            "vault-agent norms-lock failed\n"
+            "Error: every controlled value needs a confirmed definition before locking.\n"
+            f"Undefined ({len(undefined)}): " + ", ".join(undefined[:50]) + "\n"
+            "Add them via `vault-agent export-schema-defaults` -> edit the Value "
+            "Definitions -> `vault-agent import-schema-defaults`, then approve, apply, "
+            "and retry the lock.",
         )
 
     backup_root = config.vault_root / config.paths.agent_dir / "backups"

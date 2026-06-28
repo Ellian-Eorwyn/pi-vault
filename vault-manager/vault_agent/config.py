@@ -168,7 +168,9 @@ def load_config(args: argparse.Namespace) -> AgentConfig:
         embeddings_related_min_similarity=float(
             embeddings.get(
                 "related_min_similarity",
-                embeddings.get("min_similarity", 0.65),
+                # Tuned default (was 0.65); a sweep on the eval gold set showed 0.65
+                # starved related-link recall. See vault-manager/evals.
+                embeddings.get("min_similarity", 0.55),
             )
         ),
         embeddings_duplicate_min_similarity=float(

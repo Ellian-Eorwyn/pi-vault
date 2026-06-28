@@ -1,0 +1,45 @@
+{
+  "_about": "Retrieval gold for the embedding eval. `queries` map a free-text search to the notes that should rank high. `related_pairs` give each note its curated related neighbours (used as self-queries for related-link precision). `duplicates` are near-identical pairs for detection-rate; synthetic text pairs are clearly marked. All referenced note paths are added to the embedding corpus automatically.",
+  "queries": [
+    {"query": "vehicle to grid EV charging and the electric grid", "relevant": ["03 Notes/Vehicle-to-Grid (V2G).md", "03 Notes/Vehicle-to-Home (V2H).md"]},
+    {"query": "Buddhist meditation practice and the Four Noble Truths", "relevant": ["02 Journal/2.01 Buddhism/Structured Meditation Outline.md", "01 Inbox/Buddhism.md"]},
+    {"query": "energy efficiency researcher at UC Davis", "relevant": ["06 People/Alan K Meier.md", "07 Organizations/UC Davis.md"]},
+    {"query": "speculative fiction dissertation source on futurism", "relevant": ["04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md", "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md"]},
+    {"query": "IPCC climate science assessment body", "relevant": ["07 Organizations/Intergovernmental Panel on Climate Change.md"]},
+    {"query": "knowledge management plain text data storage guidelines", "relevant": ["08 Reference/Tech/4.09 Knowledge Management/Data Storage and Retrieval Guidelines.md"]},
+    {"query": "therapy session notes about advisor and family", "relevant": ["02 Journal/2.02 Therapy/2025-04-15 Therapy.md"]},
+    {"query": "Magic the Gathering deck list", "relevant": ["05 Projects/Hobbies/Games/Card Games/MTG/BG.md"]},
+    {"query": "medical summary of care record from Sutter", "relevant": ["09 Administrative/Health/Data/Sutter/DOC0006 - Summary of Care.md"]},
+    {"query": "community based participatory research how-to for energy", "relevant": ["05 Projects/EEI/4.06 Energy CBPR/Deep Research Prompt.md"]},
+    {"query": "personal checklist for living well and giving", "relevant": ["01 Inbox/Living Well.md"]},
+    {"query": "history of wargaming and role playing games", "relevant": ["04 Sources/Secondary/Dissertation/Games/Peterson_2012_Playing at the World.md"]},
+    {"query": "architect who founded Architecture 2030", "relevant": ["06 People/Edward Mazria.md"]},
+    {"query": "sustainability lead at WeWork", "relevant": ["06 People/Lindsay Baker.md"]}
+  ],
+  "related_pairs": [
+    {"path": "03 Notes/Vehicle-to-Grid (V2G).md", "related": ["03 Notes/Vehicle-to-Home (V2H).md"]},
+    {"path": "03 Notes/Vehicle-to-Home (V2H).md", "related": ["03 Notes/Vehicle-to-Grid (V2G).md"]},
+    {"path": "06 People/Edward Mazria.md", "related": ["07 Organizations/Architecture 2030.md"]},
+    {"path": "06 People/Lindsay Baker.md", "related": ["07 Organizations/WeWork.md"]},
+    {"path": "06 People/Irina Krishpinovich.md", "related": ["07 Organizations/The Ortiz Group.md"]},
+    {"path": "06 People/Alan K Meier.md", "related": ["07 Organizations/UC Davis.md"]},
+    {"path": "07 Organizations/UC Davis.md", "related": ["06 People/Alan K Meier.md", "07 Organizations/EEI.md", "07 Organizations/WCEC.md"]},
+    {"path": "07 Organizations/EEI.md", "related": ["07 Organizations/UC Davis.md"]},
+    {"path": "06 People/Nick Eyre.md", "related": ["07 Organizations/Intergovernmental Panel on Climate Change.md"]},
+    {"path": "07 Organizations/Intergovernmental Panel on Climate Change.md", "related": ["06 People/Nick Eyre.md"]},
+    {"path": "02 Journal/2.01 Buddhism/Structured Meditation Outline.md", "related": ["01 Inbox/Buddhism.md"]},
+    {"path": "01 Inbox/Buddhism.md", "related": ["02 Journal/2.01 Buddhism/Four Noble Truths.md"]},
+    {"path": "02 Journal/2.01 Buddhism/Four Noble Truths.md", "related": ["02 Journal/2.01 Buddhism/Eightfold Path.md"]},
+    {"path": "02 Journal/2.01 Buddhism/Eightfold Path.md", "related": ["02 Journal/2.01 Buddhism/Four Noble Truths.md"]},
+    {"path": "02 Journal/2.01 Buddhism/Dependent Origination.md", "related": ["02 Journal/2.01 Buddhism/Cause and Effect.md"]},
+    {"path": "02 Journal/2.01 Buddhism/Meditation.md", "related": ["02 Journal/2.01 Buddhism/Meditation Schedule.md"]},
+    {"path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md", "related": ["04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md"]},
+    {"path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md", "related": ["04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md"]},
+    {"path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md", "related": ["04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md"]}
+  ],
+  "duplicates": [
+    {"label": "synthetic: V2G near-paraphrase", "a_text": "Vehicle-to-Grid (V2G) lets electric vehicles return stored battery energy back to the electric grid during peak demand.", "b_text": "Vehicle-to-Grid (V2G) allows electric vehicles to feed stored battery energy back into the electric grid during peak demand."},
+    {"label": "synthetic: meditation near-paraphrase", "a_text": "A structured meditation begins with taking refuge in the Buddha, the Dharma, and the Sangha before reflecting on the Four Noble Truths.", "b_text": "A structured meditation starts by taking refuge in the Buddha, the Dharma, and the Sangha and then reflecting on the Four Noble Truths."},
+    {"label": "synthetic: bio near-duplicate", "a_text": "Edward Mazria is an architect and researcher who founded Architecture 2030 to address the built environment's energy use and emissions.", "b_text": "Edward Mazria, an architect and researcher, founded Architecture 2030 to tackle the built environment's energy use and emissions."}
+  ]
+}

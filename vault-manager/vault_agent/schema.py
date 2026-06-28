@@ -163,6 +163,30 @@ DOMAIN_DEFINITIONS = {
     "meta": "PKM, vault design, workflows, agent systems.",
 }
 
+SOURCE_KIND_DEFINITIONS = {
+    "book": "A book or monograph, printed or ebook.",
+    "article": "A journal article, paper, or magazine/news piece.",
+    "report": "A formal report, white paper, or technical/industry report.",
+    "policy": "A policy, regulation, statute, or guideline document.",
+    "standard": "A formal standard or specification (e.g. ISO, IEEE, building code).",
+    "website": "A web page or online resource that is not a formal publication.",
+    "dataset": "A structured data source or database.",
+    "video": "A film, recorded talk, or other video.",
+    "podcast": "An audio episode or podcast.",
+    "interview": "An interview, oral history, or Q&A with a person.",
+    "transcript": "A verbatim transcript of speech (talk, hearing, call, recording).",
+    "presentation": "Slides or a delivered talk/lecture deck.",
+    "manual": "A manual, handbook, or how-to/instructional reference.",
+}
+
+CAPTURE_TYPE_DEFINITIONS = {
+    "voice": "Captured by voice memo or speech-to-text dictation.",
+    "meeting": "Captured during or from a meeting, call, or conversation.",
+    "chat": "Captured from a chat or messaging thread (incl. LLM chats).",
+    "imported": "Imported from an external file, app, or service.",
+    "manual": "Typed or written directly into the vault by hand.",
+}
+
 RECOMMENDED_TOPIC_HUBS = [
     "Academia",
     "Research",
@@ -247,6 +271,8 @@ def default_schema(extra_domains: list[str] | None = None) -> dict[str, Any]:
         "note_types": deepcopy(NOTE_TYPES),
         "status_definitions": deepcopy(STATUS_DEFINITIONS),
         "domain_definitions": domain_definitions,
+        "source_kind_definitions": deepcopy(SOURCE_KIND_DEFINITIONS),
+        "capture_type_definitions": deepcopy(CAPTURE_TYPE_DEFINITIONS),
         "recommended_topic_hubs": list(RECOMMENDED_TOPIC_HUBS),
         "topic_hubs": {domain: [] for domain in domain_definitions},
         "agent_rules": list(AGENT_RULES),
@@ -351,6 +377,102 @@ def allowed_controlled_values_from_schema(
             if isinstance(value, str) and value not in values:
                 values.append(value)
     return values
+
+
+# Controlled properties that carry per-value definitions: their built-in
+# {value: definition} map and the schema.json key where confirmed definitions live.
+_BUILTIN_DEFINITIONS: dict[str, dict[str, str]] = {
+    "status": STATUS_DEFINITIONS,
+    "domain": DOMAIN_DEFINITIONS,
+    "source_kind": SOURCE_KIND_DEFINITIONS,
+    "capture_type": CAPTURE_TYPE_DEFINITIONS,
+}
+DEFINITION_SCHEMA_KEYS: dict[str, str] = {
+    "status": "status_definitions",
+    "domain": "domain_definitions",
+    "source_kind": "source_kind_definitions",
+    "capture_type": "capture_type_definitions",
+}
+
+
+def definitions_for(schema: dict[str, Any] | None, property_name: str) -> dict[str, str]:
+    """Merged ``{value: definition}`` for a controlled property.
+
+    Built-in definitions overlaid with confirmed definitions stored in
+    ``schema.json`` (e.g. ``domain_definitions``). The schema is the single source
+    of truth, so its entries win.
+    """
+    merged = dict(_BUILTIN_DEFINITIONS.get(property_name, {}))
+    if isinstance(schema, dict):
+        stored = schema.get(DEFINITION_SCHEMA_KEYS.get(property_name, ""))
+        if isinstance(stored, dict):
+            for value, text in stored.items():
+                if isinstance(value, str) and isinstance(text, str) and text.strip():
+                    merged[value] = text.strip()
+    return merged
+
+
+def note_type_definitions_from_schema(schema: dict[str, Any] | None) -> dict[str, str]:
+    """Merged ``{note_type: description}`` from built-in types plus schema additions."""
+    out: dict[str, str] = {}
+    for name, spec in note_types_from_schema(schema).items():
+        desc = spec.get("description") if isinstance(spec, dict) else ""
+        out[name] = desc.strip() if isinstance(desc, str) else ""
+    return out
+
+
+def hub_descriptions_for(domain: str | None, schema: dict[str, Any]) -> list[tuple[str, str]]:
+    """Approved topic hubs for a domain as ``(name, description)``, in registry order."""
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for entry in topic_hubs_from_schema(schema).get(domain or "", []):
+        name = _hub_name(entry)
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        desc = entry.get("description", "") if isinstance(entry, dict) else ""
+        out.append((name, desc.strip() if isinstance(desc, str) else ""))
+    return out
+
+
+def extra_domains_for(vault_root: Path) -> list[str]:
+    """Custom (non-built-in) domain values for a vault: schema additions plus any
+    folder-derived domains. The classifier and its validator both need these so a
+    domain added via the canonical schema note (or propose-property) is usable."""
+    schema = load_schema(vault_root)
+    builtin = set(COMMON_PROPERTIES["domain"]["allowed"])
+    out = [v for v in allowed_controlled_values_from_schema(schema, "domain") if v not in builtin]
+    for domain in paths_for(vault_root).domain_folders:
+        if domain and domain not in builtin and domain not in out:
+            out.append(domain)
+    return out
+
+
+def missing_definitions(schema: dict[str, Any] | None) -> list[str]:
+    """Controlled values and approved hubs that lack a non-empty definition.
+
+    Returns human-readable ``property:value`` / ``hub[domain]:name`` tokens. An
+    empty list means every controlled value is defined — the precondition for
+    writing a norms lock and for confident model classification.
+    """
+    missing: list[str] = []
+    for name, description in note_type_definitions_from_schema(schema).items():
+        if not (description or "").strip():
+            missing.append(f"note_type:{name}")
+    for property_name in ("status", "domain", "source_kind", "capture_type"):
+        defs = definitions_for(schema, property_name)
+        for value in allowed_controlled_values_from_schema(schema, property_name):
+            if value and not (defs.get(value) or "").strip():
+                missing.append(f"{property_name}:{value}")
+    for domain, entries in topic_hubs_from_schema(schema or {}).items():
+        for entry in entries:
+            name = _hub_name(entry)
+            if not name:
+                continue
+            description = entry.get("description", "") if isinstance(entry, dict) else ""
+            if not (description or "").strip():
+                missing.append(f"hub[{domain}]:{name}")
+    return missing
 
 
 def accepted_properties_for(note_type: str | None = None) -> set[str]:
@@ -502,7 +624,8 @@ def property_values_markdown(extra_domains: list[str] | None = None) -> str:
     )
     for source_kind in CORE_PROPERTIES["source_kind"]["allowed"]:
         if source_kind:
-            lines.append(f"- `{source_kind}`")
+            definition = SOURCE_KIND_DEFINITIONS.get(source_kind, "")
+            lines.append(f"- `{source_kind}`" + (f": {definition}" if definition else ""))
     lines.extend(
         [
             "",
@@ -514,7 +637,8 @@ def property_values_markdown(extra_domains: list[str] | None = None) -> str:
     )
     for capture_type in CORE_PROPERTIES["capture_type"]["allowed"]:
         if capture_type:
-            lines.append(f"- `{capture_type}`")
+            definition = CAPTURE_TYPE_DEFINITIONS.get(capture_type, "")
+            lines.append(f"- `{capture_type}`" + (f": {definition}" if definition else ""))
     lines.extend(
         [
             "",

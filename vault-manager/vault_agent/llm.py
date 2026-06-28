@@ -15,11 +15,18 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from .schema import (
+    CAPTURE_TYPE_DEFINITIONS,
     COMMON_PROPERTIES,
+    DOMAIN_DEFINITIONS,
     NOTE_TYPES,
+    SOURCE_KIND_DEFINITIONS,
+    STATUS_DEFINITIONS,
     allowed_controlled_values_from_schema,
     allowed_note_types_from_schema,
+    definitions_for,
+    extra_domains_for,
     load_schema,
+    note_type_definitions_from_schema,
 )
 
 
@@ -123,6 +130,11 @@ class OpenAICompatibleProposalProvider:
         extra_note_types: list[str] | None = None,
         extra_source_kinds: list[str] | None = None,
         extra_capture_types: list[str] | None = None,
+        domain_definitions: dict[str, str] | None = None,
+        note_type_definitions: dict[str, str] | None = None,
+        status_definitions: dict[str, str] | None = None,
+        source_kind_definitions: dict[str, str] | None = None,
+        capture_type_definitions: dict[str, str] | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -139,6 +151,41 @@ class OpenAICompatibleProposalProvider:
         self.extra_note_types = list(extra_note_types or [])
         self.extra_source_kinds = list(extra_source_kinds or [])
         self.extra_capture_types = list(extra_capture_types or [])
+        # Definitions are injected into every classification prompt so the model
+        # is aligned on what each controlled value means. They default to the
+        # built-in definitions (on by default); provider_from_config overlays the
+        # vault's confirmed schema definitions on top.
+        self.domain_definitions = (
+            dict(DOMAIN_DEFINITIONS) if domain_definitions is None else dict(domain_definitions)
+        )
+        self.note_type_definitions = (
+            {name: spec.get("description", "") for name, spec in NOTE_TYPES.items()}
+            if note_type_definitions is None
+            else dict(note_type_definitions)
+        )
+        self.status_definitions = (
+            dict(STATUS_DEFINITIONS) if status_definitions is None else dict(status_definitions)
+        )
+        self.source_kind_definitions = (
+            dict(SOURCE_KIND_DEFINITIONS)
+            if source_kind_definitions is None
+            else dict(source_kind_definitions)
+        )
+        self.capture_type_definitions = (
+            dict(CAPTURE_TYPE_DEFINITIONS)
+            if capture_type_definitions is None
+            else dict(capture_type_definitions)
+        )
+
+    def _definitions(self) -> dict[str, dict[str, str]]:
+        """Bundle the per-property definition maps for the prompt builders."""
+        return {
+            "note_type": self.note_type_definitions,
+            "status": self.status_definitions,
+            "domain": self.domain_definitions,
+            "source_kind": self.source_kind_definitions,
+            "capture_type": self.capture_type_definitions,
+        }
 
     def propose(self, *, note_path: Path, note_text: str) -> dict[str, Any]:
         prompt = _proposal_prompt(
@@ -149,6 +196,7 @@ class OpenAICompatibleProposalProvider:
             extra_note_types=self.extra_note_types,
             extra_source_kinds=self.extra_source_kinds,
             extra_capture_types=self.extra_capture_types,
+            definitions=self._definitions(),
         )
         system = (
             "You classify Obsidian notes for vault-agent. "
@@ -181,6 +229,7 @@ class OpenAICompatibleProposalProvider:
             extra_note_types=self.extra_note_types,
             extra_source_kinds=self.extra_source_kinds,
             extra_capture_types=self.extra_capture_types,
+            definitions=self._definitions(),
         )
         system = (
             "You perform one narrow Obsidian vault-agent stage. "
@@ -301,7 +350,7 @@ def provider_from_config(config: Any) -> "OpenAICompatibleProposalProvider | Non
         max_input_tokens=config.llm_max_input_tokens,
         chars_per_token=config.llm_chars_per_token,
         max_input_chars=config.llm_max_input_chars,
-        extra_domains=list(config.paths.domain_folders),
+        extra_domains=extra_domains_for(config.vault_root),
         extra_note_types=sorted(allowed_note_types_from_schema(schema) - set(NOTE_TYPES)),
         extra_source_kinds=[
             v
@@ -313,6 +362,11 @@ def provider_from_config(config: Any) -> "OpenAICompatibleProposalProvider | Non
             for v in allowed_controlled_values_from_schema(schema, "capture_type")
             if v not in builtin_capture
         ],
+        domain_definitions=definitions_for(schema, "domain"),
+        status_definitions=definitions_for(schema, "status"),
+        source_kind_definitions=definitions_for(schema, "source_kind"),
+        capture_type_definitions=definitions_for(schema, "capture_type"),
+        note_type_definitions=note_type_definitions_from_schema(schema),
     )
 
 
@@ -355,6 +409,22 @@ def _allowed_controlled_values(property_name: str, extra: list[str] | None) -> l
     return builtin + [v for v in (extra or []) if v and v not in builtin]
 
 
+def _format_allowed_with_defs(values: list[str], definitions: dict[str, str] | None) -> str:
+    """Render allowed values as a `- value: definition` block.
+
+    Empty values are skipped; values without a definition degrade to a bare
+    `- value` line so the block stays valid when a definition is missing.
+    """
+    definitions = definitions or {}
+    lines: list[str] = []
+    for value in values:
+        if not value:
+            continue
+        definition = (definitions.get(value) or "").strip()
+        lines.append(f"- {value}: {definition}" if definition else f"- {value}")
+    return "\n".join(lines)
+
+
 def _proposal_prompt(
     *,
     note_path: Path,
@@ -364,21 +434,39 @@ def _proposal_prompt(
     extra_note_types: list[str] | None = None,
     extra_source_kinds: list[str] | None = None,
     extra_capture_types: list[str] | None = None,
+    definitions: dict[str, dict[str, str]] | None = None,
 ) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars
-    allowed_types = ", ".join(_allowed_note_type_values(extra_note_types))
-    allowed_statuses = ", ".join(COMMON_PROPERTIES["status"]["allowed"])
-    allowed_domains = ", ".join(_allowed_domain_values(extra_domains))
-    allowed_source_kinds = ", ".join(_allowed_controlled_values("source_kind", extra_source_kinds))
-    allowed_capture_types = ", ".join(_allowed_controlled_values("capture_type", extra_capture_types))
+    defs = definitions or {}
+    allowed_types = _format_allowed_with_defs(
+        _allowed_note_type_values(extra_note_types), defs.get("note_type")
+    )
+    allowed_statuses = _format_allowed_with_defs(
+        list(COMMON_PROPERTIES["status"]["allowed"]), defs.get("status")
+    )
+    allowed_domains = _format_allowed_with_defs(
+        _allowed_domain_values(extra_domains), defs.get("domain")
+    )
+    allowed_source_kinds = _format_allowed_with_defs(
+        _allowed_controlled_values("source_kind", extra_source_kinds), defs.get("source_kind")
+    )
+    allowed_capture_types = _format_allowed_with_defs(
+        _allowed_controlled_values("capture_type", extra_capture_types), defs.get("capture_type")
+    )
     return f"""Classify this Obsidian note and propose only schema-approved metadata.
+Each allowed value is listed as `value: definition` — choose the value whose definition best fits.
 
-Allowed note_type values: {allowed_types}
-Allowed status values: {allowed_statuses}
-Allowed domain values: {allowed_domains}
-Allowed source_kind values: {allowed_source_kinds}
-Allowed capture_type values: {allowed_capture_types}
+Allowed note_type values:
+{allowed_types}
+Allowed status values:
+{allowed_statuses}
+Allowed domain values:
+{allowed_domains}
+Allowed source_kind values:
+{allowed_source_kinds}
+Allowed capture_type values:
+{allowed_capture_types}
 
 Return JSON with exactly these keys:
 - note_type: one allowed note type
@@ -426,20 +514,32 @@ def _stage_prompt(
     note_text: str,
     stage: str,
     max_chars: int,
-    allowed_hubs: list[str] | None = None,
+    allowed_hubs: list[str] | list[tuple[str, str]] | None = None,
     allowed_folders: list[tuple[str, str]] | None = None,
     extra_domains: list[str] | None = None,
     extra_note_types: list[str] | None = None,
     extra_source_kinds: list[str] | None = None,
     extra_capture_types: list[str] | None = None,
+    definitions: dict[str, dict[str, str]] | None = None,
 ) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars
-    allowed_types = ", ".join(_allowed_note_type_values(extra_note_types))
-    allowed_statuses = ", ".join(COMMON_PROPERTIES["status"]["allowed"])
-    allowed_domains = ", ".join(_allowed_domain_values(extra_domains))
-    allowed_source_kinds = ", ".join(_allowed_controlled_values("source_kind", extra_source_kinds))
-    allowed_capture_types = ", ".join(_allowed_controlled_values("capture_type", extra_capture_types))
+    defs = definitions or {}
+    allowed_types = _format_allowed_with_defs(
+        _allowed_note_type_values(extra_note_types), defs.get("note_type")
+    )
+    allowed_statuses = _format_allowed_with_defs(
+        list(COMMON_PROPERTIES["status"]["allowed"]), defs.get("status")
+    )
+    allowed_domains = _format_allowed_with_defs(
+        _allowed_domain_values(extra_domains), defs.get("domain")
+    )
+    allowed_source_kinds = _format_allowed_with_defs(
+        _allowed_controlled_values("source_kind", extra_source_kinds), defs.get("source_kind")
+    )
+    allowed_capture_types = _format_allowed_with_defs(
+        _allowed_controlled_values("capture_type", extra_capture_types), defs.get("capture_type")
+    )
     common = f"""Path: {note_path.as_posix()}
 Truncated: {str(truncated).lower()}
 
@@ -448,8 +548,10 @@ Note:
 """
     if stage == "classify-type":
         return f"""Choose only the note type for this note.
+Each value is listed as `value: definition` — choose the one whose definition best fits.
 
-Allowed note_type values: {allowed_types}
+Allowed note_type values:
+{allowed_types}
 
 Return JSON with exactly these keys:
 - note_type: one allowed note type
@@ -461,11 +563,16 @@ Do not propose status, domain, parent, related, cover, source_kind, capture_type
 {common}"""
     if stage == "property-values":
         return f"""Fill only accepted frontmatter property values for this note.
+Each allowed value is listed as `value: definition` — choose the value whose definition best fits.
 
-Allowed status values: {allowed_statuses}
-Allowed domain values: {allowed_domains}
-Allowed source_kind values: {allowed_source_kinds}
-Allowed capture_type values: {allowed_capture_types}
+Allowed status values:
+{allowed_statuses}
+Allowed domain values:
+{allowed_domains}
+Allowed source_kind values:
+{allowed_source_kinds}
+Allowed capture_type values:
+{allowed_capture_types}
 
 Return JSON with exactly these keys:
 - status: one allowed status value
@@ -494,10 +601,15 @@ Do not propose frontmatter, type, property values, headings, or other body edits
 
 {common}"""
     if stage == "assign-hub":
-        hub_list = ", ".join(allowed_hubs or []) or "(none defined for this domain)"
+        hub_pairs = [h if isinstance(h, tuple) else (h, "") for h in (allowed_hubs or [])]
+        hub_list = "\n".join(
+            f"- {name}: {desc}" if desc else f"- {name}" for name, desc in hub_pairs
+        ) or "(none defined for this domain)"
         return f"""Assign this note to exactly one approved topic hub for its domain, or none.
+Each hub is listed as `name: definition` — choose the one whose definition best fits.
 
-Approved hubs: {hub_list}
+Approved hubs:
+{hub_list}
 
 Return JSON with exactly these keys:
 - parent: one hub name from the approved list (no brackets), or empty string if none fits

@@ -8,6 +8,7 @@ from pathlib import Path
 from .dashboard_layout import dashboard_shell_contents
 from .paths import DEFAULT_CONTENT_DIRS, DEFAULT_DASHBOARDS_DIR, VaultPaths
 from .schema import (
+    default_schema,
     default_schema_json,
     folder_norms_markdown,
     index_base_templates,
@@ -17,6 +18,7 @@ from .schema import (
     topic_hubs_markdown,
 )
 from .schema_defaults import vault_defaults_markdown
+from .schema_note import SCHEMA_NOTE_NAME, render_schema_note
 
 # Bundled Dashboard++ CSS snippet (TfTHacker, https://tfthacker.com), extended with
 # callout and Bases card polish. Generated dashboards set `cssclasses: [dashboard]`,
@@ -179,7 +181,10 @@ llm:
   # KV-cache on the shared slot, so increase only for unusually large notes.
   max_input_tokens: 64000
   chars_per_token: 4
-  embedding_base_url: http://llms:8005
+  # Qwen3-Embedding-0.6B (q8 KV cache). Chosen over the 4B after benchmarking
+  # (vault-manager/evals): ties 4B on Recall@5, ~1.7x faster, ~1.8GB less VRAM;
+  # the small ranking/precision gap is closed by the tuned thresholds below.
+  embedding_base_url: http://llms:8011
   embedding_model: embed
 embeddings:
   # Embedding-backed retrieval (related-note discovery, semantic search). Enabled by
@@ -189,9 +194,11 @@ embeddings:
   # Similarity is computed in a mean-centered space (the corpus mean is removed
   # to counter Qwen3's high baseline cosine), so 0.55 is a meaningful search floor.
   min_similarity: 0.55
-  # Related-link proposals use a stricter default than search so suggested
-  # frontmatter links stay precise.
-  related_min_similarity: 0.65
+  # Related-link proposals use a stricter floor than search so suggested frontmatter
+  # links stay precise. Tuned from a threshold sweep on the eval gold set: 0.65 was
+  # starving recall (~0.2); 0.55 maximises F1 for the 0.6B model. For extra
+  # precision, run `propose-related-links --top-k 3`.
+  related_min_similarity: 0.55
   # Near-duplicate candidates should be much tighter than ordinary neighbors.
   duplicate_min_similarity: 0.97
   # Keep local embedding requests modest when the GPU host is serving other models.
@@ -564,6 +571,7 @@ Open full notes only after selecting likely candidates. Do not edit notes during
         "99 System/0.01 agent/retrieval/04 summary-brief.md": "# Summary Brief\n\nNot scanned yet.\n",
         "99 System/0.01 agent/retrieval/stale-summaries.md": "# Stale Summaries\n\n",
         "99 System/0.01 agent/retrieval/retrieval-log.md": "# Retrieval Log\n\n",
+        f"99 System/{SCHEMA_NOTE_NAME}": render_schema_note(default_schema(extra_domains)),
         "99 System/0.02 templates/0.020 vault schema.md": schema_markdown(extra_domains),
         "99 System/0.02 templates/0.021 property values.md": property_values_markdown(extra_domains),
         "99 System/0.02 templates/0.022 folder norms.md": folder_norms_markdown(),

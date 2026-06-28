@@ -14,6 +14,7 @@ from .processing_state import processing_summary
 from .readiness import build_readiness_report
 from .scanner import scan_vault
 from .schema import CORE_PROPERTY_ORDER
+from .schema_note import SCHEMA_NOTE_NAME, note_changed, schema_note_path
 from .validation import issue_groups, validate_entries
 
 
@@ -79,6 +80,11 @@ def build_status(config: AgentConfig) -> dict[str, object]:
         "generated_state": generated_state,
         "norms_lock": lock_hash or "",
         "schema_state": schema_state,
+        "schema_note": {
+            "path": (config.paths.system_dir / SCHEMA_NOTE_NAME).as_posix(),
+            "present": schema_note_path(config).exists(),
+            "changed": note_changed(config),
+        },
         "previous_scan": previous_state.get("last_scan") or "",
         "stale_tracked_notes": summary["stale"],
         "blocked_tracked_notes": summary["blocked"],
@@ -106,6 +112,7 @@ def run_status(config: AgentConfig, *, json_output: bool = False) -> tuple[int, 
         f"Changed inbox files: {len(status['inbox_changes']['changed'])}",
         f"Validation issues: {status['validation_issues']}",
         f"Schema state: {status['schema_state']}",
+        f"Schema note changed since last sync: {status['schema_note']['changed']}",
         f"Norms lock: {status['norms_lock'] or '(missing)'}",
         f"Previous scan: {status['previous_scan'] or '(none)'}",
         f"Stale tracked notes: {status['stale_tracked_notes']}",

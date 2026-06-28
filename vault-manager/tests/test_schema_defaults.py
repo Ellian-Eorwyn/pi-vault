@@ -257,7 +257,11 @@ def _blocks(text: str) -> dict:
     return {
         "core_property_order": parsed["core_property_order"],
         "controlled_values": parsed["controlled_values"],
+        "note_type_descriptions": parsed["note_type_descriptions"],
+        "status_descriptions": parsed["status_descriptions"],
         "domain_descriptions": parsed["domain_descriptions"],
+        "source_kind_descriptions": parsed["source_kind_descriptions"],
+        "capture_type_descriptions": parsed["capture_type_descriptions"],
         "folders": parsed["folders"],
         "dashboard_structure": parsed["dashboard_structure"],
         "dashboard_rules": parsed["dashboard_rules"],
@@ -270,7 +274,11 @@ def _replace_blocks(text: str, data: dict) -> str:
     replacements = [
         {"core_property_order": data["core_property_order"]},
         {"controlled_values": data["controlled_values"]},
+        {"note_type_descriptions": data["note_type_descriptions"]},
+        {"status_descriptions": data["status_descriptions"]},
         {"domain_descriptions": data["domain_descriptions"]},
+        {"source_kind_descriptions": data["source_kind_descriptions"]},
+        {"capture_type_descriptions": data["capture_type_descriptions"]},
         {"folders": data["folders"]},
         {"dashboard_structure": data["dashboard_structure"]},
         {"dashboard_rules": data["dashboard_rules"]},

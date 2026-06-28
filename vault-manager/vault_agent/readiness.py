@@ -14,7 +14,13 @@ from .norms import current_lock_hash
 from .processing_state import processing_summary
 from .processor import next_needed_stage
 from .scanner import scan_vault
-from .schema import CORE_PROPERTY_ORDER, accepted_properties_for, allowed_note_types
+from .schema import (
+    CORE_PROPERTY_ORDER,
+    accepted_properties_for,
+    allowed_note_types,
+    load_schema,
+    missing_definitions,
+)
 from .validation import issue_groups, validate_entries
 
 
@@ -27,6 +33,7 @@ def build_readiness_report(config: AgentConfig, *, folder: str | None = None) ->
     cleanup = _cleanup_opportunities(config, scan.entries, folder=folder)
     generated_state = generated_state_report(config)
     latest_report = generated_state["organization_reports"]["latest"]
+    undefined_values = missing_definitions(load_schema(config.vault_root))
     errors = sum(1 for issue in issues if issue.severity == "error")
     readiness = _readiness_status(
         generated_state=generated_state,
@@ -56,6 +63,10 @@ def build_readiness_report(config: AgentConfig, *, folder: str | None = None) ->
         "processing_state": state_summary,
         "generated_state": generated_state,
         "latest_organization_report": latest_report,
+        "definitions": {
+            "undefined": len(undefined_values),
+            "sample": undefined_values[:20],
+        },
     }
 
 
@@ -78,6 +89,7 @@ def run_organization_readiness(
         f"Cleanup queue opportunities: {report['cleanup_queue']['total']}",
         f"Stale tracked notes: {report['processing_state']['stale']}",
         f"Blocked tracked notes: {report['processing_state']['blocked']}",
+        f"Undefined value definitions (block norms-lock): {report['definitions']['undefined']}",
         f"Latest organization report: {report['latest_organization_report'] or '(none)'}",
     ]
     return 0, "\n".join(lines)

@@ -40,3 +40,4 @@ plans/
 .pi/hf-sessions/
 .pi/hf-sessions-backup/
 collect.sh
+vault-manager/evals/results/

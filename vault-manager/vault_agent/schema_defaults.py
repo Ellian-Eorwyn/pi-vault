@@ -21,14 +21,31 @@ from .paths import (
 from .safety import atomic_write_text
 from .schema import (
     AGENT_RULES,
+    CAPTURE_TYPE_DEFINITIONS,
     COMMON_PROPERTIES,
     CORE_PROPERTY_ORDER,
+    DEFINITION_SCHEMA_KEYS,
     DOMAIN_DEFINITIONS,
     NOTE_TYPES,
+    SOURCE_KIND_DEFINITIONS,
+    STATUS_DEFINITIONS,
     default_schema,
+    definitions_for,
     folder_norms_markdown,
+    load_schema,
+    note_type_definitions_from_schema,
     property_values_markdown,
     schema_markdown,
+)
+
+# Editable description blocks: contract key -> note_type uses note_types[].description,
+# the rest map to schema.json <property>_definitions via DEFINITION_SCHEMA_KEYS.
+DESCRIPTION_BLOCK_KEYS = (
+    "note_type_descriptions",
+    "status_descriptions",
+    "domain_descriptions",
+    "source_kind_descriptions",
+    "capture_type_descriptions",
 )
 
 
@@ -37,15 +54,44 @@ SUPPORTED_EDITABLE_CONTROLLED_PROPERTIES = {"domain"}
 DEFAULTS_PROPOSAL_ID = "vault-schema-defaults"
 
 
+def _description_maps(schema: dict[str, Any] | None, extra_domains: list[str] | None) -> dict[str, dict[str, str]]:
+    """Per-property ``{value: definition}`` maps, sourced from the live schema when
+    given, otherwise from built-in defaults."""
+    if schema:
+        domain = definitions_for(schema, "domain")
+        note_type = note_type_definitions_from_schema(schema)
+        status = definitions_for(schema, "status")
+        source_kind = definitions_for(schema, "source_kind")
+        capture_type = definitions_for(schema, "capture_type")
+    else:
+        domain = {
+            **DOMAIN_DEFINITIONS,
+            **{d: "User-defined domain." for d in _new_domain_values(extra_domains)},
+        }
+        note_type = {name: spec.get("description", "") for name, spec in NOTE_TYPES.items()}
+        status = dict(STATUS_DEFINITIONS)
+        source_kind = dict(SOURCE_KIND_DEFINITIONS)
+        capture_type = dict(CAPTURE_TYPE_DEFINITIONS)
+    return {
+        "note_type_descriptions": note_type,
+        "status_descriptions": status,
+        "domain_descriptions": domain,
+        "source_kind_descriptions": source_kind,
+        "capture_type_descriptions": capture_type,
+    }
+
+
 def vault_defaults_markdown(
     *,
     paths: VaultPaths = DEFAULT_PATHS,
     extra_domains: list[str] | None = None,
+    schema: dict[str, Any] | None = None,
 ) -> str:
     """Render the editable, deterministic Markdown defaults contract."""
     domain_values = [
         value for value in COMMON_PROPERTIES["domain"]["allowed"] if value
     ] + _new_domain_values(extra_domains)
+    descriptions = _description_maps(schema, extra_domains)
     controlled_values: dict[str, list[str]] = {}
     for property_name in CONTROLLED_PROPERTIES:
         allowed = COMMON_PROPERTIES[property_name].get("allowed", [])
@@ -104,19 +150,21 @@ def vault_defaults_markdown(
         "",
         _yaml_block({"controlled_values": controlled_values}),
         "",
-        "## Domain Descriptions",
+        "## Value Definitions",
         "",
-        _yaml_block(
-            {
-                "domain_descriptions": {
-                    **DOMAIN_DEFINITIONS,
-                    **{
-                        domain: "User-defined domain."
-                        for domain in _new_domain_values(extra_domains)
-                    },
-                }
-            }
-        ),
+        "A definition for every controlled value. These are injected into the model's "
+        "classification prompts and required before the norms lock can be written, so "
+        "edit them carefully — they are how the model and you stay aligned on meaning.",
+        "",
+        _yaml_block({"note_type_descriptions": descriptions["note_type_descriptions"]}),
+        "",
+        _yaml_block({"status_descriptions": descriptions["status_descriptions"]}),
+        "",
+        _yaml_block({"domain_descriptions": descriptions["domain_descriptions"]}),
+        "",
+        _yaml_block({"source_kind_descriptions": descriptions["source_kind_descriptions"]}),
+        "",
+        _yaml_block({"capture_type_descriptions": descriptions["capture_type_descriptions"]}),
         "",
         "## Folder Structure",
         "",
@@ -171,7 +219,11 @@ def run_export_schema_defaults(
     output: str,
 ) -> tuple[int, str]:
     target = _resolve_export_path(config, output)
-    content = vault_defaults_markdown(paths=config.paths, extra_domains=_schema_extra_domains(config))
+    content = vault_defaults_markdown(
+        paths=config.paths,
+        extra_domains=_schema_extra_domains(config),
+        schema=load_schema(config.vault_root),
+    )
     if config.dry_run:
         return (
             0,
@@ -238,6 +290,10 @@ def parse_vault_defaults_markdown(text: str) -> dict[str, Any]:
         "core_property_order",
         "controlled_values",
         "domain_descriptions",
+        "note_type_descriptions",
+        "status_descriptions",
+        "source_kind_descriptions",
+        "capture_type_descriptions",
         "folders",
         "dashboard_structure",
         "dashboard_rules",
@@ -268,6 +324,7 @@ def proposal_from_vault_defaults(config: AgentConfig, parsed: dict[str, Any]) ->
     domain_values = _controlled_values(parsed, "domain")
     extra_domains = _extra_domains_from_values(domain_values)
     schema = default_schema(extra_domains)
+    _apply_descriptions(schema, parsed)
     operations: list[dict[str, Any]] = [
         {
             "op": "write_file",
@@ -303,7 +360,7 @@ def proposal_from_vault_defaults(config: AgentConfig, parsed: dict[str, Any]) ->
             "op": "write_file",
             "path": (paths.template_dir / "0.024 vault defaults.md").as_posix(),
             "if_exists": "overwrite",
-            "content": vault_defaults_markdown(paths=paths, extra_domains=extra_domains),
+            "content": vault_defaults_markdown(paths=paths, extra_domains=extra_domains, schema=schema),
         },
     ]
     for directory in (paths.inbox_dir, *dashboard_directories(paths)):
@@ -337,6 +394,34 @@ def proposal_from_vault_defaults(config: AgentConfig, parsed: dict[str, Any]) ->
         ),
         "operations": operations,
     }
+
+
+def _apply_descriptions(schema: dict[str, Any], parsed: dict[str, Any]) -> None:
+    """Overlay edited value definitions from the contract onto the schema dict.
+
+    Controlled-value definitions go into the ``<property>_definitions`` maps;
+    note-type definitions update ``note_types[name]["description"]``.
+    """
+    for prop in ("status", "domain", "source_kind", "capture_type"):
+        edits = parsed.get(f"{prop}_descriptions")
+        if not isinstance(edits, dict):
+            continue
+        target = dict(schema.get(DEFINITION_SCHEMA_KEYS[prop]) or {})
+        for value, text in edits.items():
+            if isinstance(value, str) and isinstance(text, str) and text.strip():
+                target[value] = text.strip()
+        schema[DEFINITION_SCHEMA_KEYS[prop]] = target
+    note_edits = parsed.get("note_type_descriptions")
+    if isinstance(note_edits, dict):
+        note_types = schema.setdefault("note_types", {})
+        for name, text in note_edits.items():
+            if (
+                isinstance(name, str)
+                and isinstance(text, str)
+                and text.strip()
+                and isinstance(note_types.get(name), dict)
+            ):
+                note_types[name]["description"] = text.strip()
 
 
 def _validate_parsed_defaults(parsed: dict[str, Any]) -> None:

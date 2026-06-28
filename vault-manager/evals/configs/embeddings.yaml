@@ -1,0 +1,43 @@
+# Embedding models. Both are served simultaneously, so run_embeddings.py hits
+# them in a single pass and emits one comparison. Add quant variants by serving
+# them on a free port and appending an entry; results accumulate by key.
+
+timeout_seconds: 120
+batch_size: 32
+excerpt_chars: 6000
+
+# Thresholds the eval scores related-links/duplicates against. The suite also
+# recomputes recommended per-model thresholds from each model's own distribution.
+#
+# MODIFIED 2026-06-28 (calibration tuning) — LOCKED at 0.50.
+# Tuning history: shipped 0.65 -> tried 0.51 -> tried 0.60 (worse) -> swept.
+# A full sweep (run_embeddings --related-sweep) over a 19-pair related-links gold
+# set on the 150-note corpus traced F1|recall vs floor:
+#   floor   0.45   0.50   0.55   0.58   0.60   0.65
+#   4B      .43|.86 .46|.86 .45|.71 .42|.57 .38|.43 .26|.24
+#   0.6B    .44|.95 .42|.86 .46|.76 .39|.57 .39|.52 .27|.29
+# F1 peaks ~0.50 (4B) / 0.55 (0.6B); 0.65 is the worst point (recall .24). Because
+# the gold marks only 1-3 true neighbours per note, precision is understated (the
+# embedder's extra finds are often valid), so recall is the trustworthy signal ->
+# 0.50 maximises recall at peak F1. min_similarity 0.55 -> 0.45 (search candidate
+# floor). EVAL defaults only — the engine still ships 0.55/0.65 in vault_agent;
+# port 0.50 over once you're happy. Prior shipped values recorded inline.
+# LOCKED for the chosen 0.6B deployment (2026-06-28): related floor 0.55 is the
+# 0.6B sweep optimum (4B optimum was 0.50; both are far below the old 0.65). Pair
+# with related-links top_k=3 (`run_embeddings --related-topk 3`) for extra precision.
+default_thresholds:
+  min_similarity: 0.45            # was 0.55 (shipped)
+  related_min_similarity: 0.55    # 0.6B optimum (4B was 0.50); shipped engine now 0.55
+  duplicate_min_similarity: 0.97
+
+endpoints:
+  - key: qwen3-embed-4b
+    base_url: http://llms:8005
+    model: embed
+    label: "Qwen3-Embedding-4B"
+    vram_gb: null
+  - key: qwen3-embed-0.6b
+    base_url: http://llms:8011
+    model: embed
+    label: "Qwen3-Embedding-0.6B"
+    vram_gb: null

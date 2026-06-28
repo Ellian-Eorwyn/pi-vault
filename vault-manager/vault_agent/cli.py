@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -113,6 +114,7 @@ MAIN_COMMANDS = (
     "embed-index",
     "propose-related-links",
     "vault-search",
+    "schema-sync",
     "status",
     "hermes-run",
     "obsidian-check",
@@ -158,6 +160,7 @@ MAIN_COMMAND_HELP = {
     "embed-index": "Build or refresh the embedding index over vault notes.",
     "propose-related-links": "Propose embedding-discovered related links as a pending proposal.",
     "vault-search": "Semantic search over the embedding index (read-only).",
+    "schema-sync": "Sync the canonical schema note into the structured schema (only what changed).",
     "status": "Show vault-agent health and inbox status.",
     "hermes-run": "Run scheduled maintenance across vaults in a Hermes directory.",
     "obsidian-check": "Validate frontmatter and embedded Bases for Obsidian compatibility.",
@@ -831,6 +834,14 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Render machine-readable search results.",
             )
             command_parser.set_defaults(handler=_handle_vault_search)
+        elif command == "schema-sync":
+            command_parser.add_argument(
+                "--json",
+                action="store_true",
+                dest="json_output",
+                help="Render machine-readable sync result.",
+            )
+            command_parser.set_defaults(handler=_handle_schema_sync)
         elif command == "status":
             command_parser.add_argument(
                 "--json",
@@ -1139,8 +1150,58 @@ def _emit_run_summary(
     return exit_code
 
 
+def _presync_schema(config: AgentConfig) -> None:
+    """Sync the canonical schema note into schema.json before mutating work, so
+    the model always runs against the user's current categories + definitions.
+    Best-effort and quiet: never blocks the pass."""
+    try:
+        from .schema_note import sync_schema_from_note
+
+        result = sync_schema_from_note(config)
+        if result.changed:
+            print(f"[schema-sync] {result.summary}", file=sys.stderr)
+    except Exception:  # noqa: BLE001 - schema sync must never break a pass
+        pass
+
+
+def _handle_schema_sync(args: argparse.Namespace, config: AgentConfig) -> int:
+    from .schema_note import sync_schema_from_note
+
+    result = sync_schema_from_note(config)
+    if getattr(args, "json_output", False):
+        print(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "note_missing": result.note_missing,
+                    "changed": result.changed,
+                    "added": result.added,
+                    "edited": result.edited,
+                    "removed": result.removed,
+                    "blocked": result.blocked,
+                    "summary": result.summary,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    print("vault-agent schema-sync")
+    print(result.summary)
+    blocked = {key: vals for key, vals in result.blocked.items() if vals}
+    if blocked:
+        print("Blocked removals (value still used by notes — kept):")
+        for key, vals in sorted(blocked.items()):
+            for value in vals:
+                print(f"  - {key}: {value}")
+    if result.changed:
+        print("schema.json updated; norms lock may now be stale — run `vault-agent norms-lock --write`.")
+    return 0
+
+
 def _handle_process_inbox(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
+    _presync_schema(config)
     exit_code, output = run_process_inbox(
         config,
         max_notes=args.max_notes if args.max_notes is not None else config.max_notes,
@@ -1161,6 +1222,7 @@ def _handle_process_inbox(args: argparse.Namespace, config: AgentConfig) -> int:
 
 def _handle_process_vault(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
+    _presync_schema(config)
     exit_code, output = run_process_vault(
         config,
         max_notes=args.max_notes if args.max_notes is not None else config.max_notes,
@@ -1267,6 +1329,7 @@ def _handle_norms_lock(args: argparse.Namespace, config: AgentConfig) -> int:
 
 def _handle_organize_vault_pass(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
+    _presync_schema(config)
     proposal_provider = None
     if bool(getattr(args, "use_llm", False)):
         proposal_provider = _proposal_provider_from_config(config)
@@ -1295,6 +1358,7 @@ def _handle_organize_vault_pass(args: argparse.Namespace, config: AgentConfig) -
 
 def _handle_autonomous_run(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
+    _presync_schema(config)
     proposal_provider = None
     if bool(getattr(args, "use_llm", False)):
         proposal_provider = _proposal_provider_from_config(config)

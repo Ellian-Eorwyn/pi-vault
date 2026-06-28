@@ -25,6 +25,8 @@ from .schema import (
     allowed_note_types,
     approved_hubs_for,
     default_schema,
+    extra_domains_for,
+    hub_descriptions_for,
     ordered_properties_for,
 )
 from .templates import append_missing_headings
@@ -402,7 +404,7 @@ def process_note(
     body = parsed.body
     confidence: float | None = None
     warnings: list[str] = []
-    extra_domains = list(paths_for(vault_root).domain_folders)
+    extra_domains = extra_domains_for(vault_root)
     stage_extras = schema_stage_extras(vault_root)
 
     if stage == "frontmatter-shape":
@@ -427,7 +429,9 @@ def process_note(
             return ProcessResult(
                 changed=False, mode="blocked", errors=["assign-hub requires a schema-approved domain"]
             )
-        approved = approved_hubs_for(domain, _load_vault_schema(vault_root))
+        hub_schema = _load_vault_schema(vault_root)
+        approved_pairs = hub_descriptions_for(domain, hub_schema)
+        approved = [name for name, _ in approved_pairs]
         if not approved:
             return ProcessResult(
                 changed=False, mode="blocked", errors=[f"no approved hubs for domain `{domain}`"]
@@ -440,7 +444,7 @@ def process_note(
         if proposal_provider is not None:
             try:
                 proposal = _stage_proposal(
-                    proposal_provider, stage, note_path, text, allowed_hubs=approved
+                    proposal_provider, stage, note_path, text, allowed_hubs=approved_pairs
                 )
             except Exception as exc:
                 return ProcessResult(changed=False, mode="blocked", errors=[str(exc)])
