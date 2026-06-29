@@ -79,17 +79,42 @@ def build() -> dict[str, Any]:
         row["composite_quality"] = _composite_quality(row)
         main_rows.append(row)
 
+    task_rows = []
+    for path in sorted(RESULTS_DIR.glob("task_*.json")):
+        result = load_json(path)
+        row = _main_row(result)
+        row["composite_quality"] = _composite_quality(row)
+        task_rows.append(row)
+
     embeddings = None
     emb_path = RESULTS_DIR / "embeddings.json"
     if emb_path.exists():
         embeddings = load_json(emb_path)
 
-    return {"main": main_rows, "embeddings": embeddings}
+    return {"main": main_rows, "task": task_rows, "embeddings": embeddings}
 
 
 def _main_table(rows: list[dict]) -> str:
     if not rows:
         return "_No main-model results yet. Run `python -m evals.runners.run_main --model <key>`._\n"
+    headers = ["Model", "type", "status", "domain", "folder", "person",
+               "sum·cos", "refine", "valid", "json1", "tok/s", "med·s",
+               "max·ctx", "VRAM", "Q"]
+    lines = ["| " + " | ".join(headers) + " |",
+             "|" + "|".join(["---"] * len(headers)) + "|"]
+    for row in sorted(rows, key=lambda r: -r["composite_quality"]):
+        lines.append("| " + " | ".join(_fmt(v) for v in [
+            row["label"], row["type_acc"], row["status_acc"], row["domain_acc"],
+            row["folder_acc"], row["person_acc"], row["summary_cos"], row["refine_preserve"],
+            row["valid_rate"], row["first_pass_json"], row["tokens_s"], row["median_s"],
+            row["max_ctx"], row["vram_gb"], row["composite_quality"],
+        ]) + " |")
+    return "\n".join(lines) + "\n"
+
+
+def _task_table(rows: list[dict]) -> str:
+    if not rows:
+        return "_No task-model results yet. Run `python -m evals.runners.run_task --model <key>`._\n"
     headers = ["Model", "type", "status", "domain", "folder", "person",
                "sum·cos", "refine", "valid", "json1", "tok/s", "med·s",
                "max·ctx", "VRAM", "Q"]
@@ -199,16 +224,20 @@ def _recommendation(rows: list[dict], emb: dict | None) -> str:
 
 def render(data: dict) -> str:
     rows = data["main"]
+    task_rows = data.get("task", [])
     emb = data["embeddings"]
     parts = [
         "# pi-vault model leaderboard\n",
-        "Quality scores are accuracy/cosine/preservation on the frozen gold set; "
-        "`Q` is the unweighted composite. Speed and VRAM are operational. "
-        "All main-model numbers come from the same gold fixtures, so rows are comparable "
+        "Quality scores are accuracy/cosine/preservation on the frozen gold set; ",
+        "`Q` is the unweighted composite. Speed and VRAM are operational. ",
+        "All main-model numbers come from the same gold fixtures, so rows are comparable ",
         "even though models were run at different times.\n",
         "## Main models\n",
         _main_table(rows),
         _quant_diff(rows),
+        "## Task models\n",
+        _task_table(task_rows),
+        _quant_diff(task_rows),
         "## Embedding models\n",
         _embeddings_section(emb),
         _recommendation(rows, emb),

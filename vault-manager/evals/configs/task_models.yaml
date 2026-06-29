@@ -1,0 +1,30 @@
+# Task models, served one-at-a-time at llms:8007.
+#
+# Like main_models, runs are sequential: serve a model, run
+# `python evals/runners/run_task.py --model <key>`, switch the served
+# model, repeat. Each run writes evals/results/task_<key>.json.
+#
+# `vram_gb` is recorded by hand (nvidia-smi while the model is served) and shown
+# in the leaderboard next to quality and speed.
+
+endpoint: http://llms:8007
+timeout_seconds: 180
+# Client-side input cap. Kept at ~64k tokens.
+max_input_tokens: 64000
+chars_per_token: 4
+
+models:
+  - key: qwen3.5-9b-q6
+    model: code
+    label: "Qwen3.5-9B q6"
+    arch: "9b"
+    quant: "q6"
+    server_context_tokens: 32768
+    vram_gb: null
+  - key: qwen3.5-9b-q4
+    model: code
+    label: "Qwen3.5-9B q4"
+    arch: "9b"
+    quant: "q4"
+    server_context_tokens: 32768
+    vram_gb: null
