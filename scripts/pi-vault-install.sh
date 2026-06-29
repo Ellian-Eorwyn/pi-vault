@@ -5,11 +5,14 @@ SOURCE_DIR=""
 OLD_HEAD=""
 UPDATE=false
 INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-$HOME/.pi-vault}"
+LEGACY_INSTALL_DIR="${PI_VAULT_LEGACY_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/pi-vault}"
 BIN_DIR="${PI_VAULT_BIN_DIR:-$INSTALL_DIR/bin}"
+LEGACY_BIN_DIR="${PI_VAULT_LEGACY_BIN_DIR:-$HOME/.local/bin}"
 RUNTIME_DIR="${PI_VAULT_HOME:-$INSTALL_DIR/runtime}"
 VENV_DIR="$RUNTIME_DIR/venv"
 AGENT_DIR="${PI_VAULT_CODING_AGENT_DIR:-$INSTALL_DIR/agent}"
 NPM_CACHE_DIR="${PI_VAULT_NPM_CACHE:-$RUNTIME_DIR/npm-cache}"
+MIGRATED_FROM="${PI_VAULT_MIGRATED_FROM:-}"
 
 usage() {
 	cat <<'EOF'
@@ -44,7 +47,30 @@ if [[ -z "$SOURCE_DIR" || ! -f "$SOURCE_DIR/package.json" ]]; then
 	exit 1
 fi
 
-SOURCE_DIR="$(cd "$SOURCE_DIR" && pwd)"
+SOURCE_DIR="$(cd "$SOURCE_DIR" && pwd -P)"
+
+if [[ "$UPDATE" == true && -z "${PI_VAULT_INSTALL_DIR+x}" && -d "$LEGACY_INSTALL_DIR/repository" ]]; then
+	LEGACY_REPO="$(cd "$LEGACY_INSTALL_DIR/repository" && pwd -P)"
+	mkdir -p "$INSTALL_DIR"
+	TARGET_REPO_PARENT="$(cd "$INSTALL_DIR" && pwd -P)"
+	TARGET_REPO="$TARGET_REPO_PARENT/repository"
+	if [[ "$SOURCE_DIR" == "$LEGACY_REPO" && "$SOURCE_DIR" != "$TARGET_REPO" ]]; then
+		if [[ -e "$TARGET_REPO" ]]; then
+			echo "Cannot migrate pi-vault checkout: target already exists at $TARGET_REPO" >&2
+			echo "Remove it or set PI_VAULT_INSTALL_DIR to keep a custom install root." >&2
+			exit 1
+		fi
+		mv "$SOURCE_DIR" "$TARGET_REPO"
+		rmdir "$LEGACY_INSTALL_DIR" 2>/dev/null || true
+		export PI_VAULT_MIGRATED_FROM="$SOURCE_DIR"
+		REEXEC_ARGS=(--source-dir "$TARGET_REPO" --update)
+		if [[ -n "$OLD_HEAD" ]]; then
+			REEXEC_ARGS+=(--old-head "$OLD_HEAD")
+		fi
+		exec "$TARGET_REPO/scripts/pi-vault-install.sh" "${REEXEC_ARGS[@]}"
+	fi
+fi
+
 rm -rf -- "$SOURCE_DIR/.claude" "$SOURCE_DIR/.codex"
 command -v node >/dev/null 2>&1 || { echo "pi-vault requires Node.js 22.19 or newer." >&2; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo "pi-vault requires npm." >&2; exit 1; }
@@ -116,6 +142,19 @@ ln -sfn "$SOURCE_DIR/scripts/pi-vault-run.sh" "$BIN_DIR/pi-vault"
 ln -sfn "$SOURCE_DIR/scripts/pi-vault-mcp-run.sh" "$BIN_DIR/pi-vault-mcp"
 ln -sfn "$SOURCE_DIR/update.sh" "$BIN_DIR/pi-vault-update"
 ln -sfn "$SOURCE_DIR/uninstall.sh" "$BIN_DIR/pi-vault-uninstall"
+
+if [[ -n "$MIGRATED_FROM" && "$LEGACY_BIN_DIR" != "$BIN_DIR" ]]; then
+	for launcher in pi-vault pi-vault-mcp pi-vault-update pi-vault-uninstall; do
+		legacy_launcher="$LEGACY_BIN_DIR/$launcher"
+		if [[ ! -L "$legacy_launcher" ]]; then
+			continue
+		fi
+		legacy_target="$(readlink "$legacy_launcher" 2>/dev/null || true)"
+		if [[ "$legacy_target" == "$MIGRATED_FROM/"* ]]; then
+			rm -f -- "$legacy_launcher"
+		fi
+	done
+fi
 
 echo "pi-vault is installed."
 echo "  CLI: $BIN_DIR/pi-vault"
