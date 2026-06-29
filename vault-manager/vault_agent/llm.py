@@ -15,17 +15,18 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from .schema import (
+    CAPTURE_TYPE_DEFINITIONS,
     COMMON_PROPERTIES,
+    DOMAIN_DEFINITIONS,
     NOTE_TYPES,
+    SOURCE_KIND_DEFINITIONS,
+    STATUS_DEFINITIONS,
     allowed_controlled_values_from_schema,
     allowed_note_types_from_schema,
-<<<<<<< Updated upstream
-=======
     custom_property_specs,
     definitions_for,
-    extra_domains_for,
->>>>>>> Stashed changes
     load_schema,
+    note_type_definitions_from_schema,
 )
 
 
@@ -140,15 +141,12 @@ class OpenAICompatibleProposalProvider:
         extra_note_types: list[str] | None = None,
         extra_source_kinds: list[str] | None = None,
         extra_capture_types: list[str] | None = None,
-<<<<<<< Updated upstream
-=======
         custom_properties: list[tuple[str, str, str]] | None = None,
         domain_definitions: dict[str, str] | None = None,
         note_type_definitions: dict[str, str] | None = None,
         status_definitions: dict[str, str] | None = None,
         source_kind_definitions: dict[str, str] | None = None,
         capture_type_definitions: dict[str, str] | None = None,
->>>>>>> Stashed changes
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -165,8 +163,6 @@ class OpenAICompatibleProposalProvider:
         self.extra_note_types = list(extra_note_types or [])
         self.extra_source_kinds = list(extra_source_kinds or [])
         self.extra_capture_types = list(extra_capture_types or [])
-<<<<<<< Updated upstream
-=======
         self.custom_properties = list(custom_properties or [])
         # Definitions are injected into every classification prompt so the model
         # is aligned on what each controlled value means. They default to the
@@ -203,7 +199,6 @@ class OpenAICompatibleProposalProvider:
             "source_kind": self.source_kind_definitions,
             "capture_type": self.capture_type_definitions,
         }
->>>>>>> Stashed changes
 
     def propose(self, *, note_path: Path, note_text: str) -> dict[str, Any]:
         prompt = _proposal_prompt(
@@ -246,11 +241,8 @@ class OpenAICompatibleProposalProvider:
             extra_note_types=self.extra_note_types,
             extra_source_kinds=self.extra_source_kinds,
             extra_capture_types=self.extra_capture_types,
-<<<<<<< Updated upstream
-=======
             custom_properties=self.custom_properties,
             definitions=self._definitions(),
->>>>>>> Stashed changes
         )
         system = (
             "You perform one narrow Obsidian vault-agent stage. "
@@ -395,15 +387,12 @@ def provider_from_config(config: Any) -> "OpenAICompatibleProposalProvider | Non
             for v in allowed_controlled_values_from_schema(schema, "capture_type")
             if v not in builtin_capture
         ],
-<<<<<<< Updated upstream
-=======
         custom_properties=custom_property_specs(schema),
         domain_definitions=definitions_for(schema, "domain"),
         status_definitions=definitions_for(schema, "status"),
         source_kind_definitions=definitions_for(schema, "source_kind"),
         capture_type_definitions=definitions_for(schema, "capture_type"),
         note_type_definitions=note_type_definitions_from_schema(schema),
->>>>>>> Stashed changes
     )
 
 
@@ -524,11 +513,8 @@ def _stage_prompt(
     extra_note_types: list[str] | None = None,
     extra_source_kinds: list[str] | None = None,
     extra_capture_types: list[str] | None = None,
-<<<<<<< Updated upstream
-=======
     custom_properties: list[tuple[str, str, str]] | None = None,
     definitions: dict[str, dict[str, str]] | None = None,
->>>>>>> Stashed changes
 ) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars

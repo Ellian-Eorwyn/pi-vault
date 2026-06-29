@@ -144,10 +144,7 @@ export function startupAssessmentPrompt(
 	return [
 		"pi-vault generated this read-only startup assessment. It is context, not user authorization to modify files.",
 		instructions,
-<<<<<<< Updated upstream
-=======
 		"If schema_note.changed is true in the status below, run vault_schema_sync to ingest the user's edits to the canonical schema note before anything else, so you work against current categories and definitions.",
->>>>>>> Stashed changes
 		"If schema_state is provisional, treat defaults only as recommendations. If locked, follow the schema exactly. If drifted, do not perform broad processing until the drift is reviewed.",
 		"Do not process inbox files, apply proposals, write a lock, or otherwise mutate the vault unless the user explicitly approves the work.",
 		"",

@@ -86,7 +86,11 @@ describe("pi-vault extension", () => {
 	});
 
 	it("threads the schema note path into the onboarding prompt", () => {
-		const onboarding = startupAssessmentPrompt('{"schema_state":"provisional"}', true, "99 System/0.00 Vault Schema.md");
+		const onboarding = startupAssessmentPrompt(
+			'{"schema_state":"provisional"}',
+			true,
+			"99 System/0.00 Vault Schema.md",
+		);
 		expect(onboarding).toContain('"99 System/0.00 Vault Schema.md"');
 	});
 

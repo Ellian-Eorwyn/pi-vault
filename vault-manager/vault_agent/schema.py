@@ -163,8 +163,6 @@ DOMAIN_DEFINITIONS = {
     "meta": "PKM, vault design, workflows, agent systems.",
 }
 
-<<<<<<< Updated upstream
-=======
 SOURCE_KIND_DEFINITIONS = {
     "book": "A book or monograph, printed or ebook.",
     "article": "A journal article, paper, or magazine/news piece.",
@@ -203,7 +201,6 @@ PROPERTY_DEFINITIONS = {
     "capture_type": "How the note was captured (controlled; see Capture types).",
 }
 
->>>>>>> Stashed changes
 RECOMMENDED_TOPIC_HUBS = [
     "Academia",
     "Research",
@@ -288,12 +285,9 @@ def default_schema(extra_domains: list[str] | None = None) -> dict[str, Any]:
         "note_types": deepcopy(NOTE_TYPES),
         "status_definitions": deepcopy(STATUS_DEFINITIONS),
         "domain_definitions": domain_definitions,
-<<<<<<< Updated upstream
-=======
         "source_kind_definitions": deepcopy(SOURCE_KIND_DEFINITIONS),
         "capture_type_definitions": deepcopy(CAPTURE_TYPE_DEFINITIONS),
         "property_definitions": deepcopy(PROPERTY_DEFINITIONS),
->>>>>>> Stashed changes
         "recommended_topic_hubs": list(RECOMMENDED_TOPIC_HUBS),
         "topic_hubs": {domain: [] for domain in domain_definitions},
         "agent_rules": list(AGENT_RULES),
@@ -400,10 +394,6 @@ def allowed_controlled_values_from_schema(
     return values
 
 
-<<<<<<< Updated upstream
-def accepted_properties_for(note_type: str | None = None) -> set[str]:
-    """Return schema-approved frontmatter properties for a note type."""
-=======
 # Controlled properties that carry per-value definitions: their built-in
 # {value: definition} map and the schema.json key where confirmed definitions live.
 _BUILTIN_DEFINITIONS: dict[str, dict[str, str]] = {
@@ -577,7 +567,6 @@ def accepted_properties_for(
     Includes any user-added properties declared in ``schema`` so they are accepted
     rather than treated as unknown.
     """
->>>>>>> Stashed changes
     del note_type
     return set(property_order_from_schema(schema))
 

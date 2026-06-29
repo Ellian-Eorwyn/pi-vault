@@ -28,12 +28,8 @@ from .schema import (
     custom_properties_from_schema,
     custom_property_specs,
     default_schema,
-<<<<<<< Updated upstream
-=======
     extra_domains_for,
-    hub_descriptions_for,
     load_schema,
->>>>>>> Stashed changes
     ordered_properties_for,
 )
 from .templates import append_missing_headings
