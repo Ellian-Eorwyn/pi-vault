@@ -19,6 +19,12 @@ from .schema import (
     NOTE_TYPES,
     allowed_controlled_values_from_schema,
     allowed_note_types_from_schema,
+<<<<<<< Updated upstream
+=======
+    custom_property_specs,
+    definitions_for,
+    extra_domains_for,
+>>>>>>> Stashed changes
     load_schema,
 )
 
@@ -70,6 +76,9 @@ class ProposalProvider(Protocol):
     def propose_base_hierarchy(self, *, prompt: str) -> dict[str, Any]:
         """Return optional structured wording for generated Bases dashboards."""
 
+    def propose_property_remap(self, *, prompt: str) -> dict[str, Any]:
+        """Return proposed mappings from unapproved property keys to approved ones."""
+
 
 class JsonFileProposalProvider:
     """Proposal provider backed by a local JSON file."""
@@ -105,6 +114,14 @@ class JsonFileProposalProvider:
             raise ValueError("proposal JSON must be an object")
         return proposal
 
+    def propose_property_remap(self, *, prompt: str) -> dict[str, Any]:
+        del prompt
+        with self.proposal_file.open(encoding="utf-8") as file:
+            proposal = json.load(file)
+        if not isinstance(proposal, dict):
+            raise ValueError("proposal JSON must be an object")
+        return proposal
+
 
 class OpenAICompatibleProposalProvider:
     """Proposal provider for OpenAI-compatible chat completion backends."""
@@ -123,6 +140,15 @@ class OpenAICompatibleProposalProvider:
         extra_note_types: list[str] | None = None,
         extra_source_kinds: list[str] | None = None,
         extra_capture_types: list[str] | None = None,
+<<<<<<< Updated upstream
+=======
+        custom_properties: list[tuple[str, str, str]] | None = None,
+        domain_definitions: dict[str, str] | None = None,
+        note_type_definitions: dict[str, str] | None = None,
+        status_definitions: dict[str, str] | None = None,
+        source_kind_definitions: dict[str, str] | None = None,
+        capture_type_definitions: dict[str, str] | None = None,
+>>>>>>> Stashed changes
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -139,6 +165,45 @@ class OpenAICompatibleProposalProvider:
         self.extra_note_types = list(extra_note_types or [])
         self.extra_source_kinds = list(extra_source_kinds or [])
         self.extra_capture_types = list(extra_capture_types or [])
+<<<<<<< Updated upstream
+=======
+        self.custom_properties = list(custom_properties or [])
+        # Definitions are injected into every classification prompt so the model
+        # is aligned on what each controlled value means. They default to the
+        # built-in definitions (on by default); provider_from_config overlays the
+        # vault's confirmed schema definitions on top.
+        self.domain_definitions = (
+            dict(DOMAIN_DEFINITIONS) if domain_definitions is None else dict(domain_definitions)
+        )
+        self.note_type_definitions = (
+            {name: spec.get("description", "") for name, spec in NOTE_TYPES.items()}
+            if note_type_definitions is None
+            else dict(note_type_definitions)
+        )
+        self.status_definitions = (
+            dict(STATUS_DEFINITIONS) if status_definitions is None else dict(status_definitions)
+        )
+        self.source_kind_definitions = (
+            dict(SOURCE_KIND_DEFINITIONS)
+            if source_kind_definitions is None
+            else dict(source_kind_definitions)
+        )
+        self.capture_type_definitions = (
+            dict(CAPTURE_TYPE_DEFINITIONS)
+            if capture_type_definitions is None
+            else dict(capture_type_definitions)
+        )
+
+    def _definitions(self) -> dict[str, dict[str, str]]:
+        """Bundle the per-property definition maps for the prompt builders."""
+        return {
+            "note_type": self.note_type_definitions,
+            "status": self.status_definitions,
+            "domain": self.domain_definitions,
+            "source_kind": self.source_kind_definitions,
+            "capture_type": self.capture_type_definitions,
+        }
+>>>>>>> Stashed changes
 
     def propose(self, *, note_path: Path, note_text: str) -> dict[str, Any]:
         prompt = _proposal_prompt(
@@ -181,6 +246,11 @@ class OpenAICompatibleProposalProvider:
             extra_note_types=self.extra_note_types,
             extra_source_kinds=self.extra_source_kinds,
             extra_capture_types=self.extra_capture_types,
+<<<<<<< Updated upstream
+=======
+            custom_properties=self.custom_properties,
+            definitions=self._definitions(),
+>>>>>>> Stashed changes
         )
         system = (
             "You perform one narrow Obsidian vault-agent stage. "
@@ -203,6 +273,18 @@ class OpenAICompatibleProposalProvider:
             system=system,
             prompt=prompt[: self.max_input_chars],
             expected="base hierarchy coverage JSON",
+        )
+
+    def propose_property_remap(self, *, prompt: str) -> dict[str, Any]:
+        system = (
+            "You align Obsidian frontmatter to an approved schema. "
+            "Return exactly one valid JSON object and no prose. "
+            "Do not include analysis, reasoning, markdown, or code fences."
+        )
+        return self._json_completion_with_repair(
+            system=system,
+            prompt=prompt[: self.max_input_chars],
+            expected="property remap JSON",
         )
 
     def _json_completion_with_repair(
@@ -313,11 +395,20 @@ def provider_from_config(config: Any) -> "OpenAICompatibleProposalProvider | Non
             for v in allowed_controlled_values_from_schema(schema, "capture_type")
             if v not in builtin_capture
         ],
+<<<<<<< Updated upstream
+=======
+        custom_properties=custom_property_specs(schema),
+        domain_definitions=definitions_for(schema, "domain"),
+        status_definitions=definitions_for(schema, "status"),
+        source_kind_definitions=definitions_for(schema, "source_kind"),
+        capture_type_definitions=definitions_for(schema, "capture_type"),
+        note_type_definitions=note_type_definitions_from_schema(schema),
+>>>>>>> Stashed changes
     )
 
 
-def schema_stage_extras(vault_root: Path) -> dict[str, list[str]]:
-    """Custom note types / controlled values declared in the vault's schema.json.
+def schema_stage_extras(vault_root: Path) -> dict[str, Any]:
+    """Custom note types / controlled values / properties declared in schema.json.
 
     Returned as keyword args for `validate_stage_proposal` / `validate_proposal` so the
     validators accept schema-defined additions on top of the built-in vocabulary.
@@ -337,6 +428,7 @@ def schema_stage_extras(vault_root: Path) -> dict[str, list[str]]:
             for v in allowed_controlled_values_from_schema(schema, "capture_type")
             if v not in builtin_capture
         ],
+        "custom_properties": custom_property_specs(schema),
     }
 
 
@@ -432,6 +524,11 @@ def _stage_prompt(
     extra_note_types: list[str] | None = None,
     extra_source_kinds: list[str] | None = None,
     extra_capture_types: list[str] | None = None,
+<<<<<<< Updated upstream
+=======
+    custom_properties: list[tuple[str, str, str]] | None = None,
+    definitions: dict[str, dict[str, str]] | None = None,
+>>>>>>> Stashed changes
 ) -> str:
     excerpt = note_text[:max_chars]
     truncated = len(note_text) > max_chars
@@ -460,6 +557,14 @@ Do not propose status, domain, parent, related, cover, source_kind, capture_type
 
 {common}"""
     if stage == "property-values":
+        custom_lines = ""
+        for name, ptype, definition in custom_properties or []:
+            hint = (definition or "").strip()
+            if ptype == "list":
+                custom_lines += f"\n- {name}: list of strings — {hint} (use [] if none apply)"
+            else:
+                suffix = f" — {hint}" if hint else ""
+                custom_lines += f'\n- {name}: free text{suffix} (use "" if not applicable)'
         return f"""Fill only accepted frontmatter property values for this note.
 
 Allowed status values: {allowed_statuses}
@@ -474,7 +579,7 @@ Return JSON with exactly these keys:
 - parent: one Obsidian wikilink string if a clear parent exists, or empty string
 - related: list of Obsidian wikilink strings for obvious related concepts/entities, or []
 - cover: image path/string if clearly present, or empty string
-- capture_type: one allowed capture_type value if clear, or empty string
+- capture_type: one allowed capture_type value if clear, or empty string{custom_lines}
 - confidence: number from 0 to 1
 - warnings: list of short strings for ambiguity
 
@@ -639,7 +744,11 @@ def validate_proposal(
     extra_note_types: list[str] | None = None,
     extra_source_kinds: list[str] | None = None,
     extra_capture_types: list[str] | None = None,
+    custom_properties: list[tuple[str, str, str]] | None = None,
 ) -> ProposalValidation:
+    # custom_properties is accepted so schema_stage_extras can be spread uniformly;
+    # the monolithic classification path does not surface custom properties.
+    del custom_properties
     errors: list[str] = []
     unknown = sorted(set(proposal) - ALLOWED_PROPOSAL_KEYS)
     if unknown:
@@ -706,12 +815,13 @@ def validate_stage_proposal(
     extra_note_types: list[str] | None = None,
     extra_source_kinds: list[str] | None = None,
     extra_capture_types: list[str] | None = None,
+    custom_properties: list[tuple[str, str, str]] | None = None,
 ) -> StageValidation:
     if stage == "classify-type":
         return _validate_type_stage(proposal, extra_note_types)
     if stage == "property-values":
         return _validate_property_values_stage(
-            proposal, extra_domains, extra_source_kinds, extra_capture_types
+            proposal, extra_domains, extra_source_kinds, extra_capture_types, custom_properties
         )
     if stage == "summary":
         return _validate_summary_stage(proposal)
@@ -810,9 +920,16 @@ def _validate_property_values_stage(
     extra_domains: list[str] | None = None,
     extra_source_kinds: list[str] | None = None,
     extra_capture_types: list[str] | None = None,
+    custom_properties: list[tuple[str, str, str]] | None = None,
 ) -> StageValidation:
     errors: list[str] = []
-    unknown = sorted(set(proposal) - {"status", "domain", "parent", "related", "cover", "source_kind", "capture_type", "confidence", "warnings"})
+    custom = custom_properties or []
+    custom_names = {name for name, _type, _def in custom}
+    allowed_keys = {
+        "status", "domain", "parent", "related", "cover", "source_kind",
+        "capture_type", "confidence", "warnings",
+    } | custom_names
+    unknown = sorted(set(proposal) - allowed_keys)
     if unknown:
         errors.append("unknown proposal keys: " + ", ".join(unknown))
     status = proposal.get("status", "active")
@@ -829,6 +946,14 @@ def _validate_property_values_stage(
     _validate_string_list(proposal, "related", errors)
     _validate_optional_string(proposal, "cover", errors)
     _validate_string_list(proposal, "warnings", errors)
+    custom_values: dict[str, Any] = {}
+    for name, ptype, _definition in custom:
+        if ptype == "list":
+            _validate_string_list(proposal, name, errors)
+            custom_values[name] = proposal.get(name, [])
+        else:
+            _validate_optional_string(proposal, name, errors)
+            custom_values[name] = proposal.get(name, "")
     confidence = _validate_confidence(proposal, errors)
     return StageValidation(
         not errors,
@@ -840,6 +965,7 @@ def _validate_property_values_stage(
             "parent": proposal.get("parent", ""),
             "related": proposal.get("related", []),
             "cover": proposal.get("cover", ""),
+            **custom_values,
             "confidence": confidence,
             "warnings": proposal.get("warnings", []),
         },

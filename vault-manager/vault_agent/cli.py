@@ -44,6 +44,8 @@ from .refine import run_propose_folder_refinement
 from .processor import PROCESSING_STAGES, run_process_inbox, run_process_next, run_process_vault
 from .proposals import (
     run_propose_base_hierarchy,
+    run_propose_property_remap,
+    run_propose_requested_dashboards,
     run_propose_cleanup_queue,
     run_propose_cleanup,
     run_propose_folder_organization,
@@ -102,6 +104,9 @@ MAIN_COMMANDS = (
     "propose-inbox-sort",
     "propose-vault-layout",
     "propose-base-hierarchy",
+    "propose-property-remap",
+    "propose-requested-dashboards",
+    "refresh-dashboard-table",
     "propose-action-queue",
     "propose-folder-organization",
     "propose-folder-refinement",
@@ -147,6 +152,9 @@ MAIN_COMMAND_HELP = {
     "propose-inbox-sort": "Generate bounded deterministic inbox move proposals.",
     "propose-vault-layout": "Generate a reviewed dashboard-first layout migration proposal.",
     "propose-base-hierarchy": "Generate hierarchical Bases dashboard proposals.",
+    "propose-property-remap": "Propose model-driven mappings from unapproved frontmatter properties to approved ones.",
+    "propose-requested-dashboards": "Build dashboards for the rows checked in the schema note's Dashboards table.",
+    "refresh-dashboard-table": "Refresh the schema note's Dashboards candidate table from the vault (preserves checkmarks).",
     "propose-action-queue": "Generate a pending proposal for queued maintenance actions.",
     "propose-folder-organization": "Generate a pending proposal to organize one folder and dashboard.",
     "propose-folder-refinement": "Generate note-body refinement proposals for a folder using the configured LLM, guarded so wording never changes.",
@@ -222,6 +230,9 @@ JSON_OUTPUT_COMMANDS = frozenset(
         "propose-topic-hubs",
         "propose-vault-layout",
         "propose-base-hierarchy",
+        "propose-property-remap",
+        "propose-requested-dashboards",
+        "refresh-dashboard-table",
         "propose-folder-organization",
         "propose-cleanup-queue",
         "propose-inbox-sort",
@@ -602,6 +613,34 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Replace an existing base hierarchy proposal with the same id.",
             )
             command_parser.set_defaults(handler=_handle_propose_base_hierarchy)
+        elif command == "propose-property-remap":
+            command_parser.add_argument(
+                "--max-notes",
+                type=int,
+                default=200,
+                help="Maximum notes to include per-note frontmatter edits for.",
+            )
+            command_parser.add_argument(
+                "--overwrite-proposal",
+                action="store_true",
+                help="Replace an existing property-remap proposal with the same id.",
+            )
+            command_parser.set_defaults(handler=_handle_propose_property_remap)
+        elif command == "propose-requested-dashboards":
+            command_parser.add_argument(
+                "--overwrite-proposal",
+                action="store_true",
+                help="Replace an existing requested-dashboards proposal with the same id.",
+            )
+            command_parser.set_defaults(handler=_handle_propose_requested_dashboards)
+        elif command == "refresh-dashboard-table":
+            command_parser.add_argument(
+                "--min-count",
+                type=int,
+                default=2,
+                help="Minimum notes for a property/value to appear as a dashboard candidate.",
+            )
+            command_parser.set_defaults(handler=_handle_refresh_dashboard_table)
         elif command == "propose-inbox-sort":
             command_parser.add_argument("--max-notes", type=int, default=5)
             command_parser.add_argument(
@@ -1511,6 +1550,57 @@ def _handle_propose_base_hierarchy(args: argparse.Namespace, config: AgentConfig
     )
     print(output)
     return exit_code
+
+
+def _handle_propose_property_remap(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    proposal_provider = _proposal_provider_from_config(config)
+    if proposal_provider is None:
+        print(
+            "vault-agent propose-property-remap failed\n"
+            "Error: property remapping requires llm.enabled and a supported provider in config."
+        )
+        return 1
+    exit_code, output = run_propose_property_remap(
+        config,
+        proposal_provider=proposal_provider,
+        max_notes=int(getattr(args, "max_notes", 200)),
+        overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_propose_requested_dashboards(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    exit_code, output = run_propose_requested_dashboards(
+        config, overwrite_proposal=bool(getattr(args, "overwrite_proposal", False))
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_refresh_dashboard_table(args: argparse.Namespace, config: AgentConfig) -> int:
+    from .dashboard_table import refresh_dashboard_table
+
+    result = refresh_dashboard_table(config, min_count=int(getattr(args, "min_count", 2)))
+    if getattr(config, "json_output", False):
+        print(
+            json.dumps(
+                {
+                    "status": "missing" if result.note_missing else "ok",
+                    "changed": result.changed,
+                    "rows": result.rows,
+                }
+            )
+        )
+        return 1 if result.note_missing else 0
+    if result.note_missing:
+        print("vault-agent refresh-dashboard-table: schema note not found")
+        return 1
+    state = "changed" if result.changed else "no change"
+    print(f"vault-agent refresh-dashboard-table: {result.rows} candidate rows ({state})")
+    return 0
 
 
 def _handle_propose_inbox_sort(args: argparse.Namespace, config: AgentConfig) -> int:

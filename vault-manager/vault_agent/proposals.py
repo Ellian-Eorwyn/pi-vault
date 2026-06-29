@@ -36,6 +36,8 @@ from .schema import (
     NOTE_TYPES,
     accepted_properties_for,
     default_schema,
+    load_schema,
+    property_order_from_schema,
     property_values_markdown,
     template_for,
 )
@@ -301,6 +303,27 @@ def run_propose_vault_layout(
         dry_run=config.dry_run,
         overwrite_existing=overwrite_proposal,
     )
+def run_propose_property_remap(
+    config: AgentConfig,
+    *,
+    proposal_provider: ProposalProvider | None = None,
+    max_notes: int = 200,
+    overwrite_proposal: bool = False,
+) -> tuple[int, str]:
+    from .property_remap import generate_property_remap_proposal
+
+    proposal, errors = generate_property_remap_proposal(
+        config, proposal_provider=proposal_provider, max_notes=max_notes
+    )
+    if errors or proposal is None:
+        return 1, "vault-agent propose-property-remap failed\n" + "\n".join(
+            f"Error: {error}" for error in errors
+        )
+    return _write_proposal(
+        config, proposal, dry_run=config.dry_run, overwrite_existing=overwrite_proposal
+    )
+
+
 def run_propose_base_hierarchy(
     config: AgentConfig,
     *,
@@ -677,7 +700,7 @@ def generate_cleanup_proposal(
             set_values[key] = [] if key == "related" else ""
 
     note_type = mapped.get("type") if mapped.get("type") in NOTE_TYPES else None
-    accepted = accepted_properties_for(note_type)
+    accepted = accepted_properties_for(note_type, load_schema(config.vault_root))
     remove = sorted(key for key in mapped if key not in accepted) if remove_unknown else []
     if not set_values and not remove:
         return {}, [f"no cleanup changes found for `{relative.as_posix()}`"]
@@ -711,13 +734,16 @@ def generate_cleanup_queue_proposal(
         return {}, ["max-items must be at least 1"], {"operations": 0, "issues": 0}
     result = scan_vault(config.vault_root)
     issues = validate_entries(result.entries, config)
-    scoped_entries = _scoped_cleanup_entries(config, result.entries, folder)
+    schema = load_schema(config.vault_root)
+    known_properties = property_order_from_schema(schema)
+    scoped_entries = _scoped_cleanup_entries(config, result.entries, folder, known_properties)
     operations: list[dict[str, Any]] = []
     for entry in scoped_entries:
         operation = _cleanup_operation_for_entry(
             config=config,
             path=entry["path"],
             remove_unknown=remove_unknown,
+            schema=schema,
         )
         if operation:
             operations.append(operation)
@@ -875,6 +901,7 @@ def generate_folder_organization_proposal(
     }
     llm_attempts = 0
     llm_notes = 0
+    known_properties = property_order_from_schema(load_schema(config.vault_root))
     for index, note_path in enumerate(note_paths, start=1):
         relative = note_path.relative_to(config.vault_root)
         if relative.as_posix() in processed_paths:
@@ -887,7 +914,9 @@ def generate_folder_organization_proposal(
         if parsed.error:
             errors.append(f"{relative.as_posix()}: {parsed.error}")
             continue
-        mapped = apply_legacy_mappings(parsed.frontmatter, config)
+        mapped = apply_legacy_mappings(
+            parsed.frontmatter, config, approved_properties=set(known_properties)
+        )
         note_type = _approved_type(mapped.get("type"))
         llm_property_values: dict[str, Any] = {}
         if proposal_provider and llm_attempts < llm_limit:
@@ -929,7 +958,7 @@ def generate_folder_organization_proposal(
                 "capture_type": llm_property_values.get("capture_type") or capture_type,
         }
         remove = (
-            sorted(key for key in parsed.frontmatter if key not in CORE_PROPERTY_ORDER)
+            sorted(key for key in parsed.frontmatter if key not in known_properties)
             if remove_legacy
             else []
         )
@@ -1093,7 +1122,10 @@ def _load_checkpoint_operations(config: AgentConfig, proposal_id: str) -> list[d
 
 
 def _scoped_cleanup_entries(
-    config: AgentConfig, entries: list[dict[str, Any]], folder: str | None
+    config: AgentConfig,
+    entries: list[dict[str, Any]],
+    folder: str | None,
+    known_properties: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     prefix = folder.strip("/").rstrip("/") if folder else ""
     scoped: list[dict[str, Any]] = []
@@ -1108,15 +1140,17 @@ def _scoped_cleanup_entries(
     return sorted(
         scoped,
         key=lambda entry: (
-            0 if _entry_has_mappable_legacy(entry) else 1,
+            0 if _entry_has_mappable_legacy(entry, known_properties) else 1,
             entry["path"].lower(),
         ),
     )
 
 
-def _entry_has_mappable_legacy(entry: dict[str, Any]) -> bool:
+def _entry_has_mappable_legacy(
+    entry: dict[str, Any], known_properties: tuple[str, ...]
+) -> bool:
     frontmatter = entry.get("frontmatter", {})
-    return any(key not in CORE_PROPERTY_ORDER for key in frontmatter) or any(
+    return any(key not in known_properties for key in frontmatter) or any(
         entry.get(key) not in (None, "") for key in ("type", "status", "source_kind")
     )
 
@@ -1126,6 +1160,7 @@ def _cleanup_operation_for_entry(
     config: AgentConfig,
     path: str,
     remove_unknown: bool,
+    schema: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     note_path = config.vault_root / path
     if not note_path.exists():
@@ -1142,7 +1177,7 @@ def _cleanup_operation_for_entry(
         elif key not in original and key in mapped:
             set_values[key] = mapped[key]
     note_type = mapped.get("type") if mapped.get("type") in NOTE_TYPES else None
-    accepted = accepted_properties_for(note_type)
+    accepted = accepted_properties_for(note_type, schema)
     remove = sorted(key for key in mapped if key not in accepted) if remove_unknown else []
     if not set_values and not remove:
         return None
@@ -1152,6 +1187,106 @@ def _cleanup_operation_for_entry(
         "set": set_values,
         "remove": remove,
     }
+
+
+def _property_value_filter(property_name: str, value: str) -> str:
+    if property_name == "parent":
+        return f'parent == "[[{value}]]" or parent == "{value}"'
+    return f'{property_name} == "{value}"'
+
+
+def _property_value_dashboard_content(*, property_name: str, value: str, title: str) -> str:
+    filter_expr = _property_value_filter(property_name, value)
+    frontmatter = (
+        "---\n"
+        "type: index\n"
+        "status: active\n"
+        "domain:\n"
+        "parent:\n"
+        "related: []\n"
+        "cover:\n"
+        "source_kind:\n"
+        "capture_type:\n"
+        "cssclasses:\n"
+        "  - dashboard\n"
+        "---\n"
+    )
+    return frontmatter + f"""
+# {title}
+
+> [!abstract] {property_name.title()} Dashboard
+> Notes where `{property_name}` is `{value}`. Proposed by `vault-agent propose-requested-dashboards`.
+
+## Notes
+
+```base
+filters:
+  and:
+    - 'file.ext == "md"'
+    - '{filter_expr}'
+views:
+  - type: table
+    name: "Notes"
+    order:
+      - file.name
+      - type
+      - status
+      - domain
+      - parent
+      - file.mtime
+```
+"""
+
+
+def generate_requested_dashboards_proposal(config: AgentConfig) -> tuple[dict[str, Any] | None, list[str]]:
+    """Build one dashboard per checked row in the schema note's dashboard table."""
+    schema = load_schema(config.vault_root)
+    requests = schema.get("dashboard_requests") or []
+    rows = [
+        (str(r.get("property", "")).strip(), str(r.get("value", "")).strip())
+        for r in requests
+        if isinstance(r, dict) and r.get("property") and r.get("value")
+    ]
+    if not rows:
+        return None, ["no checked dashboard requests in the schema note"]
+    root = config.paths.dashboards_dir.as_posix().rstrip("/") + "/Requested"
+    operations = []
+    for property_name, value in rows:
+        title = value if property_name == "parent" else value.replace("-", " ").title()
+        path = f"{root}/{_slug(property_name)}-{_slug(value)}.md"
+        operations.append(
+            {
+                "op": "write_file",
+                "path": path,
+                "if_exists": "overwrite",
+                "merge_generated": True,
+                "content": _property_value_dashboard_content(
+                    property_name=property_name, value=value, title=title
+                ),
+            }
+        )
+    proposal = {
+        "id": "requested-dashboards",
+        "title": f"Build {len(operations)} requested dashboard" + ("" if len(operations) == 1 else "s"),
+        "kind": "index-note",
+        "status": "pending",
+        "summary": "Create the dashboards checked in the schema note's Dashboards table.",
+        "operations": operations,
+    }
+    return proposal, []
+
+
+def run_propose_requested_dashboards(
+    config: AgentConfig, *, overwrite_proposal: bool = False
+) -> tuple[int, str]:
+    proposal, errors = generate_requested_dashboards_proposal(config)
+    if errors or proposal is None:
+        return 1, "vault-agent propose-requested-dashboards failed\n" + "\n".join(
+            f"Error: {error}" for error in errors
+        )
+    return _write_proposal(
+        config, proposal, dry_run=config.dry_run, overwrite_existing=overwrite_proposal
+    )
 
 
 def _index_content(*, index_type: str, title: str, filter_value: str) -> str:

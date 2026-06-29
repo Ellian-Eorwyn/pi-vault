@@ -119,6 +119,8 @@ def _cleanup_opportunities(
     mappable = 0
     removable = 0
     sample: list[str] = []
+    schema = load_schema(config.vault_root)
+    approved_properties = accepted_properties_for(None, schema)
     for entry in entries:
         path = entry["path"]
         relative = Path(path)
@@ -133,10 +135,10 @@ def _cleanup_opportunities(
         if parsed.error:
             continue
         original = dict(parsed.frontmatter)
-        mapped = apply_legacy_mappings(original, config)
+        mapped = apply_legacy_mappings(original, config, approved_properties=approved_properties)
         has_mapping = any(mapped.get(key) != original.get(key) for key in CORE_PROPERTY_ORDER if key in mapped)
         note_type = mapped.get("type") if mapped.get("type") in allowed_note_types(config.vault_root) else None
-        accepted = accepted_properties_for(note_type)
+        accepted = accepted_properties_for(note_type, schema)
         unknown = [key for key in mapped if key not in accepted]
         if has_mapping:
             mappable += 1

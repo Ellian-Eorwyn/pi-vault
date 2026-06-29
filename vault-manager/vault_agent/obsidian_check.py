@@ -14,7 +14,7 @@ import yaml
 
 from .config import AgentConfig
 from .frontmatter import parse_note
-from .schema import CORE_PROPERTY_ORDER
+from .schema import load_schema, property_order_from_schema
 from .scanner import scan_vault
 
 
@@ -69,16 +69,24 @@ def run_obsidian_check(
 
 def check_vault(config: AgentConfig) -> list[ObsidianIssue]:
     scan = scan_vault(config.vault_root)
+    property_order = property_order_from_schema(load_schema(config.vault_root))
     issues: list[ObsidianIssue] = []
     for entry in scan.entries:
         path = config.vault_root / entry["path"]
         if not path.exists() or path.suffix != ".md":
             continue
-        issues.extend(check_markdown_file(config.vault_root, path))
+        issues.extend(check_markdown_file(config.vault_root, path, property_order=property_order))
     return issues
 
 
-def check_markdown_file(vault_root: Path, path: Path) -> list[ObsidianIssue]:
+def check_markdown_file(
+    vault_root: Path,
+    path: Path,
+    *,
+    property_order: tuple[str, ...] | None = None,
+) -> list[ObsidianIssue]:
+    if property_order is None:
+        property_order = property_order_from_schema(load_schema(vault_root))
     relative = path.relative_to(vault_root).as_posix()
     text = path.read_text(encoding="utf-8")
     issues: list[ObsidianIssue] = []
@@ -86,7 +94,7 @@ def check_markdown_file(vault_root: Path, path: Path) -> list[ObsidianIssue]:
     if parsed.error:
         issues.append(ObsidianIssue(relative, "error", f"frontmatter YAML error: {parsed.error}"))
     elif parsed.has_frontmatter:
-        issues.extend(_frontmatter_order_issues(relative, text, parsed.frontmatter))
+        issues.extend(_frontmatter_order_issues(relative, text, parsed.frontmatter, property_order))
     for index, block in enumerate(_base_blocks(text), start=1):
         issues.extend(_base_block_issues(relative, index, block))
     issues.extend(_wikilink_issues(vault_root, relative, text))
@@ -94,7 +102,7 @@ def check_markdown_file(vault_root: Path, path: Path) -> list[ObsidianIssue]:
 
 
 def _frontmatter_order_issues(
-    relative: str, text: str, frontmatter: dict[str, Any]
+    relative: str, text: str, frontmatter: dict[str, Any], property_order: tuple[str, ...]
 ) -> list[ObsidianIssue]:
     del frontmatter
     raw = text[4 : text.find("\n---\n", 4)]
@@ -105,7 +113,7 @@ def _frontmatter_order_issues(
         if ":" not in line:
             continue
         keys.append(line.split(":", 1)[0].strip())
-    core_positions = [CORE_PROPERTY_ORDER.index(key) for key in keys if key in CORE_PROPERTY_ORDER]
+    core_positions = [property_order.index(key) for key in keys if key in property_order]
     if core_positions != sorted(core_positions):
         return [
             ObsidianIssue(

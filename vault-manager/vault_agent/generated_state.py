@@ -11,7 +11,7 @@ from .config import AgentConfig
 from .frontmatter import parse_note
 from .norms import build_norms_lock, load_norms_lock, norms_lock_path
 from .paths import paths_for
-from .schema import CORE_PROPERTY_ORDER, allowed_note_types, index_base_templates
+from .schema import allowed_note_types, index_base_templates, known_properties_for
 
 
 @dataclass(frozen=True)
@@ -79,6 +79,7 @@ def generated_state_issues(config: AgentConfig) -> list[GeneratedStateIssue]:
 
 def template_schema_issues(config: AgentConfig) -> list[GeneratedStateIssue]:
     vault_root = config.vault_root
+    known_properties = known_properties_for(vault_root)
     issues: list[GeneratedStateIssue] = []
     for note_type in sorted(allowed_note_types(vault_root)):
         relative = config.paths.template_dir / "note-types" / f"{note_type}.md"
@@ -93,7 +94,7 @@ def template_schema_issues(config: AgentConfig) -> list[GeneratedStateIssue]:
             issues.append(GeneratedStateIssue("error", relative.as_posix(), parsed.error))
             continue
         for key in parsed.frontmatter:
-            if key not in CORE_PROPERTY_ORDER:
+            if key not in known_properties:
                 issues.append(
                     GeneratedStateIssue(
                         "warning",

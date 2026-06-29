@@ -5,20 +5,42 @@ from __future__ import annotations
 from typing import Any
 
 from .config import AgentConfig
-from .schema import COMMON_PROPERTIES
+from .schema import COMMON_PROPERTIES, load_schema, property_order_from_schema
 
 
-def apply_legacy_mappings(frontmatter: dict[str, Any], config: AgentConfig) -> dict[str, Any]:
-    """Return frontmatter with safe legacy aliases copied into core fields."""
+def _approved_properties(
+    config: AgentConfig, approved_properties: set[str] | None
+) -> set[str]:
+    if approved_properties is not None:
+        return approved_properties
+    return set(property_order_from_schema(load_schema(config.vault_root)))
+
+
+def apply_legacy_mappings(
+    frontmatter: dict[str, Any],
+    config: AgentConfig,
+    *,
+    approved_properties: set[str] | None = None,
+) -> dict[str, Any]:
+    """Return frontmatter with safe legacy aliases copied into approved fields.
+
+    An alias may target any approved property (built-in core or a user-declared
+    custom property such as ``read_time``). Built-in controlled targets keep their
+    value normalization; custom targets copy the value through as-is.
+    """
     mapped = dict(frontmatter)
+    approved = _approved_properties(config, approved_properties)
     for legacy_key, core_key in config.legacy_property_aliases.items():
         if legacy_key not in frontmatter:
             continue
-        if core_key not in COMMON_PROPERTIES:
+        if core_key not in approved:
             continue
         if mapped.get(core_key) not in (None, "", []):
             continue
-        value = _normalize_property_value(core_key, frontmatter[legacy_key], config)
+        if core_key in COMMON_PROPERTIES:
+            value = _normalize_property_value(core_key, frontmatter[legacy_key], config)
+        else:
+            value = frontmatter[legacy_key]
         if value not in (None, ""):
             mapped[core_key] = value
 
@@ -33,9 +55,13 @@ def apply_legacy_mappings(frontmatter: dict[str, Any], config: AgentConfig) -> d
     return mapped
 
 
-def mapped_property_for(key: str, config: AgentConfig) -> str | None:
+def mapped_property_for(
+    key: str, config: AgentConfig, approved_properties: set[str] | None = None
+) -> str | None:
     mapped = config.legacy_property_aliases.get(key)
-    return mapped if mapped in COMMON_PROPERTIES else None
+    if mapped is None:
+        return None
+    return mapped if mapped in _approved_properties(config, approved_properties) else None
 
 
 def mapped_controlled_value(key: str, value: Any, config: AgentConfig) -> str | None:

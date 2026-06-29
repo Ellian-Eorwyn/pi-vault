@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import yaml
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +43,7 @@ ALLOWED_KINDS = {
     "vault-layout",
     "note-refinement",
     "people-extraction",
+    "property-remap",
 }
 ALLOWED_WRITE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".base"}
 
@@ -348,9 +350,37 @@ def apply_proposal(config: AgentConfig, proposal: Proposal) -> list[str]:
             errors.extend(_apply_move_note(config, operation))
         elif op == "restructure_body":
             errors.extend(_apply_restructure_body(config, operation))
+        elif op == "add_property_aliases":
+            errors.extend(_apply_add_property_aliases(config, operation))
         else:
             errors.append(f"operation {index} has unsupported op `{op}`")
     return errors
+
+
+def _apply_add_property_aliases(config: AgentConfig, operation: dict[str, Any]) -> list[str]:
+    aliases = operation.get("aliases")
+    if not isinstance(aliases, dict) or not aliases:
+        return ["add_property_aliases requires a non-empty `aliases` object"]
+    cfg_path = config.vault_root / config.paths.agent_dir / "config.yaml"
+    try:
+        data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
+    except (OSError, yaml.YAMLError) as exc:
+        return [f"could not read {cfg_path.name}: {exc}"]
+    if data is None:
+        data = {}
+    if not isinstance(data, dict):
+        return [f"{cfg_path.name} is not a mapping"]
+    legacy = data.setdefault("legacy_metadata", {})
+    if not isinstance(legacy, dict):
+        return [f"{cfg_path.name} legacy_metadata is not a mapping"]
+    prop_aliases = legacy.setdefault("property_aliases", {})
+    if not isinstance(prop_aliases, dict):
+        return [f"{cfg_path.name} legacy_metadata.property_aliases is not a mapping"]
+    for old, target in aliases.items():
+        if isinstance(old, str) and isinstance(target, str) and old and target:
+            prop_aliases[old] = target
+    write_text_safely(cfg_path, yaml.safe_dump(data, sort_keys=False))
+    return []
 
 
 def _load_proposal(path: Path) -> Proposal:
@@ -371,9 +401,7 @@ def _validate_proposal(proposal: Proposal) -> list[str]:
     if proposal.status not in {"pending", "approved", "rejected", "applied"}:
         errors.append("status must be pending, approved, rejected, or applied")
     if data.get("kind") not in ALLOWED_KINDS:
-        errors.append(
-            "kind must be action-queue, artifact-import, schema-change, index-note, template-change, cleanup, folder-organization, base-hierarchy, inbox-sort, vault-layout, or note-refinement"
-        )
+        errors.append("kind must be one of: " + ", ".join(sorted(ALLOWED_KINDS)))
     if data.get("kind") == "artifact-import":
         errors.extend(_validate_artifact_provenance(data.get("provenance")))
     operations = data.get("operations")
@@ -397,8 +425,23 @@ def _validate_proposal(proposal: Proposal) -> list[str]:
             errors.extend(_validate_move_note(operation, index))
         elif op == "restructure_body":
             errors.extend(_validate_restructure_body(operation, index))
+        elif op == "add_property_aliases":
+            errors.extend(_validate_add_property_aliases(operation, index))
         else:
             errors.append(f"operation {index} has unsupported op `{op}`")
+    return errors
+
+
+def _validate_add_property_aliases(operation: dict[str, Any], index: int) -> list[str]:
+    aliases = operation.get("aliases")
+    if not isinstance(aliases, dict) or not aliases:
+        return [f"operation {index} add_property_aliases requires a non-empty `aliases` object"]
+    errors: list[str] = []
+    for old, target in aliases.items():
+        if not isinstance(old, str) or not old:
+            errors.append(f"operation {index} alias key must be a non-empty string")
+        if not isinstance(target, str) or not target:
+            errors.append(f"operation {index} alias target must be a non-empty string")
     return errors
 
 
@@ -455,10 +498,13 @@ def _validate_update_frontmatter(operation: dict[str, Any], index: int) -> list[
         errors.append(f"operation {index} set must be an object")
     else:
         for key, value in set_values.items():
-            if key not in COMMON_PROPERTIES:
-                errors.append(f"operation {index} cannot set unknown core property `{key}`")
+            # Concrete approval against the vault's schema (built-in + custom properties)
+            # happens at apply time; here we only require a property-slug key, and we still
+            # value-validate the built-in controlled properties.
+            if not isinstance(key, str) or re.fullmatch(r"[a-z][a-z0-9_-]*", key) is None:
+                errors.append(f"operation {index} set key `{key}` must be a property slug")
                 continue
-            allowed = COMMON_PROPERTIES[key].get("allowed")
+            allowed = COMMON_PROPERTIES.get(key, {}).get("allowed")
             if allowed and value not in allowed:
                 errors.append(f"operation {index} invalid {key} `{value}`")
             if key == "related" and not isinstance(value, list):

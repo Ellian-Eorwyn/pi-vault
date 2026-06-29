@@ -163,6 +163,47 @@ DOMAIN_DEFINITIONS = {
     "meta": "PKM, vault design, workflows, agent systems.",
 }
 
+<<<<<<< Updated upstream
+=======
+SOURCE_KIND_DEFINITIONS = {
+    "book": "A book or monograph, printed or ebook.",
+    "article": "A journal article, paper, or magazine/news piece.",
+    "report": "A formal report, white paper, or technical/industry report.",
+    "policy": "A policy, regulation, statute, or guideline document.",
+    "standard": "A formal standard or specification (e.g. ISO, IEEE, building code).",
+    "website": "A web page or online resource that is not a formal publication.",
+    "dataset": "A structured data source or database.",
+    "video": "A film, recorded talk, or other video.",
+    "podcast": "An audio episode or podcast.",
+    "interview": "An interview, oral history, or Q&A with a person.",
+    "transcript": "A verbatim transcript of speech (talk, hearing, call, recording).",
+    "presentation": "Slides or a delivered talk/lecture deck.",
+    "manual": "A manual, handbook, or how-to/instructional reference.",
+}
+
+CAPTURE_TYPE_DEFINITIONS = {
+    "voice": "Captured by voice memo or speech-to-text dictation.",
+    "meeting": "Captured during or from a meeting, call, or conversation.",
+    "chat": "Captured from a chat or messaging thread (incl. LLM chats).",
+    "imported": "Imported from an external file, app, or service.",
+    "manual": "Typed or written directly into the vault by hand.",
+}
+
+# What each frontmatter property means. The user can add their own properties to
+# the canonical schema note (e.g. `summary`); their definitions are stored in
+# schema.json under ``property_definitions`` and merged on top of these built-ins.
+PROPERTY_DEFINITIONS = {
+    "type": "What kind of note this is (controlled; see Note types).",
+    "status": "Lifecycle state of the note (controlled; see Status).",
+    "domain": "Broad area of life or work the note belongs to (controlled; see Domains).",
+    "parent": "Wikilink to the note's primary parent topic hub or owner.",
+    "related": "Wikilinks to cross-cutting related notes or concepts.",
+    "cover": "Path or wikilink to a cover image.",
+    "source_kind": "For source notes, the kind of source (controlled; see Source kinds).",
+    "capture_type": "How the note was captured (controlled; see Capture types).",
+}
+
+>>>>>>> Stashed changes
 RECOMMENDED_TOPIC_HUBS = [
     "Academia",
     "Research",
@@ -247,6 +288,12 @@ def default_schema(extra_domains: list[str] | None = None) -> dict[str, Any]:
         "note_types": deepcopy(NOTE_TYPES),
         "status_definitions": deepcopy(STATUS_DEFINITIONS),
         "domain_definitions": domain_definitions,
+<<<<<<< Updated upstream
+=======
+        "source_kind_definitions": deepcopy(SOURCE_KIND_DEFINITIONS),
+        "capture_type_definitions": deepcopy(CAPTURE_TYPE_DEFINITIONS),
+        "property_definitions": deepcopy(PROPERTY_DEFINITIONS),
+>>>>>>> Stashed changes
         "recommended_topic_hubs": list(RECOMMENDED_TOPIC_HUBS),
         "topic_hubs": {domain: [] for domain in domain_definitions},
         "agent_rules": list(AGENT_RULES),
@@ -353,16 +400,197 @@ def allowed_controlled_values_from_schema(
     return values
 
 
+<<<<<<< Updated upstream
 def accepted_properties_for(note_type: str | None = None) -> set[str]:
     """Return schema-approved frontmatter properties for a note type."""
-    del note_type
-    return set(CORE_PROPERTY_ORDER)
+=======
+# Controlled properties that carry per-value definitions: their built-in
+# {value: definition} map and the schema.json key where confirmed definitions live.
+_BUILTIN_DEFINITIONS: dict[str, dict[str, str]] = {
+    "status": STATUS_DEFINITIONS,
+    "domain": DOMAIN_DEFINITIONS,
+    "source_kind": SOURCE_KIND_DEFINITIONS,
+    "capture_type": CAPTURE_TYPE_DEFINITIONS,
+}
+DEFINITION_SCHEMA_KEYS: dict[str, str] = {
+    "status": "status_definitions",
+    "domain": "domain_definitions",
+    "source_kind": "source_kind_definitions",
+    "capture_type": "capture_type_definitions",
+}
 
 
-def ordered_properties_for(note_type: str | None = None) -> tuple[str, ...]:
-    """Return stable canonical frontmatter order for a note type."""
+def definitions_for(schema: dict[str, Any] | None, property_name: str) -> dict[str, str]:
+    """Merged ``{value: definition}`` for a controlled property.
+
+    Built-in definitions overlaid with confirmed definitions stored in
+    ``schema.json`` (e.g. ``domain_definitions``). The schema is the single source
+    of truth, so its entries win.
+    """
+    merged = dict(_BUILTIN_DEFINITIONS.get(property_name, {}))
+    if isinstance(schema, dict):
+        stored = schema.get(DEFINITION_SCHEMA_KEYS.get(property_name, ""))
+        if isinstance(stored, dict):
+            for value, text in stored.items():
+                if isinstance(value, str) and isinstance(text, str) and text.strip():
+                    merged[value] = text.strip()
+    return merged
+
+
+def property_definitions_for(schema: dict[str, Any] | None) -> dict[str, str]:
+    """Merged ``{property: definition}`` for frontmatter properties.
+
+    Built-in property descriptions overlaid with any stored in ``schema.json`` under
+    ``property_definitions`` (including user-added properties such as ``summary``).
+    """
+    merged = dict(PROPERTY_DEFINITIONS)
+    if isinstance(schema, dict):
+        stored = schema.get("property_definitions")
+        if isinstance(stored, dict):
+            for key, text in stored.items():
+                if isinstance(key, str) and isinstance(text, str) and text.strip():
+                    merged[key] = text.strip()
+    return merged
+
+
+def custom_properties_from_schema(schema: dict[str, Any] | None) -> tuple[str, ...]:
+    """User-added frontmatter properties declared in a schema beyond the core set.
+
+    Returns the keys of ``schema["core_properties"]`` that are not built-in core
+    properties, in their stored order, so they can be ordered and recognized as
+    known rather than flagged as unknown.
+    """
+    extra: list[str] = []
+    if isinstance(schema, dict):
+        core = schema.get("core_properties")
+        if isinstance(core, dict):
+            for key in core:
+                if (
+                    isinstance(key, str)
+                    and key
+                    and key not in CORE_PROPERTY_ORDER
+                    and key not in extra
+                ):
+                    extra.append(key)
+    return tuple(extra)
+
+
+def property_order_from_schema(schema: dict[str, Any] | None = None) -> tuple[str, ...]:
+    """Canonical frontmatter order: built-in core properties then schema additions."""
+    return CORE_PROPERTY_ORDER + custom_properties_from_schema(schema)
+
+
+def custom_property_specs(
+    schema: dict[str, Any] | None, *, exclude: tuple[str, ...] = ("summary",)
+) -> list[tuple[str, str, str]]:
+    """User-added properties as ``(name, type, definition)`` for model prompting.
+
+    ``type`` is ``"list"`` or ``"string"``. Properties handled by a dedicated
+    processing stage (``summary``) are excluded so the property-values stage does
+    not double-handle them.
+    """
+    defs = property_definitions_for(schema)
+    core = schema.get("core_properties") if isinstance(schema, dict) else None
+    specs: list[tuple[str, str, str]] = []
+    for name in custom_properties_from_schema(schema):
+        if name in exclude:
+            continue
+        spec = core.get(name) if isinstance(core, dict) else None
+        ptype = "list" if isinstance(spec, dict) and spec.get("type") == "list" else "string"
+        specs.append((name, ptype, defs.get(name, "")))
+    return specs
+
+
+def known_properties_for(vault_root: Path) -> set[str]:
+    """Recognized frontmatter properties for a vault: built-ins plus schema additions."""
+    return set(property_order_from_schema(load_schema(vault_root)))
+
+
+def note_type_definitions_from_schema(schema: dict[str, Any] | None) -> dict[str, str]:
+    """Merged ``{note_type: description}`` from built-in types plus schema additions."""
+    out: dict[str, str] = {}
+    for name, spec in note_types_from_schema(schema).items():
+        desc = spec.get("description") if isinstance(spec, dict) else ""
+        out[name] = desc.strip() if isinstance(desc, str) else ""
+    return out
+
+
+def hub_descriptions_for(domain: str | None, schema: dict[str, Any]) -> list[tuple[str, str]]:
+    """Approved topic hubs for a domain as ``(name, description)``, in registry order."""
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for entry in topic_hubs_from_schema(schema).get(domain or "", []):
+        name = _hub_name(entry)
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        desc = entry.get("description", "") if isinstance(entry, dict) else ""
+        out.append((name, desc.strip() if isinstance(desc, str) else ""))
+    return out
+
+
+def extra_domains_for(vault_root: Path) -> list[str]:
+    """Custom (non-built-in) domain values for a vault: schema additions plus any
+    folder-derived domains. The classifier and its validator both need these so a
+    domain added via the canonical schema note (or propose-property) is usable."""
+    schema = load_schema(vault_root)
+    builtin = set(COMMON_PROPERTIES["domain"]["allowed"])
+    out = [v for v in allowed_controlled_values_from_schema(schema, "domain") if v not in builtin]
+    for domain in paths_for(vault_root).domain_folders:
+        if domain and domain not in builtin and domain not in out:
+            out.append(domain)
+    return out
+
+
+def missing_definitions(schema: dict[str, Any] | None) -> list[str]:
+    """Controlled values and approved hubs that lack a non-empty definition.
+
+    Returns human-readable ``property:value`` / ``hub[domain]:name`` tokens. An
+    empty list means every controlled value is defined — the precondition for
+    writing a norms lock and for confident model classification.
+    """
+    missing: list[str] = []
+    for name, description in note_type_definitions_from_schema(schema).items():
+        if not (description or "").strip():
+            missing.append(f"note_type:{name}")
+    for property_name in ("status", "domain", "source_kind", "capture_type"):
+        defs = definitions_for(schema, property_name)
+        for value in allowed_controlled_values_from_schema(schema, property_name):
+            if value and not (defs.get(value) or "").strip():
+                missing.append(f"{property_name}:{value}")
+    for domain, entries in topic_hubs_from_schema(schema or {}).items():
+        for entry in entries:
+            name = _hub_name(entry)
+            if not name:
+                continue
+            description = entry.get("description", "") if isinstance(entry, dict) else ""
+            if not (description or "").strip():
+                missing.append(f"hub[{domain}]:{name}")
+    return missing
+
+
+def accepted_properties_for(
+    note_type: str | None = None, schema: dict[str, Any] | None = None
+) -> set[str]:
+    """Return schema-approved frontmatter properties for a note type.
+
+    Includes any user-added properties declared in ``schema`` so they are accepted
+    rather than treated as unknown.
+    """
+>>>>>>> Stashed changes
     del note_type
-    return CORE_PROPERTY_ORDER
+    return set(property_order_from_schema(schema))
+
+
+def ordered_properties_for(
+    note_type: str | None = None, schema: dict[str, Any] | None = None
+) -> tuple[str, ...]:
+    """Return stable canonical frontmatter order for a note type.
+
+    Built-in core order followed by any user-added properties declared in ``schema``.
+    """
+    del note_type
+    return property_order_from_schema(schema)
 
 
 def default_schema_json(extra_domains: list[str] | None = None) -> str:

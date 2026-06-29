@@ -1,0 +1,3353 @@
+{
+  "arch": "27b",
+  "context": {
+    "max_prompt_tokens": 62265,
+    "max_total_tokens": 63469,
+    "median_total_tokens": 2488,
+    "n_calls": 84,
+    "p90_total_tokens": 11847
+  },
+  "endpoint": "http://llms:8008",
+  "grades": {
+    "assign-folder": {
+      "accuracy": 0.7368,
+      "confusion": {
+        "01 inbox": {
+          "02 journal": 1
+        },
+        "02 journal": {
+          "02 journal": 2,
+          "03 notes": 1
+        },
+        "03 notes": {
+          "03 notes": 2,
+          "08 reference": 1,
+          "09 administrative": 1
+        },
+        "04 sources": {
+          "04 sources": 2
+        },
+        "05 projects": {
+          "03 notes": 1,
+          "05 projects": 1
+        },
+        "06 people": {
+          "06 people": 3
+        },
+        "07 organizations": {
+          "07 organizations": 2
+        },
+        "08 reference": {
+          "08 reference": 1
+        },
+        "09 administrative": {
+          "09 administrative": 1
+        }
+      },
+      "correct": 14,
+      "macro_f1": 0.6852,
+      "n": 19,
+      "per_class": {
+        "01 inbox": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 1
+        },
+        "02 journal": {
+          "f1": 0.6667,
+          "precision": 0.6667,
+          "recall": 0.6667,
+          "support": 3
+        },
+        "03 notes": {
+          "f1": 0.5,
+          "precision": 0.5,
+          "recall": 0.5,
+          "support": 4
+        },
+        "04 sources": {
+          "f1": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 2
+        },
+        "05 projects": {
+          "f1": 0.6667,
+          "precision": 1.0,
+          "recall": 0.5,
+          "support": 2
+        },
+        "06 people": {
+          "f1": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 3
+        },
+        "07 organizations": {
+          "f1": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 2
+        },
+        "08 reference": {
+          "f1": 0.6667,
+          "precision": 0.5,
+          "recall": 1.0,
+          "support": 1
+        },
+        "09 administrative": {
+          "f1": 0.6667,
+          "precision": 0.5,
+          "recall": 1.0,
+          "support": 1
+        }
+      }
+    },
+    "assign-hub": null,
+    "classify-person": {
+      "accuracy": 0.6667,
+      "confusion": {
+        "author": {
+          "author": 1
+        },
+        "contact": {
+          "author": 1,
+          "contact": 1
+        }
+      },
+      "correct": 2,
+      "macro_f1": 0.6667,
+      "n": 3,
+      "per_class": {
+        "author": {
+          "f1": 0.6667,
+          "precision": 0.5,
+          "recall": 1.0,
+          "support": 1
+        },
+        "contact": {
+          "f1": 0.6667,
+          "precision": 1.0,
+          "recall": 0.5,
+          "support": 2
+        }
+      }
+    },
+    "classify-type": {
+      "accuracy": 0.6842,
+      "confusion": {
+        "daily": {
+          "daily": 2
+        },
+        "note": {
+          "note": 3,
+          "person": 1,
+          "project": 1,
+          "source": 1,
+          "system": 2,
+          "template": 1
+        },
+        "organization": {
+          "organization": 2
+        },
+        "person": {
+          "person": 3
+        },
+        "source": {
+          "source": 2
+        },
+        "task": {
+          "task": 1
+        }
+      },
+      "correct": 13,
+      "macro_f1": 0.8595,
+      "n": 19,
+      "per_class": {
+        "daily": {
+          "f1": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 2
+        },
+        "note": {
+          "f1": 0.5,
+          "precision": 1.0,
+          "recall": 0.3333,
+          "support": 9
+        },
+        "organization": {
+          "f1": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 2
+        },
+        "person": {
+          "f1": 0.8571,
+          "precision": 0.75,
+          "recall": 1.0,
+          "support": 3
+        },
+        "project": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        },
+        "source": {
+          "f1": 0.8,
+          "precision": 0.6667,
+          "recall": 1.0,
+          "support": 2
+        },
+        "system": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        },
+        "task": {
+          "f1": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 1
+        },
+        "template": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 0
+        }
+      }
+    },
+    "property-values": {
+      "capture_type": {
+        "accuracy": 0.4211,
+        "confusion": {
+          "": {
+            "": 4,
+            "imported": 1,
+            "manual": 10
+          },
+          "imported": {
+            "imported": 3
+          },
+          "manual": {
+            "manual": 1
+          }
+        },
+        "correct": 8,
+        "macro_f1": 0.4816,
+        "n": 19,
+        "per_class": {
+          "(empty)": {
+            "f1": 0.4211,
+            "precision": 1.0,
+            "recall": 0.2667,
+            "support": 15
+          },
+          "imported": {
+            "f1": 0.8571,
+            "precision": 0.75,
+            "recall": 1.0,
+            "support": 3
+          },
+          "manual": {
+            "f1": 0.1667,
+            "precision": 0.0909,
+            "recall": 1.0,
+            "support": 1
+          }
+        }
+      },
+      "domain": {
+        "accuracy": 0.6316,
+        "confusion": {
+          "academic": {
+            "academic": 4
+          },
+          "craft": {
+            "personal": 1
+          },
+          "health": {
+            "health": 1,
+            "personal": 1
+          },
+          "household": {
+            "household": 1
+          },
+          "meta": {
+            "technology": 1
+          },
+          "personal": {
+            "personal": 2
+          },
+          "philosophy": {
+            "personal": 1,
+            "philosophy": 1
+          },
+          "technology": {
+            "technology": 1
+          },
+          "work": {
+            "academic": 2,
+            "craft": 1,
+            "work": 2
+          }
+        },
+        "correct": 12,
+        "macro_f1": 0.5492,
+        "n": 19,
+        "per_class": {
+          "academic": {
+            "f1": 0.8,
+            "precision": 0.6667,
+            "recall": 1.0,
+            "support": 4
+          },
+          "craft": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 1
+          },
+          "health": {
+            "f1": 0.6667,
+            "precision": 1.0,
+            "recall": 0.5,
+            "support": 2
+          },
+          "household": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "meta": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 1
+          },
+          "personal": {
+            "f1": 0.5714,
+            "precision": 0.4,
+            "recall": 1.0,
+            "support": 2
+          },
+          "philosophy": {
+            "f1": 0.6667,
+            "precision": 1.0,
+            "recall": 0.5,
+            "support": 2
+          },
+          "technology": {
+            "f1": 0.6667,
+            "precision": 0.5,
+            "recall": 1.0,
+            "support": 1
+          },
+          "work": {
+            "f1": 0.5714,
+            "precision": 1.0,
+            "recall": 0.4,
+            "support": 5
+          }
+        }
+      },
+      "source_kind": {
+        "accuracy": 0.8947,
+        "confusion": {
+          "": {
+            "": 15,
+            "policy": 1,
+            "report": 1
+          },
+          "article": {
+            "article": 1
+          },
+          "book": {
+            "book": 1
+          }
+        },
+        "correct": 17,
+        "macro_f1": 0.9792,
+        "n": 19,
+        "per_class": {
+          "(empty)": {
+            "f1": 0.9375,
+            "precision": 1.0,
+            "recall": 0.8824,
+            "support": 17
+          },
+          "article": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "book": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "policy": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          },
+          "report": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          }
+        }
+      },
+      "status": {
+        "accuracy": 0.8421,
+        "confusion": {
+          "active": {
+            "": 1,
+            "active": 16,
+            "archived": 2
+          }
+        },
+        "correct": 16,
+        "macro_f1": 0.9143,
+        "n": 19,
+        "per_class": {
+          "(empty)": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          },
+          "active": {
+            "f1": 0.9143,
+            "precision": 1.0,
+            "recall": 0.8421,
+            "support": 19
+          },
+          "archived": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          }
+        }
+      }
+    },
+    "refine-body": {
+      "clean_rate": 0.8,
+      "mean_added_ratio": 0.0169,
+      "mean_preservation": 0.9919,
+      "n": 6,
+      "n_scored": 5,
+      "per_note": [
+        {
+          "added_ratio": 0.011,
+          "path": "02 Journal/2.02 Therapy/2025-04-15 Therapy.md",
+          "preservation": 0.9783,
+          "ref_words": 365,
+          "src_words": 369,
+          "top_added": [
+            "2025",
+            "04",
+            "15",
+            "therapy"
+          ]
+        },
+        {
+          "added_ratio": 0.0238,
+          "path": "02 Journal/2.03 Journaling/12.01 Daily/2013/Of Sleep Disturbances and Academia 9 6 2013.md",
+          "preservation": 0.9814,
+          "ref_words": 757,
+          "src_words": 753,
+          "top_added": [
+            "to",
+            "state",
+            "paper",
+            "health",
+            "personal",
+            "concerns",
+            "academic",
+            "work"
+          ]
+        },
+        {
+          "added_ratio": 0.0254,
+          "path": "06 People/Lindsay Baker.md",
+          "preservation": 1.0,
+          "ref_words": 118,
+          "src_words": 115,
+          "top_added": [
+            "lindsay",
+            "baker",
+            "profile"
+          ]
+        },
+        {
+          "added_ratio": 0.0063,
+          "path": "08 Reference/Tech/4.09 Knowledge Management/Data Storage and Retrieval Guidelines.md",
+          "preservation": 1.0,
+          "ref_words": 1265,
+          "src_words": 1257,
+          "top_added": [
+            "data",
+            "storage",
+            "and",
+            "retrieval",
+            "guidelines",
+            "yaml",
+            "note",
+            "author"
+          ]
+        },
+        {
+          "added_ratio": 0.018,
+          "path": "01 Inbox/Living Well.md",
+          "preservation": 1.0,
+          "ref_words": 111,
+          "src_words": 109,
+          "top_added": [
+            "living",
+            "well"
+          ]
+        }
+      ],
+      "produced_rate": 0.8333
+    },
+    "summary": {
+      "length_ok_rate": 1.0,
+      "mean_cosine": 0.901,
+      "n": 12,
+      "n_scored": 12,
+      "per_note": [
+        {
+          "chars": 451,
+          "cosine": 0.9214,
+          "length_ok": true,
+          "path": "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+          "sentences": 2
+        },
+        {
+          "chars": 520,
+          "cosine": 0.8932,
+          "length_ok": true,
+          "path": "02 Journal/2.02 Therapy/2025-04-15 Therapy.md",
+          "sentences": 3
+        },
+        {
+          "chars": 397,
+          "cosine": 0.8956,
+          "length_ok": true,
+          "path": "02 Journal/2.03 Journaling/12.01 Daily/2013/Of Sleep Disturbances and Academia 9 6 2013.md",
+          "sentences": 2
+        },
+        {
+          "chars": 566,
+          "cosine": 0.8729,
+          "length_ok": true,
+          "path": "04 Sources/Secondary/Dissertation/Games/Peterson_2012_Playing at the World.md",
+          "sentences": 3
+        },
+        {
+          "chars": 563,
+          "cosine": 0.8388,
+          "length_ok": true,
+          "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md",
+          "sentences": 3
+        },
+        {
+          "chars": 452,
+          "cosine": 0.9037,
+          "length_ok": true,
+          "path": "05 Projects/EEI/4.06 Energy CBPR/Deep Research Prompt.md",
+          "sentences": 2
+        },
+        {
+          "chars": 365,
+          "cosine": 0.9561,
+          "length_ok": true,
+          "path": "06 People/Lindsay Baker.md",
+          "sentences": 3
+        },
+        {
+          "chars": 453,
+          "cosine": 0.9557,
+          "length_ok": true,
+          "path": "06 People/Edward Mazria.md",
+          "sentences": 2
+        },
+        {
+          "chars": 284,
+          "cosine": 0.9362,
+          "length_ok": true,
+          "path": "07 Organizations/Intergovernmental Panel on Climate Change.md",
+          "sentences": 2
+        },
+        {
+          "chars": 406,
+          "cosine": 0.8819,
+          "length_ok": true,
+          "path": "08 Reference/Tech/4.09 Knowledge Management/Data Storage and Retrieval Guidelines.md",
+          "sentences": 2
+        },
+        {
+          "chars": 303,
+          "cosine": 0.8925,
+          "length_ok": true,
+          "path": "01 Inbox/Living Well.md",
+          "sentences": 2
+        },
+        {
+          "chars": 547,
+          "cosine": 0.8644,
+          "length_ok": true,
+          "path": "01 Inbox/Buddhism.md",
+          "sentences": 3
+        }
+      ],
+      "produced_rate": 1.0
+    }
+  },
+  "kind": "main",
+  "label": "Qwen3.6-27B q4",
+  "model_key": "qwen3.6-27b-q4",
+  "n_notes": 19,
+  "per_note": [
+    {
+      "path": "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 43.847,
+          "completion_tokens": 2622,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1109,
+          "max_call_total_tokens": 3731,
+          "normalized": {
+            "confidence": 0.7,
+            "folder": "03 Notes",
+            "warnings": [
+              "Frontmatter type conflicts with content",
+              "Currently marked as inbox"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.7,
+            "folder": "03 Notes",
+            "warnings": [
+              "Frontmatter type conflicts with content",
+              "Currently marked as inbox"
+            ]
+          },
+          "prompt_tokens": 1109,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 43.848
+        },
+        "classify-type": {
+          "api_seconds": 36.764,
+          "completion_tokens": 2118,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 990,
+          "max_call_total_tokens": 3108,
+          "normalized": {
+            "confidence": 0.75,
+            "note_type": "system",
+            "warnings": [
+              "Tagged as procedure/journal but mapped to system",
+              "Could alternatively be classified as template or general note"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.75,
+            "note_type": "system",
+            "warnings": [
+              "Tagged as procedure/journal but mapped to system",
+              "Could alternatively be classified as template or general note"
+            ]
+          },
+          "prompt_tokens": 990,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 36.765
+        },
+        "property-values": {
+          "api_seconds": 34.564,
+          "completion_tokens": 2169,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1229,
+          "max_call_total_tokens": 3398,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [
+              "[[Buddhism]]"
+            ],
+            "source_kind": "",
+            "status": "",
+            "warnings": [
+              "Status 'raw' not in allowed list",
+              "Note located in Inbox"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [
+              "[[Buddhism]]"
+            ],
+            "source_kind": "",
+            "status": "",
+            "warnings": [
+              "Status 'raw' not in allowed list",
+              "Note located in Inbox"
+            ]
+          },
+          "prompt_tokens": 1229,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 34.565
+        },
+        "summary": {
+          "api_seconds": 23.206,
+          "completion_tokens": 1487,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 965,
+          "max_call_total_tokens": 2452,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note outlines a structured Buddhist meditation practice divided into six progressive stages: taking refuge in the Three Jewels, contemplating the Four Noble Truths, cultivating loving-kindness, reflecting on no-self and emptiness, and concluding with unconstructed awareness. Each stage integrates traditional doctrinal reflections with guided visualizations and explicit somatic awareness cues to ground the practice in direct bodily experience.",
+            "warnings": [
+              "Note marked as draft/inbox",
+              "Integrates philosophical concepts with somatic cues"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note outlines a structured Buddhist meditation practice divided into six progressive stages: taking refuge in the Three Jewels, contemplating the Four Noble Truths, cultivating loving-kindness, reflecting on no-self and emptiness, and concluding with unconstructed awareness. Each stage integrates traditional doctrinal reflections with guided visualizations and explicit somatic awareness cues to ground the practice in direct bodily experience.",
+            "warnings": [
+              "Note marked as draft/inbox",
+              "Integrates philosophical concepts with somatic cues"
+            ]
+          },
+          "prompt_tokens": 965,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 23.207
+        }
+      }
+    },
+    {
+      "path": "02 Journal/2.02 Therapy/2025-04-15 Therapy.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 13.503,
+          "completion_tokens": 770,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 762,
+          "max_call_total_tokens": 1532,
+          "normalized": {
+            "confidence": 0.95,
+            "folder": "02 Journal",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "folder": "02 Journal",
+            "warnings": []
+          },
+          "prompt_tokens": 762,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 13.504
+        },
+        "classify-type": {
+          "api_seconds": 16.445,
+          "completion_tokens": 952,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 643,
+          "max_call_total_tokens": 1595,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "daily",
+            "warnings": [
+              "Therapy session context could suggest meeting, but dated journal format indicates daily"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "daily",
+            "warnings": [
+              "Therapy session context could suggest meeting, but dated journal format indicates daily"
+            ]
+          },
+          "prompt_tokens": 643,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 16.446
+        },
+        "property-values": {
+          "api_seconds": 40.345,
+          "completion_tokens": 2526,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 882,
+          "max_call_total_tokens": 3408,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Frontmatter status 'raw' conflicts with allowed values",
+              "Content spans multiple domains (personal, work, philosophy)"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Frontmatter status 'raw' conflicts with allowed values",
+              "Content spans multiple domains (personal, work, philosophy)"
+            ]
+          },
+          "prompt_tokens": 882,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 40.346
+        },
+        "refine-body": {
+          "api_seconds": 96.16,
+          "completion_tokens": 6373,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 787,
+          "max_call_total_tokens": 7160,
+          "normalized": {
+            "body": "# 2025-04-15 Therapy\n\n* Muslin\n* Aunt threatening to sue my family\n* Advisor didn't show up to office hours.\n* Thought about what it meant to do something half-assed and came up with the idea that it meant 1. not doing much research beforehand, 2. doing it anyway, 3. realizing it could've been done better afterward. I realized that after I finish pretty much anything the first thing I do is think about how it could have been done better, even if I did a ton of research on it before hand. This is emotionally not terribly healthy, and also highlights that sometimes you have to actually do a thing to learn more about it, you can't just do research and think through all of the possibilities.\n* Installed a cross beam to support the hammock poles in the backyard and did it sort of half-assed.\n* Ordered a \"ChipDrop\" and have been moving that today\n* Work is overwhelming, too many projects, too many potential conflicts with my values.\n* Thought a lot about the mind-body dichotomy, how I live so much in my head and have spent a long time focusing on abstract reasoning, often studying physical labor, or embodied practices, maybe to try to teach myself to care about them more and start to focus on them in my life, but often just keep it abstract.\n* Buddhism as abstract philosophy, or thinking through the abstract philosophy and hoping to internalize it so deeply that I act in accordance with the beliefs there, but practice is important. I think I often looked down on people who applied buddhism in practical ways, because it seemed like it was simplifying very complex ideas into \"words of wisdom to live by.\" I was being arrogant and pretentious assuming that anyone who practices in a community has a less pure understanding of the teachings.\n* Realized that sometimes you can't expect your mind to spontaneously create the emotional response you want it to in a given context, sometimes you have to intentionally cultivate that emotional response and maybe eventually it will be spontaneous. But it always feels fake or like I'm lying if I express an emotion I don't spontaneously feel.",
+            "confidence": 0.95,
+            "warnings": [
+              "Frontmatter excluded per instructions",
+              "List order preserved to strictly comply with the no-reorder rule"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "body": "# 2025-04-15 Therapy\n\n* Muslin\n* Aunt threatening to sue my family\n* Advisor didn't show up to office hours.\n* Thought about what it meant to do something half-assed and came up with the idea that it meant 1. not doing much research beforehand, 2. doing it anyway, 3. realizing it could've been done better afterward. I realized that after I finish pretty much anything the first thing I do is think about how it could have been done better, even if I did a ton of research on it before hand. This is emotionally not terribly healthy, and also highlights that sometimes you have to actually do a thing to learn more about it, you can't just do research and think through all of the possibilities.\n* Installed a cross beam to support the hammock poles in the backyard and did it sort of half-assed.\n* Ordered a \"ChipDrop\" and have been moving that today\n* Work is overwhelming, too many projects, too many potential conflicts with my values.\n* Thought a lot about the mind-body dichotomy, how I live so much in my head and have spent a long time focusing on abstract reasoning, often studying physical labor, or embodied practices, maybe to try to teach myself to care about them more and start to focus on them in my life, but often just keep it abstract.\n* Buddhism as abstract philosophy, or thinking through the abstract philosophy and hoping to internalize it so deeply that I act in accordance with the beliefs there, but practice is important. I think I often looked down on people who applied buddhism in practical ways, because it seemed like it was simplifying very complex ideas into \"words of wisdom to live by.\" I was being arrogant and pretentious assuming that anyone who practices in a community has a less pure understanding of the teachings.\n* Realized that sometimes you can't expect your mind to spontaneously create the emotional response you want it to in a given context, sometimes you have to intentionally cultivate that emotional response and maybe eventually it will be spontaneous. But it always feels fake or like I'm lying if I express an emotion I don't spontaneously feel.",
+            "confidence": 0.95,
+            "warnings": [
+              "Frontmatter excluded per instructions",
+              "List order preserved to strictly comply with the no-reorder rule"
+            ]
+          },
+          "prompt_tokens": 787,
+          "repaired": false,
+          "stage": "refine-body",
+          "valid": true,
+          "wall_seconds": 96.161
+        },
+        "summary": {
+          "api_seconds": 23.898,
+          "completion_tokens": 1474,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 618,
+          "max_call_total_tokens": 2092,
+          "normalized": {
+            "confidence": 0.9,
+            "summary": "This therapy session explored feelings of work-related overwhelm and family stress, alongside reflections on the tension between abstract intellectualization and practical, embodied action. The author recognized a pattern of overthinking and underdoing, acknowledged past arrogance regarding practical Buddhist practice, and discussed the challenge of intentionally cultivating emotions that initially feel forced. Overall, the session highlighted a desire to bridge the gap between mental analysis and lived experience.",
+            "warnings": [
+              "Unclear reference to 'Muslin'",
+              "Context missing for 'ChipDrop'",
+              "No therapist dialogue or feedback included"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "summary": "This therapy session explored feelings of work-related overwhelm and family stress, alongside reflections on the tension between abstract intellectualization and practical, embodied action. The author recognized a pattern of overthinking and underdoing, acknowledged past arrogance regarding practical Buddhist practice, and discussed the challenge of intentionally cultivating emotions that initially feel forced. Overall, the session highlighted a desire to bridge the gap between mental analysis and lived experience.",
+            "warnings": [
+              "Unclear reference to 'Muslin'",
+              "Context missing for 'ChipDrop'",
+              "No therapist dialogue or feedback included"
+            ]
+          },
+          "prompt_tokens": 618,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 23.898
+        }
+      }
+    },
+    {
+      "path": "02 Journal/2.03 Journaling/12.01 Daily/2013/Of Sleep Disturbances and Academia 9 6 2013.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 8.663,
+          "completion_tokens": 480,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1218,
+          "max_call_total_tokens": 1698,
+          "normalized": {
+            "confidence": 1.0,
+            "folder": "02 Journal",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "folder": "02 Journal",
+            "warnings": []
+          },
+          "prompt_tokens": 1218,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 8.664
+        },
+        "classify-type": {
+          "api_seconds": 20.293,
+          "completion_tokens": 1246,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1099,
+          "max_call_total_tokens": 2345,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "daily",
+            "warnings": [
+              "Frontmatter specifies 'type: journal' which maps to 'daily' in allowed taxonomy",
+              "Multi-topic structure is typical for daily journal entries"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "daily",
+            "warnings": [
+              "Frontmatter specifies 'type: journal' which maps to 'daily' in allowed taxonomy",
+              "Multi-topic structure is typical for daily journal entries"
+            ]
+          },
+          "prompt_tokens": 1099,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 20.294
+        },
+        "property-values": {
+          "api_seconds": 32.639,
+          "completion_tokens": 2031,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1338,
+          "max_call_total_tokens": 3369,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "archived",
+            "warnings": [
+              "Domain spans personal and academic themes",
+              "Historical journal entry may require migration"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "archived",
+            "warnings": [
+              "Domain spans personal and academic themes",
+              "Historical journal entry may require migration"
+            ]
+          },
+          "prompt_tokens": 1338,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 32.64
+        },
+        "refine-body": {
+          "api_seconds": 88.383,
+          "completion_tokens": 6209,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1243,
+          "max_call_total_tokens": 7452,
+          "normalized": {
+            "body": "# Of Sleep Disturbances and Academia 9/6/2013\n\n## Sleep Disturbances\nThe past few nights I have experienced some rather bizarre sleep disturbances. I become half awake and attempt to solve some sort of problem, attempt some sort of task, try to learn some sort of skill. Most nights it has centered on cooking. In a half-conscious state I try to make brittle. I go through the processes in my mind. Boiling down the sugar to make caramel, painting it out on wax paper, letting it cool, trying to cut it into even sections. The night after was city planning. I was not only trying to figure out where things should go, but also working with concrete. Trying to shape it into forms that were pleasing to the eye yet functional. It started to happen again last night but I shut it down. It again was with cooking, a dessert even. I became awake enough to cease the thought though and return to sleep, thankfully. Hopefully these sort of occurrences will cease, they are very tiring.\n\n## Health & Personal Concerns\nKristin has her pap smear this morning. I've had renewed concerns about her being pregnant. I know that the birth control pills should be functioning just fine, still I am uncomfortable about it. I hope she can confirm she isn't today if she gets the pregnancy test there as well. I think she would get an abortion if she were pregnant. I don't think either of us could handle a child right now. I really don't want one myself, not now anyway.\n\n## Academic Work: Paper Draft\nI need to catch up on my academic work. I have my paper to write, the first draft of which is due next Wednesday. I have 0 words written for it, but am so far not terribly concerned. It is after all a first draft, though I would like to revise it before handing it in. I would really like to finish half of it at work today. So far work has not proved to be my most productive environment for\u2026 work. The lack of windows is stifling. Still it needs to get done and I want it to be good. I want to connect new ideas, form new concepts, utilize new methodologies. Perhaps too much to ask for this early in my academic career, still it would be nice.\n\n## Coursework: Intro to STS\nI have also received the first weeks readings for my Intro to STS class. She says the readings are dense and we shouldn't concern ourselves with grasping every idea. She also wants us to print out the articles to bring into class. I hope she isn't the type of professor to require everyone print things out and tries to prevent us from using laptops in class. I learn better with a laptop in front of me. It makes it easier to form connections between the readings and to knowledge I already have. It allows me to search through documents to find the quote that will support my argument. Really it just helps me learn and given that I am paying to be there to learn, I will use what tools best suit my style of learning. The readings don't seem particularly difficult though.\n\n## Class Dynamics & Time Management\nMy concern is that I will be arrogant in the class. I've already had a year in STS and feel like I will have a better understanding of the material than most of the other students. I need to keep quiet for most of the first class so that I don't end up saying arrogant things. I need to try to figure out a way to either learn something from the class even if it doesn't present any completely new ideas, or get an A in the class without spending too much time on it so that I can pursue other goals such as my super class and my design curriculum. I just hope it doesn't require too much of my time or energy to do well in.\n\n## Current State & Fatigue\nI'm feeling very tired. I was hoping the somewhat better sleep I had last night would help me feel more with it today. So far that is not the case. I just want to go back to bed. I also have allergies this morning though, they might be the cause of some of this fatigue. If that's the case I hope the allergies recede so that I can work on my paper with a clear mind.\n\n#journal/creative\n#journal/morningpages",
+            "confidence": 0.95,
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "body": "# Of Sleep Disturbances and Academia 9/6/2013\n\n## Sleep Disturbances\nThe past few nights I have experienced some rather bizarre sleep disturbances. I become half awake and attempt to solve some sort of problem, attempt some sort of task, try to learn some sort of skill. Most nights it has centered on cooking. In a half-conscious state I try to make brittle. I go through the processes in my mind. Boiling down the sugar to make caramel, painting it out on wax paper, letting it cool, trying to cut it into even sections. The night after was city planning. I was not only trying to figure out where things should go, but also working with concrete. Trying to shape it into forms that were pleasing to the eye yet functional. It started to happen again last night but I shut it down. It again was with cooking, a dessert even. I became awake enough to cease the thought though and return to sleep, thankfully. Hopefully these sort of occurrences will cease, they are very tiring.\n\n## Health & Personal Concerns\nKristin has her pap smear this morning. I've had renewed concerns about her being pregnant. I know that the birth control pills should be functioning just fine, still I am uncomfortable about it. I hope she can confirm she isn't today if she gets the pregnancy test there as well. I think she would get an abortion if she were pregnant. I don't think either of us could handle a child right now. I really don't want one myself, not now anyway.\n\n## Academic Work: Paper Draft\nI need to catch up on my academic work. I have my paper to write, the first draft of which is due next Wednesday. I have 0 words written for it, but am so far not terribly concerned. It is after all a first draft, though I would like to revise it before handing it in. I would really like to finish half of it at work today. So far work has not proved to be my most productive environment for\u2026 work. The lack of windows is stifling. Still it needs to get done and I want it to be good. I want to connect new ideas, form new concepts, utilize new methodologies. Perhaps too much to ask for this early in my academic career, still it would be nice.\n\n## Coursework: Intro to STS\nI have also received the first weeks readings for my Intro to STS class. She says the readings are dense and we shouldn't concern ourselves with grasping every idea. She also wants us to print out the articles to bring into class. I hope she isn't the type of professor to require everyone print things out and tries to prevent us from using laptops in class. I learn better with a laptop in front of me. It makes it easier to form connections between the readings and to knowledge I already have. It allows me to search through documents to find the quote that will support my argument. Really it just helps me learn and given that I am paying to be there to learn, I will use what tools best suit my style of learning. The readings don't seem particularly difficult though.\n\n## Class Dynamics & Time Management\nMy concern is that I will be arrogant in the class. I've already had a year in STS and feel like I will have a better understanding of the material than most of the other students. I need to keep quiet for most of the first class so that I don't end up saying arrogant things. I need to try to figure out a way to either learn something from the class even if it doesn't present any completely new ideas, or get an A in the class without spending too much time on it so that I can pursue other goals such as my super class and my design curriculum. I just hope it doesn't require too much of my time or energy to do well in.\n\n## Current State & Fatigue\nI'm feeling very tired. I was hoping the somewhat better sleep I had last night would help me feel more with it today. So far that is not the case. I just want to go back to bed. I also have allergies this morning though, they might be the cause of some of this fatigue. If that's the case I hope the allergies recede so that I can work on my paper with a clear mind.\n\n#journal/creative\n#journal/morningpages",
+            "confidence": 0.95,
+            "warnings": []
+          },
+          "prompt_tokens": 1243,
+          "repaired": false,
+          "stage": "refine-body",
+          "valid": true,
+          "wall_seconds": 88.386
+        },
+        "summary": {
+          "api_seconds": 22.207,
+          "completion_tokens": 1384,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1074,
+          "max_call_total_tokens": 2458,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "The author documents recurring hypnagogic sleep disturbances involving complex problem-solving tasks like cooking and city planning, alongside fatigue and allergies. They also express anxiety about their partner's potential pregnancy and reflect on academic pressures, including an upcoming paper draft, concerns about a professor's teaching style, and strategies to manage class time efficiently.",
+            "warnings": [
+              "Medical context unclear",
+              "Academic program specifics vague"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "The author documents recurring hypnagogic sleep disturbances involving complex problem-solving tasks like cooking and city planning, alongside fatigue and allergies. They also express anxiety about their partner's potential pregnancy and reflect on academic pressures, including an upcoming paper draft, concerns about a professor's teaching style, and strategies to manage class time efficiently.",
+            "warnings": [
+              "Medical context unclear",
+              "Academic program specifics vague"
+            ]
+          },
+          "prompt_tokens": 1074,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 22.207
+        }
+      }
+    },
+    {
+      "path": "03 Notes/Vehicle-to-Grid (V2G).md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 21.63,
+          "completion_tokens": 1347,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 316,
+          "max_call_total_tokens": 1663,
+          "normalized": {
+            "confidence": 0.85,
+            "folder": "03 Notes",
+            "warnings": [
+              "Note contains only a title and heading",
+              "Currently located in Inbox awaiting triage",
+              "Minimal content limits precise categorization"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.85,
+            "folder": "03 Notes",
+            "warnings": [
+              "Note contains only a title and heading",
+              "Currently located in Inbox awaiting triage",
+              "Minimal content limits precise categorization"
+            ]
+          },
+          "prompt_tokens": 316,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 21.631
+        },
+        "classify-type": {
+          "api_seconds": 15.691,
+          "completion_tokens": 957,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 197,
+          "max_call_total_tokens": 1154,
+          "normalized": {
+            "confidence": 0.75,
+            "note_type": "note",
+            "warnings": [
+              "Minimal content suggests placeholder status",
+              "Topic could evolve into project or system depending on context"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.75,
+            "note_type": "note",
+            "warnings": [
+              "Minimal content suggests placeholder status",
+              "Topic could evolve into project or system depending on context"
+            ]
+          },
+          "prompt_tokens": 197,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 15.691
+        },
+        "property-values": {
+          "api_seconds": 31.587,
+          "completion_tokens": 2023,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 436,
+          "max_call_total_tokens": 2459,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.6,
+            "cover": "",
+            "domain": "technology",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Stub note",
+              "Inbox location suggests unprocessed"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.6,
+            "cover": "",
+            "domain": "technology",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Stub note",
+              "Inbox location suggests unprocessed"
+            ]
+          },
+          "prompt_tokens": 436,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 31.587
+        },
+        "summary": {
+          "api_seconds": 8.317,
+          "completion_tokens": 485,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 172,
+          "max_call_total_tokens": 657,
+          "normalized": {
+            "confidence": 1.0,
+            "summary": "This note serves as a placeholder for the topic Vehicle-to-Grid (V2G) and currently contains no descriptive content.",
+            "warnings": [
+              "Note is empty",
+              "Only title present"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "summary": "This note serves as a placeholder for the topic Vehicle-to-Grid (V2G) and currently contains no descriptive content.",
+            "warnings": [
+              "Note is empty",
+              "Only title present"
+            ]
+          },
+          "prompt_tokens": 172,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 8.317
+        }
+      }
+    },
+    {
+      "path": "03 Notes/Data Sources.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 18.528,
+          "completion_tokens": 1037,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 335,
+          "max_call_total_tokens": 1372,
+          "normalized": {
+            "confidence": 0.9,
+            "folder": "08 Reference",
+            "warnings": [
+              "Title contains 'Sources' which may suggest 04 Sources, but content is a curated reference list rather than a single book/article/media item"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "folder": "08 Reference",
+            "warnings": [
+              "Title contains 'Sources' which may suggest 04 Sources, but content is a curated reference list rather than a single book/article/media item"
+            ]
+          },
+          "prompt_tokens": 335,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 18.529
+        },
+        "classify-type": {
+          "api_seconds": 6.033,
+          "completion_tokens": 343,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 216,
+          "max_call_total_tokens": 559,
+          "normalized": {
+            "confidence": 0.9,
+            "note_type": "source",
+            "warnings": [
+              "Could also be classified as an index or general note"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "note_type": "source",
+            "warnings": [
+              "Could also be classified as an index or general note"
+            ]
+          },
+          "prompt_tokens": 216,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 6.034
+        },
+        "property-values": {
+          "api_seconds": 27.66,
+          "completion_tokens": 1720,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 455,
+          "max_call_total_tokens": 2175,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.8,
+            "cover": "",
+            "domain": "work",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Located in Inbox",
+              "Domain is ambiguous",
+              "Sparse content"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.8,
+            "cover": "",
+            "domain": "work",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Located in Inbox",
+              "Domain is ambiguous",
+              "Sparse content"
+            ]
+          },
+          "prompt_tokens": 455,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 27.661
+        },
+        "summary": {
+          "api_seconds": 5.722,
+          "completion_tokens": 310,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 191,
+          "max_call_total_tokens": 501,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note outlines a framework for collecting data sources across Statistics, Government Reports, Market Reports, and Industry Reports, currently featuring only a link to the EIA Data Browser.",
+            "warnings": [
+              "Note is sparse or incomplete"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note outlines a framework for collecting data sources across Statistics, Government Reports, Market Reports, and Industry Reports, currently featuring only a link to the EIA Data Browser.",
+            "warnings": [
+              "Note is sparse or incomplete"
+            ]
+          },
+          "prompt_tokens": 191,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 5.723
+        }
+      }
+    },
+    {
+      "path": "04 Sources/Secondary/Dissertation/Games/Peterson_2012_Playing at the World.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 63.967,
+          "completion_tokens": 921,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 62145,
+          "max_call_total_tokens": 63066,
+          "normalized": {
+            "confidence": 1.0,
+            "folder": "04 Sources",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "folder": "04 Sources",
+            "warnings": []
+          },
+          "prompt_tokens": 62145,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 63.97
+        },
+        "classify-type": {
+          "api_seconds": 57.716,
+          "completion_tokens": 512,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 62026,
+          "max_call_total_tokens": 62538,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "source",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "source",
+            "warnings": []
+          },
+          "prompt_tokens": 62026,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 57.72
+        },
+        "property-values": {
+          "api_seconds": 69.912,
+          "completion_tokens": 1204,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 62265,
+          "max_call_total_tokens": 63469,
+          "normalized": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Dungeons & Dragons]]",
+              "[[Role-playing games]]",
+              "[[Gary Gygax]]",
+              "[[Dave Arneson]]",
+              "[[Chainmail]]"
+            ],
+            "source_kind": "book",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Dungeons & Dragons]]",
+              "[[Role-playing games]]",
+              "[[Gary Gygax]]",
+              "[[Dave Arneson]]",
+              "[[Chainmail]]"
+            ],
+            "source_kind": "book",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 62265,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 69.916
+        },
+        "summary": {
+          "api_seconds": 61.019,
+          "completion_tokens": 826,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 62001,
+          "max_call_total_tokens": 62827,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This excerpt from Jon Peterson's Playing at the World chronicles the evolution of tabletop wargaming into the first role-playing games, focusing on the collaborative efforts of Gary Gygax and Dave Arneson. It details the rise of wargaming clubs like the IFW, the publication of Chainmail, and Arneson's innovative Blackmoor campaign, which introduced key RPG mechanics such as character progression, dungeon exploration, and referee adjudication. Together, these developments laid the foundational systems and cultural context for the creation of Dungeons & Dragons.",
+            "warnings": [
+              "Truncated note ends mid-sentence",
+              "Covers extensive historical background"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This excerpt from Jon Peterson's Playing at the World chronicles the evolution of tabletop wargaming into the first role-playing games, focusing on the collaborative efforts of Gary Gygax and Dave Arneson. It details the rise of wargaming clubs like the IFW, the publication of Chainmail, and Arneson's innovative Blackmoor campaign, which introduced key RPG mechanics such as character progression, dungeon exploration, and referee adjudication. Together, these developments laid the foundational systems and cultural context for the creation of Dungeons & Dragons.",
+            "warnings": [
+              "Truncated note ends mid-sentence",
+              "Covers extensive historical background"
+            ]
+          },
+          "prompt_tokens": 62001,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 61.025
+        }
+      }
+    },
+    {
+      "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 31.642,
+          "completion_tokens": 1493,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 13661,
+          "max_call_total_tokens": 15154,
+          "normalized": {
+            "confidence": 1.0,
+            "folder": "04 Sources",
+            "warnings": [
+              "Currently in Inbox but content is a published academic article"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "folder": "04 Sources",
+            "warnings": [
+              "Currently in Inbox but content is a published academic article"
+            ]
+          },
+          "prompt_tokens": 13661,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 31.643
+        },
+        "classify-type": {
+          "api_seconds": 23.776,
+          "completion_tokens": 944,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 13542,
+          "max_call_total_tokens": 14486,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "source",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "source",
+            "warnings": []
+          },
+          "prompt_tokens": 13542,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 23.777
+        },
+        "property-values": {
+          "api_seconds": 43.057,
+          "completion_tokens": 2172,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 13781,
+          "max_call_total_tokens": 15953,
+          "normalized": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "article",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "article",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 13781,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 43.058
+        },
+        "summary": {
+          "api_seconds": 27.789,
+          "completion_tokens": 1271,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 13517,
+          "max_call_total_tokens": 14788,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This article introduces Dalit-futurist feminism, a theoretical framework that merges Dalit feminist standpoint theory with cyborg feminism to analyze caste and gender in Indian science fiction. Using Priya Sarukkai Chabria\u2019s Generation 14, the author demonstrates how speculative fiction can mutate and expose the arbitrary structures of Brahmanical patriarchy. The study argues that cyborg figures embody an intersectional, affiliation-based feminist politics that challenges essentialized identities and advocates for inclusive, transformative social alliances.",
+            "warnings": [
+              "Academic article format",
+              "Theoretical framework focus",
+              "Specialized terminology"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This article introduces Dalit-futurist feminism, a theoretical framework that merges Dalit feminist standpoint theory with cyborg feminism to analyze caste and gender in Indian science fiction. Using Priya Sarukkai Chabria\u2019s Generation 14, the author demonstrates how speculative fiction can mutate and expose the arbitrary structures of Brahmanical patriarchy. The study argues that cyborg figures embody an intersectional, affiliation-based feminist politics that challenges essentialized identities and advocates for inclusive, transformative social alliances.",
+            "warnings": [
+              "Academic article format",
+              "Theoretical framework focus",
+              "Specialized terminology"
+            ]
+          },
+          "prompt_tokens": 13517,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 27.791
+        }
+      }
+    },
+    {
+      "path": "05 Projects/EEI/4.06 Energy CBPR/Deep Research Prompt.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 26.701,
+          "completion_tokens": 1409,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1420,
+          "max_call_total_tokens": 2829,
+          "normalized": {
+            "confidence": 0.85,
+            "folder": "05 Projects",
+            "warnings": [
+              "Prompt template could be reference material",
+              "Specific to energy research implies project context"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.85,
+            "folder": "05 Projects",
+            "warnings": [
+              "Prompt template could be reference material",
+              "Specific to energy research implies project context"
+            ]
+          },
+          "prompt_tokens": 1420,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 26.702
+        },
+        "classify-type": {
+          "api_seconds": 29.614,
+          "completion_tokens": 1756,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1301,
+          "max_call_total_tokens": 3057,
+          "normalized": {
+            "confidence": 0.9,
+            "note_type": "template",
+            "warnings": [
+              "Located in Inbox folder, may be a working draft rather than a finalized template"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "note_type": "template",
+            "warnings": [
+              "Located in Inbox folder, may be a working draft rather than a finalized template"
+            ]
+          },
+          "prompt_tokens": 1301,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 29.615
+        },
+        "property-values": {
+          "api_seconds": 27.32,
+          "completion_tokens": 1672,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1540,
+          "max_call_total_tokens": 3212,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Inbox item pending final classification",
+              "Domain inferred from research methodology focus"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Inbox item pending final classification",
+              "Domain inferred from research methodology focus"
+            ]
+          },
+          "prompt_tokens": 1540,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 27.322
+        },
+        "summary": {
+          "api_seconds": 26.234,
+          "completion_tokens": 1694,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1276,
+          "max_call_total_tokens": 2970,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note provides a detailed LLM prompt template for conducting a literature search on practical, step-by-step toolkits and templates for community-engaged research methods like CBPR, PAR, and CEnR. It prioritizes energy-related applications and requires a structured Markdown table of resources with direct PDF links, ranked recommendations, an implementation pathway, and targeted search queries, explicitly filtering out purely theoretical content.",
+            "warnings": [
+              "Prompt template rather than standalone research",
+              "Relies on LLM web-browsing capabilities",
+              "Energy focus is ideal but transferable domains accepted"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note provides a detailed LLM prompt template for conducting a literature search on practical, step-by-step toolkits and templates for community-engaged research methods like CBPR, PAR, and CEnR. It prioritizes energy-related applications and requires a structured Markdown table of resources with direct PDF links, ranked recommendations, an implementation pathway, and targeted search queries, explicitly filtering out purely theoretical content.",
+            "warnings": [
+              "Prompt template rather than standalone research",
+              "Relies on LLM web-browsing capabilities",
+              "Energy focus is ideal but transferable domains accepted"
+            ]
+          },
+          "prompt_tokens": 1276,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 26.235
+        }
+      }
+    },
+    {
+      "path": "05 Projects/Hobbies/Games/Card Games/MTG/BG.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 36.965,
+          "completion_tokens": 2155,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 419,
+          "max_call_total_tokens": 2574,
+          "normalized": {
+            "confidence": 0.75,
+            "folder": "03 Notes",
+            "warnings": [
+              "Content is a Magic: The Gathering deck list, which is hobby-specific",
+              "May be better suited for a dedicated Hobbies or Games folder not listed"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.75,
+            "folder": "03 Notes",
+            "warnings": [
+              "Content is a Magic: The Gathering deck list, which is hobby-specific",
+              "May be better suited for a dedicated Hobbies or Games folder not listed"
+            ]
+          },
+          "prompt_tokens": 419,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 36.966
+        },
+        "classify-type": {
+          "api_seconds": 20.473,
+          "completion_tokens": 1195,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 300,
+          "max_call_total_tokens": 1495,
+          "normalized": {
+            "confidence": 0.9,
+            "note_type": "note",
+            "warnings": [
+              "Tagged as source but contains personal deck list data",
+              "Functions as a hobby reference note rather than a traditional source document"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "note_type": "note",
+            "warnings": [
+              "Tagged as source but contains personal deck list data",
+              "Functions as a hobby reference note rather than a traditional source document"
+            ]
+          },
+          "prompt_tokens": 300,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 20.473
+        },
+        "property-values": {
+          "api_seconds": 33.258,
+          "completion_tokens": 2137,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 539,
+          "max_call_total_tokens": 2676,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Multiple deck lists combined",
+              "Informal notation"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Multiple deck lists combined",
+              "Informal notation"
+            ]
+          },
+          "prompt_tokens": 539,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 33.259
+        },
+        "summary": {
+          "api_seconds": 18.659,
+          "completion_tokens": 1180,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 275,
+          "max_call_total_tokens": 1455,
+          "normalized": {
+            "confidence": 0.9,
+            "summary": "This note outlines deck-building statistics and card distribution for a Magic: The Gathering collection, primarily focusing on a Green/Blue Commander deck with dragon themes and a secondary White Standard list. It tracks counts for lands, creatures, spells, and specific gameplay categories like ramp, card draw, and board wipes.",
+            "warnings": [
+              "Fragmented decklist format",
+              "Unclear deck name or commander identity",
+              "Mixes Commander and Standard formats"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "summary": "This note outlines deck-building statistics and card distribution for a Magic: The Gathering collection, primarily focusing on a Green/Blue Commander deck with dragon themes and a secondary White Standard list. It tracks counts for lands, creatures, spells, and specific gameplay categories like ramp, card draw, and board wipes.",
+            "warnings": [
+              "Fragmented decklist format",
+              "Unclear deck name or commander identity",
+              "Mixes Commander and Standard formats"
+            ]
+          },
+          "prompt_tokens": 275,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 18.661
+        }
+      }
+    },
+    {
+      "path": "06 People/Lindsay Baker.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 4.738,
+          "completion_tokens": 272,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 477,
+          "max_call_total_tokens": 749,
+          "normalized": {
+            "confidence": 1.0,
+            "folder": "06 People",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "folder": "06 People",
+            "warnings": []
+          },
+          "prompt_tokens": 477,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 4.739
+        },
+        "classify-person": {
+          "api_seconds": 38.137,
+          "completion_tokens": 2325,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 425,
+          "max_call_total_tokens": 2750,
+          "normalized": {
+            "confidence": 0.75,
+            "details": "- VP and Head of Sustainability & Wellbeing at WeWork (Oakland, CA)\n- Former Google Real Estate and U.S. Green Building Council team member\n- President and founding team member of Comfy\n- SPUR Board Member and Tech Equity Collaborative Advisory Board Member",
+            "kind": "author",
+            "warnings": [
+              "No explicit evidence of direct interaction or cited publications",
+              "Classification forced by binary prompt constraints",
+              "Note appears to be a sourced professional profile rather than a personal interaction log"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.75,
+            "details": "- VP and Head of Sustainability & Wellbeing at WeWork (Oakland, CA)\n- Former Google Real Estate and U.S. Green Building Council team member\n- President and founding team member of Comfy\n- SPUR Board Member and Tech Equity Collaborative Advisory Board Member",
+            "kind": "author",
+            "warnings": [
+              "No explicit evidence of direct interaction or cited publications",
+              "Classification forced by binary prompt constraints",
+              "Note appears to be a sourced professional profile rather than a personal interaction log"
+            ]
+          },
+          "prompt_tokens": 425,
+          "repaired": false,
+          "stage": "classify-person",
+          "valid": true,
+          "wall_seconds": 38.138
+        },
+        "classify-type": {
+          "api_seconds": 4.551,
+          "completion_tokens": 265,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 358,
+          "max_call_total_tokens": 623,
+          "normalized": {
+            "confidence": 0.98,
+            "note_type": "person",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.98,
+            "note_type": "person",
+            "warnings": []
+          },
+          "prompt_tokens": 358,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 4.551
+        },
+        "property-values": {
+          "api_seconds": 29.334,
+          "completion_tokens": 1835,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 597,
+          "max_call_total_tokens": 2432,
+          "normalized": {
+            "capture_type": "imported",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "work",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "imported",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "work",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 597,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 29.335
+        },
+        "refine-body": {
+          "api_seconds": 62.954,
+          "completion_tokens": 4186,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 502,
+          "max_call_total_tokens": 4688,
+          "normalized": {
+            "body": "Lindsay Baker\n\n## Lindsay Baker\n\n> [!profile]\n> **VP, Head of Sustainability & Wellbeing**\n> **WeWork**\n> **Oakland, California**\n\n### Current Role\nHead of Sustainability & Wellbeing at WeWork, leading the company's efforts to drive meaningful positive impacts on global and human health.\n\n### Previous Experience\n- Industry veteran in sustainable and healthy buildings\n- Google's Real Estate team\n- Original team at U.S. Green Building Council who built the LEED Rating Systems\n- President and Founding Team member of Comfy \u2014 Oakland-based smart buildings software company\n\n### Education\n- Bachelor's degree in Environmental Studies, Oberlin College\n- Master's degree in Building Science, UC Berkeley\n\n### Community Involvement\nActive in Bay Area communities and organizations working on building healthier and more sustainable communities:\n- Board Member, SPUR (Oakland Board)\n- Advisory Board member, Tech Equity Collaborative",
+            "confidence": 0.95,
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "body": "Lindsay Baker\n\n## Lindsay Baker\n\n> [!profile]\n> **VP, Head of Sustainability & Wellbeing**\n> **WeWork**\n> **Oakland, California**\n\n### Current Role\nHead of Sustainability & Wellbeing at WeWork, leading the company's efforts to drive meaningful positive impacts on global and human health.\n\n### Previous Experience\n- Industry veteran in sustainable and healthy buildings\n- Google's Real Estate team\n- Original team at U.S. Green Building Council who built the LEED Rating Systems\n- President and Founding Team member of Comfy \u2014 Oakland-based smart buildings software company\n\n### Education\n- Bachelor's degree in Environmental Studies, Oberlin College\n- Master's degree in Building Science, UC Berkeley\n\n### Community Involvement\nActive in Bay Area communities and organizations working on building healthier and more sustainable communities:\n- Board Member, SPUR (Oakland Board)\n- Advisory Board member, Tech Equity Collaborative",
+            "confidence": 0.95,
+            "warnings": []
+          },
+          "prompt_tokens": 502,
+          "repaired": false,
+          "stage": "refine-body",
+          "valid": true,
+          "wall_seconds": 62.955
+        },
+        "summary": {
+          "api_seconds": 16.785,
+          "completion_tokens": 1091,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 333,
+          "max_call_total_tokens": 1424,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "Lindsay Baker serves as the VP and Head of Sustainability & Wellbeing at WeWork, leading initiatives focused on global and human health. With a background in sustainable building science and previous roles at Google, the U.S. Green Building Council, and Comfy, she actively contributes to Bay Area organizations promoting healthier and more sustainable communities.",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "Lindsay Baker serves as the VP and Head of Sustainability & Wellbeing at WeWork, leading initiatives focused on global and human health. With a background in sustainable building science and previous roles at Google, the U.S. Green Building Council, and Comfy, she actively contributes to Bay Area organizations promoting healthier and more sustainable communities.",
+            "warnings": []
+          },
+          "prompt_tokens": 333,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 16.785
+        }
+      }
+    },
+    {
+      "path": "06 People/Edward Mazria.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 13.271,
+          "completion_tokens": 810,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 863,
+          "max_call_total_tokens": 1673,
+          "normalized": {
+            "confidence": 1.0,
+            "folder": "06 People",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "folder": "06 People",
+            "warnings": []
+          },
+          "prompt_tokens": 863,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 13.272
+        },
+        "classify-person": {
+          "api_seconds": 35.263,
+          "completion_tokens": 2212,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 811,
+          "max_call_total_tokens": 3023,
+          "normalized": {
+            "confidence": 0.95,
+            "details": "- Founder of Architecture 2030\n- Architect, author, researcher, and educator\n- Taught at University of New Mexico, University of Oregon, UCLA, and University of Colorado-Denver\n- Fellow of the American Institute of Architects",
+            "kind": "author",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "details": "- Founder of Architecture 2030\n- Architect, author, researcher, and educator\n- Taught at University of New Mexico, University of Oregon, UCLA, and University of Colorado-Denver\n- Fellow of the American Institute of Architects",
+            "kind": "author",
+            "warnings": []
+          },
+          "prompt_tokens": 811,
+          "repaired": false,
+          "stage": "classify-person",
+          "valid": true,
+          "wall_seconds": 35.264
+        },
+        "classify-type": {
+          "api_seconds": 7.015,
+          "completion_tokens": 408,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 744,
+          "max_call_total_tokens": 1152,
+          "normalized": {
+            "confidence": 1.0,
+            "note_type": "person",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "note_type": "person",
+            "warnings": []
+          },
+          "prompt_tokens": 744,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 7.016
+        },
+        "property-values": {
+          "api_seconds": 30.432,
+          "completion_tokens": 1884,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 983,
+          "max_call_total_tokens": 2867,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "craft",
+            "parent": "[[Authors]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "craft",
+            "parent": "[[Authors]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 983,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 30.432
+        },
+        "summary": {
+          "api_seconds": 20.971,
+          "completion_tokens": 1366,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 719,
+          "max_call_total_tokens": 2085,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "Edward Mazria is an internationally recognized architect, educator, and sustainability pioneer best known for founding Architecture 2030 and launching the 2030 Challenge to reduce greenhouse gas emissions in the built environment. His influential research and initiatives, including the 2050 Imperative and various international accords, have reshaped architectural practice and policy worldwide, earning him numerous prestigious awards and fellowships.",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "Edward Mazria is an internationally recognized architect, educator, and sustainability pioneer best known for founding Architecture 2030 and launching the 2030 Challenge to reduce greenhouse gas emissions in the built environment. His influential research and initiatives, including the 2050 Imperative and various international accords, have reshaped architectural practice and policy worldwide, earning him numerous prestigious awards and fellowships.",
+            "warnings": []
+          },
+          "prompt_tokens": 719,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 20.971
+        }
+      }
+    },
+    {
+      "path": "06 People/Alan K Meier.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 4.385,
+          "completion_tokens": 258,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 321,
+          "max_call_total_tokens": 579,
+          "normalized": {
+            "confidence": 1.0,
+            "folder": "06 People",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "folder": "06 People",
+            "warnings": []
+          },
+          "prompt_tokens": 321,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 4.386
+        },
+        "classify-person": {
+          "api_seconds": 27.916,
+          "completion_tokens": 1792,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 269,
+          "max_call_total_tokens": 2061,
+          "normalized": {
+            "confidence": 0.9,
+            "details": "- Email: akmeier@ucdavis.edu\n- Organization: UC Davis",
+            "kind": "contact",
+            "warnings": [
+              "No explicit interaction or relationship stated",
+              "Role or title not specified"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "details": "- Email: akmeier@ucdavis.edu\n- Organization: UC Davis",
+            "kind": "contact",
+            "warnings": [
+              "No explicit interaction or relationship stated",
+              "Role or title not specified"
+            ]
+          },
+          "prompt_tokens": 269,
+          "repaired": false,
+          "stage": "classify-person",
+          "valid": true,
+          "wall_seconds": 27.916
+        },
+        "classify-type": {
+          "api_seconds": 3.56,
+          "completion_tokens": 207,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 202,
+          "max_call_total_tokens": 409,
+          "normalized": {
+            "confidence": 1.0,
+            "note_type": "person",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 1.0,
+            "note_type": "person",
+            "warnings": []
+          },
+          "prompt_tokens": 202,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 3.561
+        },
+        "property-values": {
+          "api_seconds": 12.374,
+          "completion_tokens": 761,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 441,
+          "max_call_total_tokens": 1202,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 441,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 12.375
+        },
+        "summary": {
+          "api_seconds": 16.948,
+          "completion_tokens": 1110,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 177,
+          "max_call_total_tokens": 1287,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note contains basic contact information for Alan K Meier, including his email address and affiliation with UC Davis.",
+            "warnings": [
+              "Minimal context provided",
+              "Missing role or title",
+              "No contact purpose specified"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note contains basic contact information for Alan K Meier, including his email address and affiliation with UC Davis.",
+            "warnings": [
+              "Minimal context provided",
+              "Missing role or title",
+              "No contact purpose specified"
+            ]
+          },
+          "prompt_tokens": 177,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 16.948
+        }
+      }
+    },
+    {
+      "path": "07 Organizations/Intergovernmental Panel on Climate Change.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 17.202,
+          "completion_tokens": 1092,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 392,
+          "max_call_total_tokens": 1484,
+          "normalized": {
+            "confidence": 0.95,
+            "folder": "07 Organizations",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "folder": "07 Organizations",
+            "warnings": []
+          },
+          "prompt_tokens": 392,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 17.203
+        },
+        "classify-type": {
+          "api_seconds": 17.936,
+          "completion_tokens": 1109,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 273,
+          "max_call_total_tokens": 1382,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "organization",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "organization",
+            "warnings": []
+          },
+          "prompt_tokens": 273,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 17.936
+        },
+        "property-values": {
+          "api_seconds": 35.753,
+          "completion_tokens": 2251,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 512,
+          "max_call_total_tokens": 2763,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Nick Eyre]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "No exact domain match for climate/environment"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Nick Eyre]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "No exact domain match for climate/environment"
+            ]
+          },
+          "prompt_tokens": 512,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 35.754
+        },
+        "summary": {
+          "api_seconds": 16.689,
+          "completion_tokens": 1121,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 248,
+          "max_call_total_tokens": 1369,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "The Intergovernmental Panel on Climate Change (IPCC) is a United Nations body responsible for assessing climate science. This note specifically highlights Nick Eyre's contributions as a lead author and review editor for Working Group III across the fifth and sixth assessment reports.",
+            "warnings": [
+              "Note is very brief",
+              "Lacks comprehensive IPCC details",
+              "Focuses primarily on a single contributor"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "The Intergovernmental Panel on Climate Change (IPCC) is a United Nations body responsible for assessing climate science. This note specifically highlights Nick Eyre's contributions as a lead author and review editor for Working Group III across the fifth and sixth assessment reports.",
+            "warnings": [
+              "Note is very brief",
+              "Lacks comprehensive IPCC details",
+              "Focuses primarily on a single contributor"
+            ]
+          },
+          "prompt_tokens": 248,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 16.69
+        }
+      }
+    },
+    {
+      "path": "07 Organizations/UC Davis.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 15.519,
+          "completion_tokens": 1033,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 345,
+          "max_call_total_tokens": 1378,
+          "normalized": {
+            "confidence": 0.95,
+            "folder": "07 Organizations",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "folder": "07 Organizations",
+            "warnings": []
+          },
+          "prompt_tokens": 345,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 15.52
+        },
+        "classify-type": {
+          "api_seconds": 4.67,
+          "completion_tokens": 280,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 226,
+          "max_call_total_tokens": 506,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "organization",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "organization",
+            "warnings": []
+          },
+          "prompt_tokens": 226,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 4.67
+        },
+        "property-values": {
+          "api_seconds": 29.421,
+          "completion_tokens": 1937,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 465,
+          "max_call_total_tokens": 2402,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[EEI]]",
+              "[[WCEC]]",
+              "[[MTRP]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[EEI]]",
+              "[[WCEC]]",
+              "[[MTRP]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 465,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 29.422
+        },
+        "summary": {
+          "api_seconds": 20.004,
+          "completion_tokens": 1327,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 201,
+          "max_call_total_tokens": 1528,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note serves as a quick reference for UC Davis, providing its official website and listing three affiliated research groups: the Energy Efficiency Institute, the Western Center for Solar Energy, and the Market Transformation Research Program.",
+            "warnings": [
+              "Lacks contextual details",
+              "Wikilinks require external resolution",
+              "Unclear purpose of listing"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note serves as a quick reference for UC Davis, providing its official website and listing three affiliated research groups: the Energy Efficiency Institute, the Western Center for Solar Energy, and the Market Transformation Research Program.",
+            "warnings": [
+              "Lacks contextual details",
+              "Wikilinks require external resolution",
+              "Unclear purpose of listing"
+            ]
+          },
+          "prompt_tokens": 201,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 20.004
+        }
+      }
+    },
+    {
+      "path": "08 Reference/Tech/4.09 Knowledge Management/Data Storage and Retrieval Guidelines.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 31.608,
+          "completion_tokens": 1853,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 2684,
+          "max_call_total_tokens": 4537,
+          "normalized": {
+            "confidence": 0.9,
+            "folder": "08 Reference",
+            "warnings": [
+              "Currently located in 01 Inbox path",
+              "Functions as internal system policy rather than external reference"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "folder": "08 Reference",
+            "warnings": [
+              "Currently located in 01 Inbox path",
+              "Functions as internal system policy rather than external reference"
+            ]
+          },
+          "prompt_tokens": 2684,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 31.608
+        },
+        "classify-type": {
+          "api_seconds": 31.546,
+          "completion_tokens": 1781,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 2565,
+          "max_call_total_tokens": 4346,
+          "normalized": {
+            "confidence": 0.88,
+            "note_type": "system",
+            "warnings": [
+              "Located in Inbox folder, suggesting draft or unprocessed status",
+              "Contains YAML schema block that could be misclassified as a template",
+              "Broad architectural scope covers multiple vault subsystems"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.88,
+            "note_type": "system",
+            "warnings": [
+              "Located in Inbox folder, suggesting draft or unprocessed status",
+              "Contains YAML schema block that could be misclassified as a template",
+              "Broad architectural scope covers multiple vault subsystems"
+            ]
+          },
+          "prompt_tokens": 2565,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 31.547
+        },
+        "property-values": {
+          "api_seconds": 35.535,
+          "completion_tokens": 2101,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 2804,
+          "max_call_total_tokens": 4905,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "technology",
+            "parent": "",
+            "related": [],
+            "source_kind": "policy",
+            "status": "active",
+            "warnings": [
+              "Inbox location conflicts with policy function",
+              "Domain overlaps with meta"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "technology",
+            "parent": "",
+            "related": [],
+            "source_kind": "policy",
+            "status": "active",
+            "warnings": [
+              "Inbox location conflicts with policy function",
+              "Domain overlaps with meta"
+            ]
+          },
+          "prompt_tokens": 2804,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 35.535
+        },
+        "refine-body": {
+          "api_seconds": 132.956,
+          "completion_tokens": 9705,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 2709,
+          "max_call_total_tokens": 12414,
+          "normalized": {
+            "body": "# Data Storage and Retrieval Guidelines\n\n## Core principles (durability & structure)\n\n- Plain-text-first \u2014 Prefer Markdown/CSV/TXT over proprietary formats for longevity and diff-ability.\n- Open standards \u2014 Use formats with stable specs (Markdown, YAML, JSON, CSV, PDF/A, UTF-8).\n- Normalization \u2014 Enforce consistent encodings and conventions (UTF-8; Unicode NFC; line endings).\n- Canonical form \u2014 One authoritative representation per item (e.g., .md + YAML) from which others are derived.\n- Round-trippability \u2014 Any export can be transformed back to the canonical form without loss.\n- Separation of concerns \u2014 Content lives in files; metadata in YAML; links/indices generated; binaries stored alongside but referenced.\n- Idempotent transforms \u2014 Re-running pipelines produces the same outputs (no duplicates, stable IDs).\n- Deterministic filenames \u2014 Use YYYY-MM-DD_slug__ID.md to avoid collisions and ease sorting.\n\n## Identity, metadata, and schema\n\n- Persistent Identifier (PID) \u2014 A stable, non-semantic ID (UUID/ULID) that never changes.\n- Title vs. ID \u2014 Human titles are mutable; PIDs are not. Always key systems on the PID.\n- YAML front matter \u2014 Lightweight per-note metadata block (id, created, updated, tags, links, type).\n- Controlled vocabulary \u2014 Curated tag lists to avoid drift (project:whrex, topic:epistemology).\n- Taxonomy vs. folksonomy \u2014 Structured categories (stable) vs. free tags (flexible); use both.\n- Ontology / typed relations \u2014 Encode predicates like links:cites|supports|contradicts|derived_from.\n- Provenance fields \u2014 source, author, method, license, capture_tool to support auditability.\n- Timestamps \u2014 ISO-8601 UTC (2025-08-27T16:20:00Z) for unambiguous ordering.\n\n## Linking & knowledge structures\n\n- Atomic notes \u2014 Small, self-contained ideas that can be recombined (minimize scope creep).\n- Zettelkasten links \u2014 Intentional, concept-level links that explain \u201cwhy this connects.\u201d\n- Johnny Decimal anchors \u2014 Stable numeric neighborhoods for files/folders; IDs appear in YAML.\n- Typed links \u2014 Relations carry meaning (supports, refutes, examples, uses, needs).\n- Backlinks \u2014 Automatic reverse references to strengthen navigability.\n- Transclusion \u2014 Pulling one note\u2019s content into another without duplication.\n- Maps of Content (MoC) \u2014 Curated \u201ctable-of-contents\u201d notes for a domain (index, not a dump).\n- Crosswalks \u2014 Tables that map your vocab to external schemas (e.g., topic:cooling \u2194 schema.org/HeatingSystem).\n\n## Retrieval & ranking (IR/RAG)\n\n- Inverted index \u2014 Lexical search over tokens (BM25). Fast and precise for named entities.\n- Vector embeddings \u2014 Dense representations to capture semantic similarity.\n- Hybrid search \u2014 Combine lexical (BM25) + vector (ANN) for balanced recall/precision.\n- Reranker \u2014 Second-stage model that reorders candidates using cross-encoders.\n- Faceted search \u2014 Filter by metadata facets (date, project, type, tags, people).\n- Query expansion \u2014 Add synonyms/aliases/lemmas to catch vocabulary variance.\n- Chunking \u2014 Split long notes into ~300\u2013800 tokens with 10\u201320% overlap for better recall.\n- Deduplication \u2014 Hash-based (SHA-256) and fuzzy (simhash/minhash) to reduce noise.\n- Evaluation metrics \u2014 Precision/Recall/F1, nDCG@k, MRR; keep a small gold set for regression tests.\n\n## Versioning, lineage, and audit\n\n- Git-based versioning \u2014 Track diffs for Markdown/YAML; store large binaries via LFS.\n- Append-only log \u2014 Immutable history of captures/edits; separate from human-facing edits.\n- Data lineage \u2014 Record how an artifact was derived (inputs \u2192 transforms \u2192 outputs).\n- Fixity \u2014 Integrity verification using checksums (store and periodically re-check).\n- Audit trail \u2014 Who/what changed a record, when, and why (commit messages, changed_by).\n\n## Preservation & backup\n\n- 3-2-1 (or 3-2-1-1-0) \u2014 3 copies, 2 media, 1 off-site; (+1 offline/immutable; 0 restore errors).\n- LOCKSS mindset \u2014 \u201cLots Of Copies Keep Stuff Safe\u201d across independent failure domains.\n- WORM/immutable storage \u2014 Prevents silent corruption/ransomware edits.\n- Scrubbing \u2014 Scheduled checksum scans to catch bit-rot early.\n- Restore testing \u2014 Periodic, scripted drills that prove backups actually restore.\n- Export matrix \u2014 Routine bulk exports (zip of .md+YAML; CSV; JSON-LD; PDF/A) to reduce lock-in risk.\n\n## Privacy, security, and ethics\n\n- Data minimization \u2014 Keep only what you need, for clear purposes; reduce breach impact.\n- Classification \u2014 Label sensitivity (public/internal/private/secret) to drive handling rules.\n- RBAC/ABAC \u2014 Role/attribute-based access; least privilege by default.\n- Encryption \u2014 At rest and in transit; keys stored/rotated in a proper keystore.\n- Redaction \u2014 Remove or mask PII/secrets before broad sharing or model training.\n- Consent & purpose limitation \u2014 Respect original purpose; obtain consent for secondary use.\n- Retention schedule \u2014 Time-bound deletion (with explicit exceptions) to reduce risk and honor impermanence.\n- Threat model \u2014 Enumerate likely risks (loss, leak, tamper) and mitigations (off-site, MFA, immutability).\n\n## Automation & pipelines\n\n- ETL/ELT \u2014 Capture \u2192 normalize \u2192 enrich \u2192 index; store raw alongside processed.\n- Idempotence \u2014 Jobs can rerun without duplicating work or drifting state.\n- Checkpointing \u2014 Persist progress so long runs resume safely.\n- Backfill \u2014 Reprocess historical data after schema/model changes.\n- Observability \u2014 Logs, metrics, and alerts for pipeline health and latency.\n- Validation \u2014 Schemas (JSON Schema) + unit tests for transforms to keep data clean.\n\n## Quality & curation workflows\n\n- Inbox capture \u2014 Low-friction dumping ground with automatic timestamping/IDs.\n- Triage \u2014 Quick pass: rename, assign type, minimal tags, link to 1\u20132 neighbors.\n- Progressive summarization \u2014 Layered summaries (tldr, abstract, key_points, full).\n- Review cadence \u2014 Weekly \u201cgardening\u201d to merge duplicates, promote MoCs, prune.\n- Epistemic status \u2014 Self-rated confidence (speculative, working, settled) to guide reuse.\n\n## Interop & export\n\n- Pandoc-friendly Markdown \u2014 Avoid tool-specific extensions; keep images local with relative paths.\n- YAML cross-refs \u2014 Store external IDs (DOI, URL, invoice#, IRB#) for federation.\n- JSON-LD sidecars \u2014 Optional machine-readable mirrors for future graph tools.\n- Data contracts \u2014 Define what downstream tools can expect (fields/types/invariants).\n\n---\n\n## Minimal canonical schema (for Markdown notes)\n\n```yaml\n---\nid: ulid_01JABCDXYZ7H1X3M5R9P8\ntitle: Short human-readable title\ntype: journal|project|research|reference|moc|task|source\ncreated: 2025-08-27T09:00:00Z\nupdated: 2025-08-27T09:00:00Z\njd_code: 12.34  # if using Johnny Decimal\ntags: [topic:epistemology, project:dissertation, person:gillian]\nsensitivity: private\nstatus: working  # speculative|working|settled\nprovenance:\n  source: \"obsidian\"\n  capture_tool: \"mobile-quicknote\"\n  author: \"Ellie\"\nlinks:\n  cites: [ulid_..., ulid_...]\n  supports: []\n  contradicts: []\n  derived_from: []\nsummary:\n  tldr: >\n    One-sentence essence for quick recall.\n  key_points:\n    - Point 1\n    - Point 2\n---\n# H1 Main content\nFree-form Markdown content with intentional links to [[other-notes-by-ID-or-slug]] and lightweight headings.\n```\n\n## File naming convention (deterministic)\n\n- YYYY-MM-DD__slug__ULID.md (e.g., 2025-08-27__hydrocele-notes__01JABCDXYZ7H...md).\n- Binaries: assets/01JABCDXYZ7H.../image_001.jpg referenced relatively from the note.\n\n---\n\n## Heuristics your AI should follow (actionable rules)\n\n- Create first, label immediately \u2014 On capture, assign ULID, created, type, 1\u20133 tags, and a draft title.\n- Link with intent \u2014 When adding a link, choose a type (cites|supports|contradicts|example_of|used_in) and write a 1-line rationale.\n- Prefer IDs over titles \u2014 Maintain links by PID; update human titles freely.\n- Chunk for retrieval \u2014 For indexing/RAG, split content into 400\u2013600-token chunks with 80-token overlap; store chunk IDs as id#chunk_n.\n- Hybrid retrieval default \u2014 Search = BM25 top-200 \u2192 rerank with cross-encoder \u2192 vector fallback if low lexical recall.\n- Summarize on touch \u2014 Any edit triggers (a) update updated, (b) refresh tldr and key_points.\n- Deduplicate \u2014 Before saving, check simhash/minhash against recent items; if \u226590% similar, link as duplicate_of rather than create a new node.\n- Respect sensitivity \u2014 Don\u2019t surface private|secret items in broad suggestions unless the query is clearly personal and local.\n- Export routinely \u2014 Nightly job to produce .zip of canonical .md+YAML, plus CSV and JSON-LD indexes.\n- Test restores \u2014 Weekly restore a random sample (yes, actually open them).\n- Retention with compassion \u2014 Apply deletion/archival rules, but ask for consent on edge cases involving other people\u2019s privacy.\n- Epistemic humility \u2014 Attach status and confidence to generated summaries; avoid overstating certainty.\n- Small kindnesses \u2014 Prefer clarity over cleverness; if a link is ambiguous, suggest disambiguation rather than guessing.\n\n## Author Note\n\nIf you want, I can turn this into a machine-readable \u201cpolicy file\u201d (YAML/JSON) your agent can load at startup and validate against. Also happy to tailor the schema to your current JDS ranges and Obsidian conventions.",
+            "confidence": 0.95,
+            "warnings": [
+              "Converted bullet characters (\u2022) to standard Markdown list markers (-) for improved Obsidian rendering.",
+              "Added '## Author Note' heading to structurally separate the closing conversational paragraph."
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "body": "# Data Storage and Retrieval Guidelines\n\n## Core principles (durability & structure)\n\n- Plain-text-first \u2014 Prefer Markdown/CSV/TXT over proprietary formats for longevity and diff-ability.\n- Open standards \u2014 Use formats with stable specs (Markdown, YAML, JSON, CSV, PDF/A, UTF-8).\n- Normalization \u2014 Enforce consistent encodings and conventions (UTF-8; Unicode NFC; line endings).\n- Canonical form \u2014 One authoritative representation per item (e.g., .md + YAML) from which others are derived.\n- Round-trippability \u2014 Any export can be transformed back to the canonical form without loss.\n- Separation of concerns \u2014 Content lives in files; metadata in YAML; links/indices generated; binaries stored alongside but referenced.\n- Idempotent transforms \u2014 Re-running pipelines produces the same outputs (no duplicates, stable IDs).\n- Deterministic filenames \u2014 Use YYYY-MM-DD_slug__ID.md to avoid collisions and ease sorting.\n\n## Identity, metadata, and schema\n\n- Persistent Identifier (PID) \u2014 A stable, non-semantic ID (UUID/ULID) that never changes.\n- Title vs. ID \u2014 Human titles are mutable; PIDs are not. Always key systems on the PID.\n- YAML front matter \u2014 Lightweight per-note metadata block (id, created, updated, tags, links, type).\n- Controlled vocabulary \u2014 Curated tag lists to avoid drift (project:whrex, topic:epistemology).\n- Taxonomy vs. folksonomy \u2014 Structured categories (stable) vs. free tags (flexible); use both.\n- Ontology / typed relations \u2014 Encode predicates like links:cites|supports|contradicts|derived_from.\n- Provenance fields \u2014 source, author, method, license, capture_tool to support auditability.\n- Timestamps \u2014 ISO-8601 UTC (2025-08-27T16:20:00Z) for unambiguous ordering.\n\n## Linking & knowledge structures\n\n- Atomic notes \u2014 Small, self-contained ideas that can be recombined (minimize scope creep).\n- Zettelkasten links \u2014 Intentional, concept-level links that explain \u201cwhy this connects.\u201d\n- Johnny Decimal anchors \u2014 Stable numeric neighborhoods for files/folders; IDs appear in YAML.\n- Typed links \u2014 Relations carry meaning (supports, refutes, examples, uses, needs).\n- Backlinks \u2014 Automatic reverse references to strengthen navigability.\n- Transclusion \u2014 Pulling one note\u2019s content into another without duplication.\n- Maps of Content (MoC) \u2014 Curated \u201ctable-of-contents\u201d notes for a domain (index, not a dump).\n- Crosswalks \u2014 Tables that map your vocab to external schemas (e.g., topic:cooling \u2194 schema.org/HeatingSystem).\n\n## Retrieval & ranking (IR/RAG)\n\n- Inverted index \u2014 Lexical search over tokens (BM25). Fast and precise for named entities.\n- Vector embeddings \u2014 Dense representations to capture semantic similarity.\n- Hybrid search \u2014 Combine lexical (BM25) + vector (ANN) for balanced recall/precision.\n- Reranker \u2014 Second-stage model that reorders candidates using cross-encoders.\n- Faceted search \u2014 Filter by metadata facets (date, project, type, tags, people).\n- Query expansion \u2014 Add synonyms/aliases/lemmas to catch vocabulary variance.\n- Chunking \u2014 Split long notes into ~300\u2013800 tokens with 10\u201320% overlap for better recall.\n- Deduplication \u2014 Hash-based (SHA-256) and fuzzy (simhash/minhash) to reduce noise.\n- Evaluation metrics \u2014 Precision/Recall/F1, nDCG@k, MRR; keep a small gold set for regression tests.\n\n## Versioning, lineage, and audit\n\n- Git-based versioning \u2014 Track diffs for Markdown/YAML; store large binaries via LFS.\n- Append-only log \u2014 Immutable history of captures/edits; separate from human-facing edits.\n- Data lineage \u2014 Record how an artifact was derived (inputs \u2192 transforms \u2192 outputs).\n- Fixity \u2014 Integrity verification using checksums (store and periodically re-check).\n- Audit trail \u2014 Who/what changed a record, when, and why (commit messages, changed_by).\n\n## Preservation & backup\n\n- 3-2-1 (or 3-2-1-1-0) \u2014 3 copies, 2 media, 1 off-site; (+1 offline/immutable; 0 restore errors).\n- LOCKSS mindset \u2014 \u201cLots Of Copies Keep Stuff Safe\u201d across independent failure domains.\n- WORM/immutable storage \u2014 Prevents silent corruption/ransomware edits.\n- Scrubbing \u2014 Scheduled checksum scans to catch bit-rot early.\n- Restore testing \u2014 Periodic, scripted drills that prove backups actually restore.\n- Export matrix \u2014 Routine bulk exports (zip of .md+YAML; CSV; JSON-LD; PDF/A) to reduce lock-in risk.\n\n## Privacy, security, and ethics\n\n- Data minimization \u2014 Keep only what you need, for clear purposes; reduce breach impact.\n- Classification \u2014 Label sensitivity (public/internal/private/secret) to drive handling rules.\n- RBAC/ABAC \u2014 Role/attribute-based access; least privilege by default.\n- Encryption \u2014 At rest and in transit; keys stored/rotated in a proper keystore.\n- Redaction \u2014 Remove or mask PII/secrets before broad sharing or model training.\n- Consent & purpose limitation \u2014 Respect original purpose; obtain consent for secondary use.\n- Retention schedule \u2014 Time-bound deletion (with explicit exceptions) to reduce risk and honor impermanence.\n- Threat model \u2014 Enumerate likely risks (loss, leak, tamper) and mitigations (off-site, MFA, immutability).\n\n## Automation & pipelines\n\n- ETL/ELT \u2014 Capture \u2192 normalize \u2192 enrich \u2192 index; store raw alongside processed.\n- Idempotence \u2014 Jobs can rerun without duplicating work or drifting state.\n- Checkpointing \u2014 Persist progress so long runs resume safely.\n- Backfill \u2014 Reprocess historical data after schema/model changes.\n- Observability \u2014 Logs, metrics, and alerts for pipeline health and latency.\n- Validation \u2014 Schemas (JSON Schema) + unit tests for transforms to keep data clean.\n\n## Quality & curation workflows\n\n- Inbox capture \u2014 Low-friction dumping ground with automatic timestamping/IDs.\n- Triage \u2014 Quick pass: rename, assign type, minimal tags, link to 1\u20132 neighbors.\n- Progressive summarization \u2014 Layered summaries (tldr, abstract, key_points, full).\n- Review cadence \u2014 Weekly \u201cgardening\u201d to merge duplicates, promote MoCs, prune.\n- Epistemic status \u2014 Self-rated confidence (speculative, working, settled) to guide reuse.\n\n## Interop & export\n\n- Pandoc-friendly Markdown \u2014 Avoid tool-specific extensions; keep images local with relative paths.\n- YAML cross-refs \u2014 Store external IDs (DOI, URL, invoice#, IRB#) for federation.\n- JSON-LD sidecars \u2014 Optional machine-readable mirrors for future graph tools.\n- Data contracts \u2014 Define what downstream tools can expect (fields/types/invariants).\n\n---\n\n## Minimal canonical schema (for Markdown notes)\n\n```yaml\n---\nid: ulid_01JABCDXYZ7H1X3M5R9P8\ntitle: Short human-readable title\ntype: journal|project|research|reference|moc|task|source\ncreated: 2025-08-27T09:00:00Z\nupdated: 2025-08-27T09:00:00Z\njd_code: 12.34  # if using Johnny Decimal\ntags: [topic:epistemology, project:dissertation, person:gillian]\nsensitivity: private\nstatus: working  # speculative|working|settled\nprovenance:\n  source: \"obsidian\"\n  capture_tool: \"mobile-quicknote\"\n  author: \"Ellie\"\nlinks:\n  cites: [ulid_..., ulid_...]\n  supports: []\n  contradicts: []\n  derived_from: []\nsummary:\n  tldr: >\n    One-sentence essence for quick recall.\n  key_points:\n    - Point 1\n    - Point 2\n---\n# H1 Main content\nFree-form Markdown content with intentional links to [[other-notes-by-ID-or-slug]] and lightweight headings.\n```\n\n## File naming convention (deterministic)\n\n- YYYY-MM-DD__slug__ULID.md (e.g., 2025-08-27__hydrocele-notes__01JABCDXYZ7H...md).\n- Binaries: assets/01JABCDXYZ7H.../image_001.jpg referenced relatively from the note.\n\n---\n\n## Heuristics your AI should follow (actionable rules)\n\n- Create first, label immediately \u2014 On capture, assign ULID, created, type, 1\u20133 tags, and a draft title.\n- Link with intent \u2014 When adding a link, choose a type (cites|supports|contradicts|example_of|used_in) and write a 1-line rationale.\n- Prefer IDs over titles \u2014 Maintain links by PID; update human titles freely.\n- Chunk for retrieval \u2014 For indexing/RAG, split content into 400\u2013600-token chunks with 80-token overlap; store chunk IDs as id#chunk_n.\n- Hybrid retrieval default \u2014 Search = BM25 top-200 \u2192 rerank with cross-encoder \u2192 vector fallback if low lexical recall.\n- Summarize on touch \u2014 Any edit triggers (a) update updated, (b) refresh tldr and key_points.\n- Deduplicate \u2014 Before saving, check simhash/minhash against recent items; if \u226590% similar, link as duplicate_of rather than create a new node.\n- Respect sensitivity \u2014 Don\u2019t surface private|secret items in broad suggestions unless the query is clearly personal and local.\n- Export routinely \u2014 Nightly job to produce .zip of canonical .md+YAML, plus CSV and JSON-LD indexes.\n- Test restores \u2014 Weekly restore a random sample (yes, actually open them).\n- Retention with compassion \u2014 Apply deletion/archival rules, but ask for consent on edge cases involving other people\u2019s privacy.\n- Epistemic humility \u2014 Attach status and confidence to generated summaries; avoid overstating certainty.\n- Small kindnesses \u2014 Prefer clarity over cleverness; if a link is ambiguous, suggest disambiguation rather than guessing.\n\n## Author Note\n\nIf you want, I can turn this into a machine-readable \u201cpolicy file\u201d (YAML/JSON) your agent can load at startup and validate against. Also happy to tailor the schema to your current JDS ranges and Obsidian conventions.",
+            "confidence": 0.95,
+            "warnings": [
+              "Converted bullet characters (\u2022) to standard Markdown list markers (-) for improved Obsidian rendering.",
+              "Added '## Author Note' heading to structurally separate the closing conversational paragraph."
+            ]
+          },
+          "prompt_tokens": 2709,
+          "repaired": false,
+          "stage": "refine-body",
+          "valid": true,
+          "wall_seconds": 132.959
+        },
+        "summary": {
+          "api_seconds": 26.729,
+          "completion_tokens": 1645,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 2540,
+          "max_call_total_tokens": 4185,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note outlines comprehensive guidelines for managing a durable, interoperable knowledge base, emphasizing plain-text formats, deterministic naming, persistent identifiers, and structured metadata. It details best practices for linking, hybrid retrieval, version control, backup strategies, and privacy, alongside a canonical YAML schema and actionable heuristics for AI-driven curation and maintenance.",
+            "warnings": [
+              "Assumes Obsidian/Zettelkasten workflow",
+              "Blends human curation with AI agent heuristics",
+              "Tool-specific conventions may require adaptation"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note outlines comprehensive guidelines for managing a durable, interoperable knowledge base, emphasizing plain-text formats, deterministic naming, persistent identifiers, and structured metadata. It details best practices for linking, hybrid retrieval, version control, backup strategies, and privacy, alongside a canonical YAML schema and actionable heuristics for AI-driven curation and maintenance.",
+            "warnings": [
+              "Assumes Obsidian/Zettelkasten workflow",
+              "Blends human curation with AI agent heuristics",
+              "Tool-specific conventions may require adaptation"
+            ]
+          },
+          "prompt_tokens": 2540,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 26.73
+        }
+      }
+    },
+    {
+      "path": "09 Administrative/Health/Data/Sutter/DOC0006 - Summary of Care.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 29.272,
+          "completion_tokens": 1599,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 5503,
+          "max_call_total_tokens": 7102,
+          "normalized": {
+            "confidence": 0.95,
+            "folder": "09 Administrative",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "folder": "09 Administrative",
+            "warnings": []
+          },
+          "prompt_tokens": 5503,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 29.272
+        },
+        "classify-type": {
+          "api_seconds": 30.938,
+          "completion_tokens": 1588,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 5384,
+          "max_call_total_tokens": 6972,
+          "normalized": {
+            "confidence": 0.85,
+            "note_type": "person",
+            "warnings": [
+              "Raw document dump may alternatively fit 'source'",
+              "Contains clinical/medical data rather than standard biographical/relational fields"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.85,
+            "note_type": "person",
+            "warnings": [
+              "Raw document dump may alternatively fit 'source'",
+              "Contains clinical/medical data rather than standard biographical/relational fields"
+            ]
+          },
+          "prompt_tokens": 5384,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 30.939
+        },
+        "property-values": {
+          "api_seconds": 44.911,
+          "completion_tokens": 2648,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 5623,
+          "max_call_total_tokens": 8271,
+          "normalized": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "health",
+            "parent": "",
+            "related": [],
+            "source_kind": "report",
+            "status": "archived",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "health",
+            "parent": "",
+            "related": [],
+            "source_kind": "report",
+            "status": "archived",
+            "warnings": []
+          },
+          "prompt_tokens": 5623,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 44.912
+        },
+        "summary": {
+          "api_seconds": 33.818,
+          "completion_tokens": 2006,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 5359,
+          "max_call_total_tokens": 7365,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This Summary of Care documents the evaluation and scheduled surgical management for Ellian Eorwyn's rapidly growing right hydrocele and mild left varicocele. A scrotal ultrasound confirmed the hydrocele and epididymal cysts while ruling out testicular torsion or masses. The patient is scheduled for a right hydrocelectomy and varicocelectomy, with active management of comorbidities including depression, anxiety, and a history of inguinal hernia repairs.",
+            "warnings": [
+              "Legal sex and sex assigned at birth not documented",
+              "Vital signs missing for encounter",
+              "Conflicting food insecurity screening responses"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This Summary of Care documents the evaluation and scheduled surgical management for Ellian Eorwyn's rapidly growing right hydrocele and mild left varicocele. A scrotal ultrasound confirmed the hydrocele and epididymal cysts while ruling out testicular torsion or masses. The patient is scheduled for a right hydrocelectomy and varicocelectomy, with active management of comorbidities including depression, anxiety, and a history of inguinal hernia repairs.",
+            "warnings": [
+              "Legal sex and sex assigned at birth not documented",
+              "Vital signs missing for encounter",
+              "Conflicting food insecurity screening responses"
+            ]
+          },
+          "prompt_tokens": 5359,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 33.818
+        }
+      }
+    },
+    {
+      "path": "01 Inbox/Living Well.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 24.908,
+          "completion_tokens": 1483,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 586,
+          "max_call_total_tokens": 2069,
+          "normalized": {
+            "confidence": 0.85,
+            "folder": "09 Administrative",
+            "warnings": [
+              "Note is a personal lifestyle and philanthropy checklist rather than traditional administrative documentation"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.85,
+            "folder": "09 Administrative",
+            "warnings": [
+              "Note is a personal lifestyle and philanthropy checklist rather than traditional administrative documentation"
+            ]
+          },
+          "prompt_tokens": 586,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 24.909
+        },
+        "classify-type": {
+          "api_seconds": 27.183,
+          "completion_tokens": 1615,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 467,
+          "max_call_total_tokens": 2082,
+          "normalized": {
+            "confidence": 0.8,
+            "note_type": "project",
+            "warnings": [
+              "Could also be classified as a system or habit tracker",
+              "Located in Inbox suggests it may be unprocessed"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.8,
+            "note_type": "project",
+            "warnings": [
+              "Could also be classified as a system or habit tracker",
+              "Located in Inbox suggests it may be unprocessed"
+            ]
+          },
+          "prompt_tokens": 467,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 27.184
+        },
+        "property-values": {
+          "api_seconds": 33.117,
+          "completion_tokens": 2073,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 706,
+          "max_call_total_tokens": 2779,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Spans multiple domains (health, environment, philanthropy)"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Spans multiple domains (health, environment, philanthropy)"
+            ]
+          },
+          "prompt_tokens": 706,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 33.118
+        },
+        "refine-body": {
+          "api_seconds": 75.239,
+          "completion_tokens": 4866,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 611,
+          "max_call_total_tokens": 5477,
+          "normalized": {
+            "body": "# Living Well\n\n## Body\n\n- [x] Don't Smoke\n- [x] Exercise (walking)\n- [x] Fiber, plant foward diet\n- [x] Sleep 7+ hours per night\n- [ ] Meditate\n- [ ] Read\n- [ ] Write\n- [ ] Exercise (strength)\n- [ ] Keep Alcohol low\n- [ ] Reduce Isolation\n\n## Environment\n\n- [x] Don't Drive\n- [x] Don't eat beef or lamb\n- [x] Create habitat\n- [ ] Electrify\n- [ ] Buy fewer new things\n\n## Giving\n\n- [ ] 30% [GiveWell Top Charities Fund](https://www.givewell.org/top-charities-fund)\n- [x] 20% [Partners In Health](https://www.pih.org/donate)\n- [ ] 20% [Founders Pledge Climate Fund](https://www.founderspledge.com/funds/climate-fund/about)\n- [ ] 10% [GiveDirectly](https://www.givedirectly.org/)\n- [ ] 10% [Teaching at the Right Level Africa](https://teachingattherightlevel.org/donate/)\n- [x] 10% [Complexly](https://secure.givelively.org/donate/complexly-inc)",
+            "confidence": 0.95,
+            "warnings": [
+              "Original contains typo 'plant foward diet'; preserved verbatim per constraints."
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "body": "# Living Well\n\n## Body\n\n- [x] Don't Smoke\n- [x] Exercise (walking)\n- [x] Fiber, plant foward diet\n- [x] Sleep 7+ hours per night\n- [ ] Meditate\n- [ ] Read\n- [ ] Write\n- [ ] Exercise (strength)\n- [ ] Keep Alcohol low\n- [ ] Reduce Isolation\n\n## Environment\n\n- [x] Don't Drive\n- [x] Don't eat beef or lamb\n- [x] Create habitat\n- [ ] Electrify\n- [ ] Buy fewer new things\n\n## Giving\n\n- [ ] 30% [GiveWell Top Charities Fund](https://www.givewell.org/top-charities-fund)\n- [x] 20% [Partners In Health](https://www.pih.org/donate)\n- [ ] 20% [Founders Pledge Climate Fund](https://www.founderspledge.com/funds/climate-fund/about)\n- [ ] 10% [GiveDirectly](https://www.givedirectly.org/)\n- [ ] 10% [Teaching at the Right Level Africa](https://teachingattherightlevel.org/donate/)\n- [x] 10% [Complexly](https://secure.givelively.org/donate/complexly-inc)",
+            "confidence": 0.95,
+            "warnings": [
+              "Original contains typo 'plant foward diet'; preserved verbatim per constraints."
+            ]
+          },
+          "prompt_tokens": 611,
+          "repaired": false,
+          "stage": "refine-body",
+          "valid": true,
+          "wall_seconds": 75.24
+        },
+        "summary": {
+          "api_seconds": 20.656,
+          "completion_tokens": 1274,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 442,
+          "max_call_total_tokens": 1716,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note outlines a personal checklist for living well, categorized into health habits, environmental choices, and charitable giving. It tracks completed and pending goals such as exercise routines, dietary restrictions, electrification efforts, and specific donation allocations to various nonprofits.",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note outlines a personal checklist for living well, categorized into health habits, environmental choices, and charitable giving. It tracks completed and pending goals such as exercise routines, dietary restrictions, electrification efforts, and specific donation allocations to various nonprofits.",
+            "warnings": []
+          },
+          "prompt_tokens": 442,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 20.657
+        }
+      }
+    },
+    {
+      "path": "01 Inbox/Buddhism.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 147.576,
+          "completion_tokens": 1709,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 8171,
+          "max_call_total_tokens": 9880,
+          "normalized": {
+            "confidence": 0.9,
+            "folder": "03 Notes",
+            "warnings": [
+              "May also align with 08 Reference depending on vault conventions for encyclopedic content"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.9,
+            "folder": "03 Notes",
+            "warnings": [
+              "May also align with 08 Reference depending on vault conventions for encyclopedic content"
+            ]
+          },
+          "prompt_tokens": 8171,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 147.577
+        },
+        "classify-type": {
+          "api_seconds": 13.219,
+          "completion_tokens": 488,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 8052,
+          "max_call_total_tokens": 8540,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "note",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "note",
+            "warnings": []
+          },
+          "prompt_tokens": 8052,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 13.225
+        },
+        "property-values": {
+          "api_seconds": 40.613,
+          "completion_tokens": 2232,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 8291,
+          "max_call_total_tokens": 10523,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "philosophy",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Located in Inbox, may require filing",
+              "Broad scope; consider splitting into sub-notes"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "philosophy",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Located in Inbox, may require filing",
+              "Broad scope; consider splitting into sub-notes"
+            ]
+          },
+          "prompt_tokens": 8291,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 40.615
+        },
+        "refine-body": {
+          "api_seconds": 0.0,
+          "completion_tokens": 0,
+          "error": "LLM request timed out",
+          "first_pass_json": false,
+          "max_call_prompt_tokens": 0,
+          "max_call_total_tokens": 0,
+          "ok": false,
+          "prompt_tokens": 0,
+          "repaired": false,
+          "stage": "refine-body",
+          "valid": false,
+          "wall_seconds": 180.018
+        },
+        "summary": {
+          "api_seconds": 27.78,
+          "completion_tokens": 1427,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 8027,
+          "max_call_total_tokens": 9454,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note provides a comprehensive overview of foundational Buddhist teachings, detailing core doctrines such as the Four Noble Truths, the Noble Eightfold Path, dependent origination, and the Five Aggregates. It outlines ethical and meditative practices, including the Four Divine States, Six Perfections, and mindfulness techniques, while explaining how these frameworks address suffering and cultivate wisdom. The text concludes with a full translation of the Heart Sutra, emphasizing the Mahayana concept of emptiness as central to liberation.",
+            "warnings": [
+              "Blends Theravada and Mahayana perspectives without explicit tradition labels",
+              "Dependent origination is explained in two separate sections with overlapping content",
+              "Meditation section shifts to abbreviated bullet points, creating tonal inconsistency"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note provides a comprehensive overview of foundational Buddhist teachings, detailing core doctrines such as the Four Noble Truths, the Noble Eightfold Path, dependent origination, and the Five Aggregates. It outlines ethical and meditative practices, including the Four Divine States, Six Perfections, and mindfulness techniques, while explaining how these frameworks address suffering and cultivate wisdom. The text concludes with a full translation of the Heart Sutra, emphasizing the Mahayana concept of emptiness as central to liberation.",
+            "warnings": [
+              "Blends Theravada and Mahayana perspectives without explicit tradition labels",
+              "Dependent origination is explained in two separate sections with overlapping content",
+              "Meditation section shifts to abbreviated bullet points, creating tonal inconsistency"
+            ]
+          },
+          "prompt_tokens": 8027,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 27.781
+        }
+      }
+    },
+    {
+      "path": "01 Inbox/Saturday, June 13th \u2013 To Do.md",
+      "stages": {
+        "assign-folder": {
+          "api_seconds": 18.872,
+          "completion_tokens": 1095,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 377,
+          "max_call_total_tokens": 1472,
+          "normalized": {
+            "confidence": 0.85,
+            "folder": "02 Journal",
+            "warnings": [
+              "Contains household chores which could fit Administrative, but dated daily task list aligns with Journal."
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.85,
+            "folder": "02 Journal",
+            "warnings": [
+              "Contains household chores which could fit Administrative, but dated daily task list aligns with Journal."
+            ]
+          },
+          "prompt_tokens": 377,
+          "repaired": false,
+          "stage": "assign-folder",
+          "valid": true,
+          "wall_seconds": 18.873
+        },
+        "classify-type": {
+          "api_seconds": 18.425,
+          "completion_tokens": 1142,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 258,
+          "max_call_total_tokens": 1400,
+          "normalized": {
+            "confidence": 0.95,
+            "note_type": "task",
+            "warnings": [
+              "Title includes a date which could imply a daily note, but content is exclusively a checklist."
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "note_type": "task",
+            "warnings": [
+              "Title includes a date which could imply a daily note, but content is exclusively a checklist."
+            ]
+          },
+          "prompt_tokens": 258,
+          "repaired": false,
+          "stage": "classify-type",
+          "valid": true,
+          "wall_seconds": 18.426
+        },
+        "property-values": {
+          "api_seconds": 32.288,
+          "completion_tokens": 2020,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 497,
+          "max_call_total_tokens": 2517,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "household",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Mixed household, craft, and garden tasks",
+              "Daily note parent not explicitly defined"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "household",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Mixed household, craft, and garden tasks",
+              "Daily note parent not explicitly defined"
+            ]
+          },
+          "prompt_tokens": 497,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 32.289
+        },
+        "summary": {
+          "api_seconds": 15.402,
+          "completion_tokens": 1013,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 233,
+          "max_call_total_tokens": 1246,
+          "normalized": {
+            "confidence": 0.95,
+            "summary": "This note outlines a Saturday to-do list focused on household chores like cleaning and tidying, a DIY sewing organizer project, and seasonal gardening tasks such as harvesting plums and raspberries.",
+            "warnings": [
+              "Missing year for date",
+              "Gardening location unspecified"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "confidence": 0.95,
+            "summary": "This note outlines a Saturday to-do list focused on household chores like cleaning and tidying, a DIY sewing organizer project, and seasonal gardening tasks such as harvesting plums and raspberries.",
+            "warnings": [
+              "Missing year for date",
+              "Gardening location unspecified"
+            ]
+          },
+          "prompt_tokens": 233,
+          "repaired": false,
+          "stage": "summary",
+          "valid": true,
+          "wall_seconds": 15.403
+        }
+      }
+    }
+  ],
+  "quant": "q4",
+  "robustness": {
+    "first_pass_json_rate": 0.9882,
+    "ok_rate": 0.9882,
+    "stage_calls": 85,
+    "valid_rate": 0.9882
+  },
+  "served_model": "code",
+  "speed": {
+    "completion_tokens": 140899,
+    "median_wall_seconds": 27.322,
+    "p90_wall_seconds": 62.183,
+    "tokens_per_second": 53.9,
+    "total_wall_seconds": 2792.7
+  },
+  "vram_gb": null
+}

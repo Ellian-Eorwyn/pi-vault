@@ -17,6 +17,7 @@ from .schema import (
     allowed_controlled_values_from_schema,
     allowed_note_types,
     load_schema,
+    property_order_from_schema,
 )
 from .safety import write_text_safely
 
@@ -31,16 +32,23 @@ class ValidationIssue:
 def validate_entries(
     entries: list[dict[str, Any]], config: AgentConfig | None = None
 ) -> list[ValidationIssue]:
+    known_properties = (
+        set(property_order_from_schema(load_schema(config.vault_root)))
+        if config is not None
+        else set(COMMON_PROPERTIES)
+    )
     issues: list[ValidationIssue] = []
     for entry in entries:
         path = entry["path"]
         if entry.get("frontmatter_error"):
             issues.append(ValidationIssue("error", path, entry["frontmatter_error"]))
         for key in entry.get("frontmatter", {}):
-            if key not in COMMON_PROPERTIES:
+            if key not in known_properties:
                 if key == "cssclasses" and entry.get("type") == "index":
                     continue
-                mapped = mapped_property_for(key, config) if config else None
+                mapped = (
+                    mapped_property_for(key, config, known_properties) if config else None
+                )
                 if mapped:
                     issues.append(
                         ValidationIssue(

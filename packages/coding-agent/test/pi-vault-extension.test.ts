@@ -78,8 +78,16 @@ describe("pi-vault extension", () => {
 
 		expect(returning).toContain("resumed conversation");
 		expect(returning).toContain("follow the schema exactly");
-		expect(onboarding).toContain("Begin onboarding now");
-		expect(onboarding).toContain("default schema is provisional");
+		// Onboarding leads with the editable schema markdown and pauses for the user.
+		expect(onboarding).toContain("editable schema markdown");
+		expect(onboarding).toContain("0.00 Vault Schema.md");
+		expect(onboarding).toContain("vault_schema_sync");
+		expect(onboarding).toContain("schema_state is provisional");
+	});
+
+	it("threads the schema note path into the onboarding prompt", () => {
+		const onboarding = startupAssessmentPrompt('{"schema_state":"provisional"}', true, "99 System/0.00 Vault Schema.md");
+		expect(onboarding).toContain('"99 System/0.00 Vault Schema.md"');
 	});
 
 	describe("first-class vault tool builders", () => {
@@ -270,6 +278,32 @@ describe("pi-vault extension", () => {
 				"--dry-run",
 			]);
 			expect(buildMaintainArgs("/vault", { operation: "maintain" })).toContain("--dry-run");
+			expect(buildMaintainArgs("/vault", { operation: "refresh-dashboards" })).toEqual([
+				"--vault-root",
+				"/vault",
+				"refresh-dashboard-table",
+				"--json",
+			]);
+		});
+
+		it("vault_schema_propose builds remap-properties argv", () => {
+			expect(buildSchemaProposeArgs("/vault", { operation: "remap-properties", maxNotes: 50 })).toEqual([
+				"--vault-root",
+				"/vault",
+				"propose-property-remap",
+				"--max-notes",
+				"50",
+				"--json",
+			]);
+		});
+
+		it("vault_organize_propose builds requested-dashboards argv", () => {
+			expect(buildOrganizeProposeArgs("/vault", { operation: "requested-dashboards" })).toEqual([
+				"--vault-root",
+				"/vault",
+				"propose-requested-dashboards",
+				"--json",
+			]);
 		});
 
 		it("vault_review_apply keeps review (dry-run) and apply-approved separate", () => {
@@ -637,6 +671,8 @@ describe("pi-vault extension", () => {
 			}),
 		);
 		expect(messageContents).toHaveLength(1);
-		expect(messageContents[0]).toContain("Begin onboarding now");
+		expect(messageContents[0]).toContain("editable schema markdown");
+		expect(messageContents[0]).toContain("99 System/0.00 Vault Schema.md");
+		expect(messageContents[0]).toContain("vault_schema_sync");
 	});
 });

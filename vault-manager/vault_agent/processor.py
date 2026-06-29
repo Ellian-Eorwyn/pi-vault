@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from .config import AgentConfig
+from .config import AgentConfig, preserves_unknown_properties
 from .frontmatter import parse_note, render_note
 from .logging_utils import append_log
 from .llm import (
@@ -22,9 +22,18 @@ from .scanner import scan_vault
 from .schema import (
     CORE_PROPERTY_ORDER,
     accepted_properties_for,
+    allowed_controlled_values_from_schema,
     allowed_note_types,
     approved_hubs_for,
+    custom_properties_from_schema,
+    custom_property_specs,
     default_schema,
+<<<<<<< Updated upstream
+=======
+    extra_domains_for,
+    hub_descriptions_for,
+    load_schema,
+>>>>>>> Stashed changes
     ordered_properties_for,
 )
 from .templates import append_missing_headings
@@ -404,6 +413,7 @@ def process_note(
     warnings: list[str] = []
     extra_domains = list(paths_for(vault_root).domain_folders)
     stage_extras = schema_stage_extras(vault_root)
+    schema = load_schema(vault_root)
 
     if stage == "frontmatter-shape":
         _apply_shape_defaults(frontmatter)
@@ -623,10 +633,15 @@ def process_note(
                     mode="blocked",
                     errors=["property-values requires a schema-approved type"],
                 )
-            _apply_property_values(frontmatter, validation.proposal)
+            _apply_property_values(frontmatter, validation.proposal, schema)
             mode = "properties-filled"
         elif stage == "summary":
-            body = _apply_summary(parsed.body, validation.proposal["summary"])
+            if "summary" in custom_properties_from_schema(schema):
+                # The vault declares `summary` as a frontmatter property (e.g. for
+                # Obsidian Bases previews), so store it there instead of the body.
+                frontmatter["summary"] = validation.proposal["summary"]
+            else:
+                body = _apply_summary(parsed.body, validation.proposal["summary"])
             mode = "summarized"
         else:
             return ProcessResult(changed=False, mode="blocked", errors=[f"unknown stage `{stage}`"])
@@ -635,11 +650,12 @@ def process_note(
         frontmatter,
         frontmatter.get("type"),
         preserve_unknown_properties=preserve_unknown_properties,
+        schema=schema,
     )
     new_text = render_note(
         frontmatter,
         body,
-        property_order=ordered_properties_for(frontmatter.get("type")),
+        property_order=ordered_properties_for(frontmatter.get("type"), schema),
     )
     if new_text == text:
         mark_stage(
@@ -688,7 +704,7 @@ def _apply_shape_defaults(frontmatter: dict) -> None:
     frontmatter.setdefault("capture_type", "")
 
 
-def _apply_property_values(frontmatter: dict, proposal: dict) -> None:
+def _apply_property_values(frontmatter: dict, proposal: dict, schema: dict | None = None) -> None:
     frontmatter["status"] = proposal["status"]
     frontmatter["domain"] = proposal["domain"]
     frontmatter["parent"] = proposal["parent"]
@@ -696,6 +712,10 @@ def _apply_property_values(frontmatter: dict, proposal: dict) -> None:
     frontmatter["cover"] = proposal["cover"]
     frontmatter["source_kind"] = proposal["source_kind"]
     frontmatter["capture_type"] = proposal["capture_type"]
+    # User-declared custom properties the model filled in (e.g. a free-text field).
+    for name, _ptype, _definition in custom_property_specs(schema):
+        if name in proposal:
+            frontmatter[name] = proposal[name]
 
 
 def _has_core_metadata(entry: dict) -> bool:
@@ -710,10 +730,36 @@ def _next_needed_stage(
     *,
     norms_lock_hash: str | None = None,
 ) -> str | None:
+    schema = load_schema(vault_root)
     for stage in PROCESSING_STAGES:
-        if _stage_needed(vault_root, note_path, entry, stage, norms_lock_hash=norms_lock_hash):
+        if _stage_needed(
+            vault_root, note_path, entry, stage, norms_lock_hash=norms_lock_hash, schema=schema
+        ):
             return stage
     return None
+
+
+def _has_unapproved_controlled_value(
+    vault_root: Path, schema: dict, frontmatter: dict
+) -> bool:
+    """Whether the note carries a controlled value outside the approved schema set.
+
+    Mirrors the values the model/validator are allowed to emit so the gate and the
+    fill stage agree (an unapproved value re-triggers realignment; an approved one
+    never loops). ``type`` is handled by the classify-type stage.
+    """
+    approved = {
+        "status": set(allowed_controlled_values_from_schema(schema, "status")),
+        "domain": set(allowed_controlled_values_from_schema(schema, "domain"))
+        | set(extra_domains_for(vault_root)),
+        "source_kind": set(allowed_controlled_values_from_schema(schema, "source_kind")),
+        "capture_type": set(allowed_controlled_values_from_schema(schema, "capture_type")),
+    }
+    for prop, allowed in approved.items():
+        value = frontmatter.get(prop)
+        if isinstance(value, str) and value and value not in allowed:
+            return True
+    return False
 
 
 def _stage_needed(
@@ -723,20 +769,34 @@ def _stage_needed(
     stage: str,
     *,
     norms_lock_hash: str | None = None,
+    schema: dict | None = None,
 ) -> bool:
     frontmatter = entry.get("frontmatter", {})
     completed = stage_complete(vault_root, note_path, stage, norms_lock_hash=norms_lock_hash)
+    if schema is None:
+        schema = load_schema(vault_root)
     if stage == "frontmatter-shape":
-        accepted = accepted_properties_for(frontmatter.get("type"))
+        accepted = accepted_properties_for(frontmatter.get("type"), schema)
         has_unknown = any(key not in accepted for key in frontmatter)
-        return (not completed and has_unknown) or not _has_core_metadata(entry)
+        if (not completed and has_unknown) or not _has_core_metadata(entry):
+            return True
+        # A note already shaped under the current lock but still carrying a property
+        # outside the approved schema is realigned only when reshaping would actually
+        # strip it; when the vault preserves unknown properties they are kept on
+        # purpose, so re-firing would loop without changing anything.
+        return has_unknown and not preserves_unknown_properties(vault_root)
     if stage == "classify-type":
-        if completed:
-            return False
-        return not frontmatter.get("type") or frontmatter.get("type") not in allowed_note_types(vault_root)
+        # An unapproved or missing type always re-triggers classification (the model
+        # only emits approved types, so this converges and never loops).
+        type_value = frontmatter.get("type")
+        return not type_value or type_value not in allowed_note_types(vault_root)
     if stage == "property-values":
         if frontmatter.get("type") not in allowed_note_types(vault_root):
             return False
+        # A controlled value outside the approved set re-triggers a fill so the model
+        # realigns it to the closest approved value, regardless of prior completion.
+        if _has_unapproved_controlled_value(vault_root, schema, frontmatter):
+            return True
         keys = ("status", "domain", "parent", "related", "cover", "source_kind", "capture_type")
         if completed:
             return any(key not in frontmatter for key in keys)
@@ -769,17 +829,24 @@ def _stage_needed(
     if stage == "summary":
         if completed:
             return False
-        return bool(frontmatter.get("type")) and _summary_missing(
-            note_path.read_text(encoding="utf-8")
-        )
+        if not frontmatter.get("type"):
+            return False
+        if "summary" in custom_properties_from_schema(schema):
+            summary_val = frontmatter.get("summary")
+            return not (isinstance(summary_val, str) and summary_val.strip())
+        return _summary_missing(note_path.read_text(encoding="utf-8"))
     return False
 
 
 def _canonical_frontmatter(
-    frontmatter: dict, note_type: str | None, *, preserve_unknown_properties: bool = True
+    frontmatter: dict,
+    note_type: str | None,
+    *,
+    preserve_unknown_properties: bool = True,
+    schema: dict | None = None,
 ) -> dict:
-    accepted = accepted_properties_for(note_type)
-    ordered = ordered_properties_for(note_type)
+    accepted = accepted_properties_for(note_type, schema)
+    ordered = ordered_properties_for(note_type, schema)
     canonical = {}
     for key in ordered:
         if key in frontmatter and key in accepted:

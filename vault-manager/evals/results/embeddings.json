@@ -1,0 +1,806 @@
+{
+  "agreement": [
+    {
+      "common_notes": 150,
+      "jaccard@k": 0.6606,
+      "mean_spearman": 0.9024,
+      "model": "qwen3-embed-0.6b",
+      "reference": "qwen3-embed-4b",
+      "top_k": 5
+    }
+  ],
+  "corpus_notes": 150,
+  "default_thresholds": {
+    "duplicate_min_similarity": 0.97,
+    "min_similarity": 0.45,
+    "related_min_similarity": 0.5
+  },
+  "endpoints": [
+    {
+      "base_url": "http://llms:8005",
+      "calibration": {
+        "centered": true,
+        "centered_nearest": {
+          "median": 0.5946,
+          "p95": 0.906,
+          "p99": 0.9826
+        },
+        "centered_random": {
+          "median": -0.0359,
+          "p95": 0.3232,
+          "p99": 0.5543
+        },
+        "centered_separation": 0.6305,
+        "note_count": 150,
+        "raw_nearest": {
+          "median": 0.8757,
+          "p95": 0.9682,
+          "p99": 0.9965
+        },
+        "raw_random": {
+          "median": 0.6782,
+          "p95": 0.8167,
+          "p99": 0.8755
+        },
+        "recommended_thresholds": {
+          "duplicate_min_similarity": 0.97,
+          "min_similarity": 0.32,
+          "related_min_similarity": 0.55
+        }
+      },
+      "duplicates": {
+        "detection_rate": 1.0,
+        "mean_cosine": 0.9954,
+        "n": 3,
+        "per_pair": [
+          {
+            "cosine": 0.9966,
+            "detected": true,
+            "label": "synthetic: V2G near-paraphrase"
+          },
+          {
+            "cosine": 0.9959,
+            "detected": true,
+            "label": "synthetic: meditation near-paraphrase"
+          },
+          {
+            "cosine": 0.9937,
+            "detected": true,
+            "label": "synthetic: bio near-duplicate"
+          }
+        ],
+        "threshold": 0.97
+      },
+      "key": "qwen3-embed-4b",
+      "label": "Qwen3-Embedding-4B",
+      "operational": {
+        "corpus_notes": 150,
+        "dimensions": 2560,
+        "embed_seconds": 31.22,
+        "model_identity": {
+          "context": 8192,
+          "dimensions": 2560,
+          "id": "embed",
+          "parameters": 4021774336,
+          "size": 3299735284
+        },
+        "notes_per_second": 4.81,
+        "vector_bytes_estimate": 3072000,
+        "vram_gb": null
+      },
+      "related_links": {
+        "f1": 0.4615,
+        "min_similarity": 0.5,
+        "n": 19,
+        "per_note": [
+          {
+            "found": [
+              "03 Notes/Vehicle-to-Home (V2H).md"
+            ],
+            "missed": [],
+            "path": "03 Notes/Vehicle-to-Grid (V2G).md"
+          },
+          {
+            "found": [
+              "03 Notes/Vehicle-to-Grid (V2G).md"
+            ],
+            "missed": [],
+            "path": "03 Notes/Vehicle-to-Home (V2H).md"
+          },
+          {
+            "found": [
+              "07 Organizations/Architecture 2030.md",
+              "07 Organizations/American Institute of Architects.md"
+            ],
+            "missed": [],
+            "path": "06 People/Edward Mazria.md"
+          },
+          {
+            "found": [
+              "07 Organizations/WeWork.md"
+            ],
+            "missed": [],
+            "path": "06 People/Lindsay Baker.md"
+          },
+          {
+            "found": [
+              "07 Organizations/The Ortiz Group.md"
+            ],
+            "missed": [],
+            "path": "06 People/Irina Krishpinovich.md"
+          },
+          {
+            "found": [
+              "05 Projects/EEI/3.04 FORGE/Forge Interanal Group.md",
+              "06 People/Miki Tsuchiya.md"
+            ],
+            "missed": [
+              "07 Organizations/UC Davis.md"
+            ],
+            "path": "06 People/Alan K Meier.md"
+          },
+          {
+            "found": [
+              "07 Organizations/WCEC.md",
+              "07 Organizations/EEI.md"
+            ],
+            "missed": [
+              "06 People/Alan K Meier.md"
+            ],
+            "path": "07 Organizations/UC Davis.md"
+          },
+          {
+            "found": [
+              "07 Organizations/UC Davis.md",
+              "07 Organizations/European Council for an Energy Efficient Economy.md"
+            ],
+            "missed": [],
+            "path": "07 Organizations/EEI.md"
+          },
+          {
+            "found": [
+              "07 Organizations/Centre for Research into Energy Demand Solutions.md",
+              "07 Organizations/Intergovernmental Panel on Climate Change.md",
+              "07 Organizations/European Council for an Energy Efficient Economy.md"
+            ],
+            "missed": [],
+            "path": "06 People/Nick Eyre.md"
+          },
+          {
+            "found": [
+              "06 People/Nick Eyre.md"
+            ],
+            "missed": [],
+            "path": "07 Organizations/Intergovernmental Panel on Climate Change.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Meditation.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Dependent Origination.md",
+              "02 Journal/2.02 Therapy/2025-04-22 Therapy.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Structured Meditation Outline.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.01 Buddhism/Cause and Effect.md",
+              "02 Journal/2.01 Buddhism/Dependent Origination.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "02 Journal/2.01 Buddhism/Meditation.md"
+            ],
+            "missed": [],
+            "path": "01 Inbox/Buddhism.md"
+          },
+          {
+            "found": [
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Cause and Effect.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "02 Journal/2.01 Buddhism/Dependent Origination.md",
+              "02 Journal/2.01 Buddhism/Meditation.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Four Noble Truths.md"
+          },
+          {
+            "found": [
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.01 Buddhism/Meditation.md",
+              "02 Journal/2.01 Buddhism/Cause and Effect.md",
+              "02 Journal/2.01 Buddhism/Structured Meditation Outline.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Eightfold Path.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Cause and Effect.md",
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "02 Journal/2.01 Buddhism/Structured Meditation Outline.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Dependent Origination.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.02 Therapy/2025-04-22 Therapy.md"
+            ],
+            "missed": [
+              "02 Journal/2.01 Buddhism/Meditation Schedule.md"
+            ],
+            "path": "02 Journal/2.01 Buddhism/Meditation.md"
+          },
+          {
+            "found": [
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Call - Structures of desire Postanarchist kink in the sp.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Jue_2017_Intimate Objectivity.md"
+            ],
+            "missed": [],
+            "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md"
+          },
+          {
+            "found": [
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Jue_2017_Intimate Objectivity.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md"
+            ],
+            "missed": [],
+            "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md"
+          },
+          {
+            "found": [
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Jue_2017_Intimate Objectivity.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Call - Structures of desire Postanarchist kink in the sp.md"
+            ],
+            "missed": [],
+            "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md"
+          }
+        ],
+        "precision": 0.3158,
+        "recall": 0.8571,
+        "top_k": 5
+      },
+      "related_sweep": [
+        {
+          "f1": 0.4235,
+          "floor": 0.45,
+          "n": 19,
+          "precision": 0.2812,
+          "recall": 0.8571
+        },
+        {
+          "f1": 0.4615,
+          "floor": 0.5,
+          "n": 19,
+          "precision": 0.3158,
+          "recall": 0.8571
+        },
+        {
+          "f1": 0.5152,
+          "floor": 0.55,
+          "n": 19,
+          "precision": 0.3778,
+          "recall": 0.8095
+        },
+        {
+          "f1": 0.3673,
+          "floor": 0.6,
+          "n": 19,
+          "precision": 0.3214,
+          "recall": 0.4286
+        },
+        {
+          "f1": 0.3684,
+          "floor": 0.65,
+          "n": 19,
+          "precision": 0.4118,
+          "recall": 0.3333
+        }
+      ],
+      "retrieval": {
+        "mrr": 0.75,
+        "n": 14,
+        "ndcg@10": 0.773,
+        "ndcg@5": 0.746,
+        "per_query": [
+          {
+            "first_rank": 1,
+            "query": "vehicle to grid EV charging and the electric grid",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 2,
+            "query": "Buddhist meditation practice and the Four Noble Truths",
+            "recall@10": 1.0,
+            "recall@5": 0.5
+          },
+          {
+            "first_rank": 1,
+            "query": "energy efficiency researcher at UC Davis",
+            "recall@10": 1.0,
+            "recall@5": 0.5
+          },
+          {
+            "first_rank": 1,
+            "query": "speculative fiction dissertation source on futurism",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "IPCC climate science assessment body",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 2,
+            "query": "knowledge management plain text data storage guidelines",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": null,
+            "query": "therapy session notes about advisor and family",
+            "recall@10": 0.0,
+            "recall@5": 0.0
+          },
+          {
+            "first_rank": 1,
+            "query": "Magic the Gathering deck list",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 2,
+            "query": "medical summary of care record from Sutter",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "community based participatory research how-to for energy",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "personal checklist for living well and giving",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "history of wargaming and role playing games",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 2,
+            "query": "architect who founded Architecture 2030",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 2,
+            "query": "sustainability lead at WeWork",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          }
+        ],
+        "recall@10": 0.9286,
+        "recall@5": 0.8571
+      }
+    },
+    {
+      "base_url": "http://llms:8011",
+      "calibration": {
+        "centered": true,
+        "centered_nearest": {
+          "median": 0.5988,
+          "p95": 0.9184,
+          "p99": 0.9869
+        },
+        "centered_random": {
+          "median": -0.0292,
+          "p95": 0.3342,
+          "p99": 0.5805
+        },
+        "centered_separation": 0.628,
+        "note_count": 150,
+        "raw_nearest": {
+          "median": 0.8468,
+          "p95": 0.9639,
+          "p99": 0.9959
+        },
+        "raw_random": {
+          "median": 0.5837,
+          "p95": 0.759,
+          "p99": 0.8378
+        },
+        "recommended_thresholds": {
+          "duplicate_min_similarity": 0.97,
+          "min_similarity": 0.33,
+          "related_min_similarity": 0.58
+        }
+      },
+      "duplicates": {
+        "detection_rate": 1.0,
+        "mean_cosine": 0.9951,
+        "n": 3,
+        "per_pair": [
+          {
+            "cosine": 0.9943,
+            "detected": true,
+            "label": "synthetic: V2G near-paraphrase"
+          },
+          {
+            "cosine": 0.9967,
+            "detected": true,
+            "label": "synthetic: meditation near-paraphrase"
+          },
+          {
+            "cosine": 0.9943,
+            "detected": true,
+            "label": "synthetic: bio near-duplicate"
+          }
+        ],
+        "threshold": 0.97
+      },
+      "key": "qwen3-embed-0.6b",
+      "label": "Qwen3-Embedding-0.6B",
+      "operational": {
+        "corpus_notes": 150,
+        "dimensions": 1024,
+        "embed_seconds": 16.25,
+        "model_identity": {
+          "id": "embed"
+        },
+        "notes_per_second": 9.23,
+        "vector_bytes_estimate": 1228800,
+        "vram_gb": null
+      },
+      "related_links": {
+        "f1": 0.4235,
+        "min_similarity": 0.5,
+        "n": 19,
+        "per_note": [
+          {
+            "found": [
+              "03 Notes/Vehicle-to-Home (V2H).md"
+            ],
+            "missed": [],
+            "path": "03 Notes/Vehicle-to-Grid (V2G).md"
+          },
+          {
+            "found": [
+              "03 Notes/Vehicle-to-Grid (V2G).md"
+            ],
+            "missed": [],
+            "path": "03 Notes/Vehicle-to-Home (V2H).md"
+          },
+          {
+            "found": [
+              "07 Organizations/American Institute of Architects.md",
+              "07 Organizations/Architecture 2030.md",
+              "06 People/Nick Eyre.md",
+              "06 People/Lindsay Baker.md"
+            ],
+            "missed": [],
+            "path": "06 People/Edward Mazria.md"
+          },
+          {
+            "found": [
+              "07 Organizations/WeWork.md",
+              "06 People/Irina Krishpinovich.md",
+              "06 People/Edward Mazria.md"
+            ],
+            "missed": [],
+            "path": "06 People/Lindsay Baker.md"
+          },
+          {
+            "found": [
+              "07 Organizations/The Ortiz Group.md",
+              "06 People/Lindsay Baker.md"
+            ],
+            "missed": [],
+            "path": "06 People/Irina Krishpinovich.md"
+          },
+          {
+            "found": [
+              "05 Projects/EEI/3.04 FORGE/Forge Interanal Group.md",
+              "06 People/Miki Tsuchiya.md",
+              "06 People/Ann Edminster.md"
+            ],
+            "missed": [
+              "07 Organizations/UC Davis.md"
+            ],
+            "path": "06 People/Alan K Meier.md"
+          },
+          {
+            "found": [
+              "07 Organizations/WCEC.md",
+              "07 Organizations/EEI.md"
+            ],
+            "missed": [
+              "06 People/Alan K Meier.md"
+            ],
+            "path": "07 Organizations/UC Davis.md"
+          },
+          {
+            "found": [
+              "07 Organizations/UC Davis.md",
+              "07 Organizations/WCEC.md"
+            ],
+            "missed": [],
+            "path": "07 Organizations/EEI.md"
+          },
+          {
+            "found": [
+              "07 Organizations/Centre for Research into Energy Demand Solutions.md",
+              "07 Organizations/Intergovernmental Panel on Climate Change.md",
+              "06 People/Edward Mazria.md",
+              "07 Organizations/European Council for an Energy Efficient Economy.md"
+            ],
+            "missed": [],
+            "path": "06 People/Nick Eyre.md"
+          },
+          {
+            "found": [
+              "06 People/Nick Eyre.md"
+            ],
+            "missed": [],
+            "path": "07 Organizations/Intergovernmental Panel on Climate Change.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Meditation.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "02 Journal/2.01 Buddhism/Dependent Origination.md",
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.02 Therapy/2025-04-22 Therapy.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Structured Meditation Outline.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.01 Buddhism/Cause and Effect.md",
+              "02 Journal/2.01 Buddhism/Dependent Origination.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "02 Journal/2.01 Buddhism/Meditation.md"
+            ],
+            "missed": [],
+            "path": "01 Inbox/Buddhism.md"
+          },
+          {
+            "found": [
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Cause and Effect.md",
+              "02 Journal/2.01 Buddhism/Dependent Origination.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "02 Journal/2.01 Buddhism/Meditation.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Four Noble Truths.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Meditation.md",
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+              "02 Journal/2.01 Buddhism/Cause and Effect.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Eightfold Path.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Cause and Effect.md",
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md"
+            ],
+            "missed": [],
+            "path": "02 Journal/2.01 Buddhism/Dependent Origination.md"
+          },
+          {
+            "found": [
+              "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+              "02 Journal/2.01 Buddhism/Eightfold Path.md",
+              "01 Inbox/Buddhism.md",
+              "02 Journal/2.01 Buddhism/Four Noble Truths.md",
+              "02 Journal/2.02 Therapy/2025-04-22 Therapy.md"
+            ],
+            "missed": [
+              "02 Journal/2.01 Buddhism/Meditation Schedule.md"
+            ],
+            "path": "02 Journal/2.01 Buddhism/Meditation.md"
+          },
+          {
+            "found": [
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Call - Structures of desire Postanarchist kink in the sp.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Jue_2017_Intimate Objectivity.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md"
+            ],
+            "missed": [],
+            "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md"
+          },
+          {
+            "found": [
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Jue_2017_Intimate Objectivity.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md"
+            ],
+            "missed": [],
+            "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md"
+          },
+          {
+            "found": [
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Guthrie - Redefining the Colonial An Afrofuturist Analysis .md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Call - Structures of desire Postanarchist kink in the sp.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Jue_2017_Intimate Objectivity.md",
+              "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md"
+            ],
+            "missed": [],
+            "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Morris_2012_Black Girls Are from the Future.md"
+          }
+        ],
+        "precision": 0.2812,
+        "recall": 0.8571,
+        "top_k": 5
+      },
+      "related_sweep": [
+        {
+          "f1": 0.4396,
+          "floor": 0.45,
+          "n": 19,
+          "precision": 0.2857,
+          "recall": 0.9524
+        },
+        {
+          "f1": 0.4235,
+          "floor": 0.5,
+          "n": 19,
+          "precision": 0.2812,
+          "recall": 0.8571
+        },
+        {
+          "f1": 0.4571,
+          "floor": 0.55,
+          "n": 19,
+          "precision": 0.3265,
+          "recall": 0.7619
+        },
+        {
+          "f1": 0.386,
+          "floor": 0.6,
+          "n": 19,
+          "precision": 0.3056,
+          "recall": 0.5238
+        },
+        {
+          "f1": 0.2667,
+          "floor": 0.65,
+          "n": 19,
+          "precision": 0.25,
+          "recall": 0.2857
+        }
+      ],
+      "retrieval": {
+        "mrr": 0.6786,
+        "n": 14,
+        "ndcg@10": 0.7348,
+        "ndcg@5": 0.7054,
+        "per_query": [
+          {
+            "first_rank": 1,
+            "query": "vehicle to grid EV charging and the electric grid",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 3,
+            "query": "Buddhist meditation practice and the Four Noble Truths",
+            "recall@10": 1.0,
+            "recall@5": 0.5
+          },
+          {
+            "first_rank": 2,
+            "query": "energy efficiency researcher at UC Davis",
+            "recall@10": 1.0,
+            "recall@5": 0.5
+          },
+          {
+            "first_rank": 1,
+            "query": "speculative fiction dissertation source on futurism",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "IPCC climate science assessment body",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "knowledge management plain text data storage guidelines",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": null,
+            "query": "therapy session notes about advisor and family",
+            "recall@10": 0.0,
+            "recall@5": 0.0
+          },
+          {
+            "first_rank": 1,
+            "query": "Magic the Gathering deck list",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 2,
+            "query": "medical summary of care record from Sutter",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 3,
+            "query": "community based participatory research how-to for energy",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 2,
+            "query": "personal checklist for living well and giving",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "history of wargaming and role playing games",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 3,
+            "query": "architect who founded Architecture 2030",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          },
+          {
+            "first_rank": 1,
+            "query": "sustainability lead at WeWork",
+            "recall@10": 1.0,
+            "recall@5": 1.0
+          }
+        ],
+        "recall@10": 0.9286,
+        "recall@5": 0.8571
+      }
+    }
+  ],
+  "kind": "embeddings"
+}

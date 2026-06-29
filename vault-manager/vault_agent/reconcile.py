@@ -18,6 +18,7 @@ from .schema import (
     NOTE_TYPES,
     accepted_properties_for,
     allowed_note_types,
+    load_schema,
     ordered_properties_for,
 )
 from .templates import append_missing_headings
@@ -42,6 +43,7 @@ def build_reconcile_plan(
 ) -> list[ReconcilePlanItem]:
     plan: list[ReconcilePlanItem] = []
     allowed_types = allowed_note_types(config.vault_root)
+    schema = load_schema(config.vault_root)
     for note_path in discover_markdown(config.vault_root):
         relative = note_path.relative_to(config.vault_root)
         if relative.is_relative_to(config.paths.system_dir) or relative.is_relative_to(
@@ -57,7 +59,9 @@ def build_reconcile_plan(
             continue
 
         original_frontmatter = dict(parsed.frontmatter)
-        frontmatter = apply_legacy_mappings(original_frontmatter, config)
+        frontmatter = apply_legacy_mappings(
+            original_frontmatter, config, approved_properties=accepted_properties_for(None, schema)
+        )
         note_type = frontmatter.get("type")
         inferred_type = infer_type_from_content(
             relative, parsed.body, inbox_dir=config.paths.inbox_dir
@@ -77,7 +81,7 @@ def build_reconcile_plan(
             plan.append(item)
             continue
 
-        accepted = accepted_properties_for(note_type)
+        accepted = accepted_properties_for(note_type, schema)
         if not config.preserve_unknown_properties:
             item.removed_properties = sorted(key for key in frontmatter if key not in accepted)
         for key, value in _missing_property_defaults(relative, frontmatter, note_type).items():
@@ -107,6 +111,7 @@ def run_reconcile(config: AgentConfig, *, properties_only: bool = False) -> tupl
 
     backup_root = config.vault_root / config.paths.agent_dir / "backups"
     allowed_types = allowed_note_types(config.vault_root)
+    schema = load_schema(config.vault_root)
     applied = 0
     for item in changed:
         note_path = config.vault_root / item.path
@@ -121,6 +126,7 @@ def run_reconcile(config: AgentConfig, *, properties_only: bool = False) -> tupl
             frontmatter,
             note_type,
             preserve_unknown_properties=config.preserve_unknown_properties,
+            schema=schema,
         )
         body = parsed.body
         if note_type in allowed_types and not properties_only:
@@ -128,7 +134,7 @@ def run_reconcile(config: AgentConfig, *, properties_only: bool = False) -> tupl
                 body, note_type, vault_root=config.vault_root
             )
         new_text = render_note(
-            frontmatter, body, property_order=ordered_properties_for(note_type)
+            frontmatter, body, property_order=ordered_properties_for(note_type, schema)
         )
         if new_text != text:
             write_text_safely(note_path, new_text, backup_root=backup_root)
@@ -170,9 +176,10 @@ def _canonical_frontmatter(
     note_type: str | None,
     *,
     preserve_unknown_properties: bool = True,
+    schema: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    accepted = accepted_properties_for(note_type)
-    ordered = ordered_properties_for(note_type)
+    accepted = accepted_properties_for(note_type, schema)
+    ordered = ordered_properties_for(note_type, schema)
     canonical: dict[str, Any] = {}
     for key in ordered:
         if key in frontmatter and key in accepted:

@@ -1,0 +1,1132 @@
+{
+  "arch": "35ba3b",
+  "context": {
+    "max_prompt_tokens": 62694,
+    "max_total_tokens": 64349,
+    "median_total_tokens": 3668,
+    "n_calls": 19,
+    "p90_total_tokens": 11368
+  },
+  "endpoint": "http://llms:8008",
+  "grades": {
+    "assign-folder": null,
+    "assign-hub": null,
+    "classify-person": null,
+    "classify-type": null,
+    "property-values": {
+      "capture_type": {
+        "accuracy": 0.4211,
+        "confusion": {
+          "": {
+            "": 4,
+            "chat": 1,
+            "manual": 10
+          },
+          "imported": {
+            "imported": 3
+          },
+          "manual": {
+            "manual": 1
+          }
+        },
+        "correct": 8,
+        "macro_f1": 0.5292,
+        "n": 19,
+        "per_class": {
+          "(empty)": {
+            "f1": 0.4211,
+            "precision": 1.0,
+            "recall": 0.2667,
+            "support": 15
+          },
+          "chat": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          },
+          "imported": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 3
+          },
+          "manual": {
+            "f1": 0.1667,
+            "precision": 0.0909,
+            "recall": 1.0,
+            "support": 1
+          }
+        }
+      },
+      "domain": {
+        "accuracy": 0.6842,
+        "confusion": {
+          "academic": {
+            "academic": 4
+          },
+          "craft": {
+            "craft": 1
+          },
+          "health": {
+            "health": 1,
+            "personal": 1
+          },
+          "household": {
+            "household": 1
+          },
+          "meta": {
+            "meta": 1
+          },
+          "personal": {
+            "health": 1,
+            "personal": 1
+          },
+          "philosophy": {
+            "personal": 1,
+            "philosophy": 1
+          },
+          "technology": {
+            "technology": 1
+          },
+          "work": {
+            "academic": 3,
+            "work": 2
+          }
+        },
+        "correct": 13,
+        "macro_f1": 0.7628,
+        "n": 19,
+        "per_class": {
+          "academic": {
+            "f1": 0.7273,
+            "precision": 0.5714,
+            "recall": 1.0,
+            "support": 4
+          },
+          "craft": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "health": {
+            "f1": 0.5,
+            "precision": 0.5,
+            "recall": 0.5,
+            "support": 2
+          },
+          "household": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "meta": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "personal": {
+            "f1": 0.4,
+            "precision": 0.3333,
+            "recall": 0.5,
+            "support": 2
+          },
+          "philosophy": {
+            "f1": 0.6667,
+            "precision": 1.0,
+            "recall": 0.5,
+            "support": 2
+          },
+          "technology": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "work": {
+            "f1": 0.5714,
+            "precision": 1.0,
+            "recall": 0.4,
+            "support": 5
+          }
+        }
+      },
+      "source_kind": {
+        "accuracy": 0.8947,
+        "confusion": {
+          "": {
+            "": 15,
+            "policy": 1,
+            "report": 1
+          },
+          "article": {
+            "article": 1
+          },
+          "book": {
+            "book": 1
+          }
+        },
+        "correct": 17,
+        "macro_f1": 0.9792,
+        "n": 19,
+        "per_class": {
+          "(empty)": {
+            "f1": 0.9375,
+            "precision": 1.0,
+            "recall": 0.8824,
+            "support": 17
+          },
+          "article": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "book": {
+            "f1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 1
+          },
+          "policy": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          },
+          "report": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          }
+        }
+      },
+      "status": {
+        "accuracy": 0.8421,
+        "confusion": {
+          "active": {
+            "active": 16,
+            "archived": 1,
+            "completed": 2
+          }
+        },
+        "correct": 16,
+        "macro_f1": 0.9143,
+        "n": 19,
+        "per_class": {
+          "active": {
+            "f1": 0.9143,
+            "precision": 1.0,
+            "recall": 0.8421,
+            "support": 19
+          },
+          "archived": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          },
+          "completed": {
+            "f1": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "support": 0
+          }
+        }
+      }
+    },
+    "refine-body": null
+  },
+  "kind": "main",
+  "label": "Qwen3.6-35B-A3B q6",
+  "model_key": "qwen3.6-35ba3b-q6",
+  "n_notes": 19,
+  "per_note": [
+    {
+      "path": "02 Journal/2.01 Buddhism/Structured Meditation Outline.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 34.659,
+          "completion_tokens": 2072,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1658,
+          "max_call_total_tokens": 3730,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [
+              "[[Buddhism]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Note is in Inbox with raw status",
+              "Original procedure/guide rather than external source"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [
+              "[[Buddhism]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Note is in Inbox with raw status",
+              "Original procedure/guide rather than external source"
+            ]
+          },
+          "prompt_tokens": 1658,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 34.66
+        }
+      }
+    },
+    {
+      "path": "02 Journal/2.02 Therapy/2025-04-15 Therapy.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 43.019,
+          "completion_tokens": 2611,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1311,
+          "max_call_total_tokens": 3922,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Spans multiple domains (personal, work, philosophy)",
+              "Journal entry rather than source note"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Spans multiple domains (personal, work, philosophy)",
+              "Journal entry rather than source note"
+            ]
+          },
+          "prompt_tokens": 1311,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 43.02
+        }
+      }
+    },
+    {
+      "path": "02 Journal/2.03 Journaling/12.01 Daily/2013/Of Sleep Disturbances and Academia 9 6 2013.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 47.927,
+          "completion_tokens": 2919,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1767,
+          "max_call_total_tokens": 4686,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "archived",
+            "warnings": [
+              "Spans personal, academic, and health topics"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "personal",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "archived",
+            "warnings": [
+              "Spans personal, academic, and health topics"
+            ]
+          },
+          "prompt_tokens": 1767,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 47.927
+        }
+      }
+    },
+    {
+      "path": "03 Notes/Vehicle-to-Grid (V2G).md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 30.303,
+          "completion_tokens": 1858,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 865,
+          "max_call_total_tokens": 2723,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.7,
+            "cover": "",
+            "domain": "technology",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Note is a title stub with no body content",
+              "Domain inferred from title"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.7,
+            "cover": "",
+            "domain": "technology",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Note is a title stub with no body content",
+              "Domain inferred from title"
+            ]
+          },
+          "prompt_tokens": 865,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 30.303
+        }
+      }
+    },
+    {
+      "path": "03 Notes/Data Sources.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 31.711,
+          "completion_tokens": 1874,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 884,
+          "max_call_total_tokens": 2758,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.8,
+            "cover": "",
+            "domain": "work",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Inbox location implies temporary status",
+              "Broad topic lacks specific project context"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.8,
+            "cover": "",
+            "domain": "work",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Inbox location implies temporary status",
+              "Broad topic lacks specific project context"
+            ]
+          },
+          "prompt_tokens": 884,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 31.711
+        }
+      }
+    },
+    {
+      "path": "04 Sources/Secondary/Dissertation/Games/Peterson_2012_Playing at the World.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 98.179,
+          "completion_tokens": 1655,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 62694,
+          "max_call_total_tokens": 64349,
+          "normalized": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Dungeons & Dragons]]",
+              "[[Role-playing games]]",
+              "[[Gary Gygax]]",
+              "[[Dave Arneson]]"
+            ],
+            "source_kind": "book",
+            "status": "completed",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Dungeons & Dragons]]",
+              "[[Role-playing games]]",
+              "[[Gary Gygax]]",
+              "[[Dave Arneson]]"
+            ],
+            "source_kind": "book",
+            "status": "completed",
+            "warnings": []
+          },
+          "prompt_tokens": 62694,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 98.181
+        }
+      }
+    },
+    {
+      "path": "04 Sources/Secondary/Dissertation/Speculative Fiction/Naik_2021_Dalit-futurist Feminism.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 47.648,
+          "completion_tokens": 2121,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 14210,
+          "max_call_total_tokens": 16331,
+          "normalized": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "article",
+            "status": "completed",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "article",
+            "status": "completed",
+            "warnings": []
+          },
+          "prompt_tokens": 14210,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 47.648
+        }
+      }
+    },
+    {
+      "path": "05 Projects/EEI/4.06 Energy CBPR/Deep Research Prompt.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 23.372,
+          "completion_tokens": 1326,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1969,
+          "max_call_total_tokens": 3295,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Located in Inbox, may require reorganization",
+              "Contains LLM prompt template rather than source material"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Located in Inbox, may require reorganization",
+              "Contains LLM prompt template rather than source material"
+            ]
+          },
+          "prompt_tokens": 1969,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 23.373
+        }
+      }
+    },
+    {
+      "path": "05 Projects/Hobbies/Games/Card Games/MTG/BG.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 37.699,
+          "completion_tokens": 2277,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 968,
+          "max_call_total_tokens": 3245,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "craft",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Domain 'craft' selected as closest match for hobby/game content",
+              "No explicit parent reference found in note"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "craft",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Domain 'craft' selected as closest match for hobby/game content",
+              "No explicit parent reference found in note"
+            ]
+          },
+          "prompt_tokens": 968,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 37.7
+        }
+      }
+    },
+    {
+      "path": "06 People/Lindsay Baker.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 37.442,
+          "completion_tokens": 2306,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1026,
+          "max_call_total_tokens": 3332,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "work",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "work",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 1026,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 37.443
+        }
+      }
+    },
+    {
+      "path": "06 People/Edward Mazria.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 57.42,
+          "completion_tokens": 2807,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1412,
+          "max_call_total_tokens": 4219,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "[[Authors]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "[[Authors]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 1412,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 57.42
+        }
+      }
+    },
+    {
+      "path": "06 People/Alan K Meier.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 31.384,
+          "completion_tokens": 2016,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 870,
+          "max_call_total_tokens": 2886,
+          "normalized": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Role unclear: contact vs. author",
+              "Domain inferred from email domain"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "[[Contacts]]",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Role unclear: contact vs. author",
+              "Domain inferred from email domain"
+            ]
+          },
+          "prompt_tokens": 870,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 31.384
+        }
+      }
+    },
+    {
+      "path": "07 Organizations/Intergovernmental Panel on Climate Change.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 29.739,
+          "completion_tokens": 1739,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 941,
+          "max_call_total_tokens": 2680,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Nick Eyre]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[Nick Eyre]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 941,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 29.739
+        }
+      }
+    },
+    {
+      "path": "07 Organizations/UC Davis.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 27.145,
+          "completion_tokens": 1723,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 894,
+          "max_call_total_tokens": 2617,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[EEI]]",
+              "[[WCEC]]",
+              "[[MTRP]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.9,
+            "cover": "",
+            "domain": "academic",
+            "parent": "",
+            "related": [
+              "[[EEI]]",
+              "[[WCEC]]",
+              "[[MTRP]]"
+            ],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 894,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 27.145
+        }
+      }
+    },
+    {
+      "path": "08 Reference/Tech/4.09 Knowledge Management/Data Storage and Retrieval Guidelines.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 46.925,
+          "completion_tokens": 2692,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 3233,
+          "max_call_total_tokens": 5925,
+          "normalized": {
+            "capture_type": "chat",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "meta",
+            "parent": "",
+            "related": [],
+            "source_kind": "policy",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "chat",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "meta",
+            "parent": "",
+            "related": [],
+            "source_kind": "policy",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 3233,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 46.925
+        }
+      }
+    },
+    {
+      "path": "09 Administrative/Health/Data/Sutter/DOC0006 - Summary of Care.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 49.275,
+          "completion_tokens": 2703,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 6052,
+          "max_call_total_tokens": 8755,
+          "normalized": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "health",
+            "parent": "",
+            "related": [],
+            "source_kind": "report",
+            "status": "active",
+            "warnings": [
+              "Contains sensitive medical and PII data"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "imported",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "health",
+            "parent": "",
+            "related": [],
+            "source_kind": "report",
+            "status": "active",
+            "warnings": [
+              "Contains sensitive medical and PII data"
+            ]
+          },
+          "prompt_tokens": 6052,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 49.276
+        }
+      }
+    },
+    {
+      "path": "01 Inbox/Living Well.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 42.355,
+          "completion_tokens": 2533,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 1135,
+          "max_call_total_tokens": 3668,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "health",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Spans multiple domains: health, environment, philanthropy"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "health",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Spans multiple domains: health, environment, philanthropy"
+            ]
+          },
+          "prompt_tokens": 1135,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 42.355
+        }
+      }
+    },
+    {
+      "path": "01 Inbox/Buddhism.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 30.422,
+          "completion_tokens": 1407,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 8720,
+          "max_call_total_tokens": 10127,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "philosophy",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.95,
+            "cover": "",
+            "domain": "philosophy",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": []
+          },
+          "prompt_tokens": 8720,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 30.422
+        }
+      }
+    },
+    {
+      "path": "01 Inbox/Saturday, June 13th \u2013 To Do.md",
+      "stages": {
+        "property-values": {
+          "api_seconds": 29.379,
+          "completion_tokens": 1787,
+          "errors": [],
+          "first_pass_json": true,
+          "max_call_prompt_tokens": 926,
+          "max_call_total_tokens": 2713,
+          "normalized": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "household",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Year unspecified in title",
+              "Mix of household chores and craft project"
+            ]
+          },
+          "ok": true,
+          "parsed": {
+            "capture_type": "manual",
+            "confidence": 0.85,
+            "cover": "",
+            "domain": "household",
+            "parent": "",
+            "related": [],
+            "source_kind": "",
+            "status": "active",
+            "warnings": [
+              "Year unspecified in title",
+              "Mix of household chores and craft project"
+            ]
+          },
+          "prompt_tokens": 926,
+          "repaired": false,
+          "stage": "property-values",
+          "valid": true,
+          "wall_seconds": 29.379
+        }
+      }
+    }
+  ],
+  "quant": "q6",
+  "robustness": {
+    "first_pass_json_rate": 1.0,
+    "ok_rate": 1.0,
+    "stage_calls": 19,
+    "valid_rate": 1.0
+  },
+  "served_model": "code",
+  "server_context_tokens": 131072,
+  "speed": {
+    "completion_tokens": 40426,
+    "median_wall_seconds": 37.443,
+    "p90_wall_seconds": 50.905,
+    "tokens_per_second": 52.1,
+    "total_wall_seconds": 776.0
+  },
+  "vram_gb": null
+}

@@ -257,6 +257,17 @@ def allowed_domains(config: AgentConfig) -> list[str]:
     return values
 
 
+def preserves_unknown_properties(vault_root: Path) -> bool:
+    """Whether this vault keeps non-schema frontmatter properties (default True).
+
+    Lightweight read of the agent config so the processing gate can decide whether
+    reshaping a note would actually strip an unapproved property.
+    """
+    file_config = _load_config_file(vault_root / paths_for(vault_root).agent_dir / "config.yaml")
+    legacy = _mapping(file_config.get("legacy_metadata"))
+    return bool(legacy.get("preserve_unknown_properties", True))
+
+
 def _load_config_file(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}

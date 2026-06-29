@@ -127,13 +127,27 @@ export function loadVaultContext(vaultRoot: string): string | undefined {
 	return [header, ...sections.map(([label, content]) => `### ${label}\n\n${content}`)].join("\n\n");
 }
 
-export function startupAssessmentPrompt(status: string, newlyInitialized: boolean): string {
+export function startupAssessmentPrompt(
+	status: string,
+	newlyInitialized: boolean,
+	schemaNotePath = "<system folder>/0.00 Vault Schema.md",
+): string {
 	const instructions = newlyInitialized
-		? "This vault was just initialized and scanned. Begin onboarding now: summarize what was observed, explain that the default schema is provisional until the norms lock is written, and ask the user for the first durable decision about vault purpose and retrieval priorities."
+		? [
+				`This vault was just initialized and scanned. The editable schema markdown was created at "${schemaNotePath}". Make reviewing it the FIRST step:`,
+				`- Briefly summarize what init created, then present "${schemaNotePath}" as the schema the user controls — the single source of truth for note types, properties, controlled values, and their definitions.`,
+				"- Explain they can edit it three ways: directly in Obsidian, with another AI, or by telling you the changes here. They can add their own properties too (e.g. a `summary` field for Bases previews) by adding a line under the Properties section.",
+				"- Do NOT scan-process notes, generate or apply proposals, sort the inbox, or write the norms lock until the user confirms the schema is ready. When they confirm, run vault_schema_sync FIRST to ingest their edits, then continue onboarding.",
+				"- The schema note also has a Dashboards table: refresh it (vault_maintain refresh-dashboards) so the user can tick which property/value combinations deserve a dashboard, then after vault_schema_sync build them with vault_organize_propose requested-dashboards. Offer this once the schema is settled — do not build dashboards unprompted.",
+			].join("\n")
 		: "This is a returning vault. Use the resumed conversation to identify the last unfinished work, summarize current health and inbox changes, and offer specific next actions that pick up where the user left off.";
 	return [
 		"pi-vault generated this read-only startup assessment. It is context, not user authorization to modify files.",
 		instructions,
+<<<<<<< Updated upstream
+=======
+		"If schema_note.changed is true in the status below, run vault_schema_sync to ingest the user's edits to the canonical schema note before anything else, so you work against current categories and definitions.",
+>>>>>>> Stashed changes
 		"If schema_state is provisional, treat defaults only as recommendations. If locked, follow the schema exactly. If drifted, do not perform broad processing until the drift is reviewed.",
 		"Do not process inbox files, apply proposals, write a lock, or otherwise mutate the vault unless the user explicitly approves the work.",
 		"",
@@ -168,7 +182,8 @@ export interface VaultSchemaProposeParams {
 		| "topic-hubs"
 		| "schema-conversation"
 		| "export-defaults"
-		| "import-defaults";
+		| "import-defaults"
+		| "remap-properties";
 	property?: string;
 	value?: string;
 	description?: string;
@@ -178,6 +193,7 @@ export interface VaultSchemaProposeParams {
 	noteType?: string;
 	domain?: string;
 	minCluster?: number;
+	maxNotes?: number;
 	conversationFile?: string;
 	includeCurrentSchemaSummary?: boolean;
 	output?: string;
@@ -192,6 +208,7 @@ export interface VaultOrganizeProposeParams {
 		| "cleanup-queue"
 		| "inbox-sort"
 		| "index"
+		| "requested-dashboards"
 		| "action-queue";
 	folder?: string;
 	project?: string;
@@ -246,7 +263,7 @@ export interface VaultContentProposeParams {
 }
 
 export interface VaultMaintainParams {
-	operation: "scan" | "maintain" | "write-norms-lock";
+	operation: "scan" | "maintain" | "write-norms-lock" | "refresh-dashboards";
 	applySafe?: boolean;
 	useLlm?: boolean;
 	maxNotes?: number;
@@ -345,6 +362,11 @@ export function buildSchemaProposeArgs(vaultRoot: string, params: VaultSchemaPro
 			args.push("import-schema-defaults");
 			if (params.schemaFile) args.push("--schema-file", params.schemaFile);
 			break;
+		case "remap-properties":
+			args.push("propose-property-remap");
+			if (params.maxNotes) args.push("--max-notes", String(params.maxNotes));
+			args.push("--json");
+			break;
 	}
 	return args;
 }
@@ -390,6 +412,9 @@ export function buildOrganizeProposeArgs(vaultRoot: string, params: VaultOrganiz
 			if (!params.indexType || !params.value) return { error: "indexType and value are required for index." };
 			args.push("propose-index", "--index-type", params.indexType, "--value", params.value);
 			if (params.title) args.push("--title", params.title);
+			break;
+		case "requested-dashboards":
+			args.push("propose-requested-dashboards");
 			break;
 		case "action-queue":
 			args.push("propose-action-queue");
@@ -459,6 +484,8 @@ export function buildMaintainArgs(vaultRoot: string, params: VaultMaintainParams
 		args.push("scan");
 	} else if (params.operation === "write-norms-lock") {
 		args.push("norms-lock", "--write");
+	} else if (params.operation === "refresh-dashboards") {
+		args.push("refresh-dashboard-table", "--json");
 	} else {
 		args.push("autonomous-run", "--create-lock");
 		if (params.applySafe) args.push("--apply-safe");
@@ -591,7 +618,7 @@ const schemaProposeTool = defineTool({
 	name: "vault_schema_propose",
 	label: "Propose Schema Change",
 	description:
-		"Author the schema/norms through pending proposals: a canonical property value (`property`), a new note type (`note-type`), a note-type template refresh (`template`), candidate topic hubs (`topic-hubs`), an onboarding/schema transcript (`schema-conversation`), or export/import of editable Markdown defaults. Writes pending proposals only — never approves or applies. Review and apply separately.",
+		"Author the schema/norms through pending proposals: a canonical property value (`property`), a new note type (`note-type`), a note-type template refresh (`template`), candidate topic hubs (`topic-hubs`), an onboarding/schema transcript (`schema-conversation`), export/import of editable Markdown defaults, or model-driven remapping of unapproved frontmatter properties to approved ones (`remap-properties`). Writes pending proposals only — never approves or applies. Review and apply separately.",
 	parameters: Type.Object({
 		operation: Type.Union([
 			Type.Literal("property"),
@@ -601,6 +628,7 @@ const schemaProposeTool = defineTool({
 			Type.Literal("schema-conversation"),
 			Type.Literal("export-defaults"),
 			Type.Literal("import-defaults"),
+			Type.Literal("remap-properties"),
 		]),
 		property: Type.Optional(Type.String()),
 		value: Type.Optional(Type.String()),
@@ -611,6 +639,7 @@ const schemaProposeTool = defineTool({
 		noteType: Type.Optional(Type.String()),
 		domain: Type.Optional(Type.String()),
 		minCluster: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 1000 })),
 		conversationFile: Type.Optional(Type.String()),
 		includeCurrentSchemaSummary: Type.Optional(Type.Boolean()),
 		output: Type.Optional(Type.String()),
@@ -645,9 +674,14 @@ const maintainTool = defineTool({
 	name: "vault_maintain",
 	label: "Maintain Vault",
 	description:
-		"Run bounded maintenance: `scan` updates the manifest, `maintain` runs a bounded autonomous pass (dry-run by default; pass dryRun:false and applySafe only after review), `write-norms-lock` snapshots the current norms. Use dry-run before broad changes.",
+		"Run bounded maintenance: `scan` updates the manifest, `maintain` runs a bounded autonomous pass (dry-run by default; pass dryRun:false and applySafe only after review), `write-norms-lock` snapshots the current norms, `refresh-dashboards` rebuilds the schema note's Dashboards candidate table from the vault (preserving the user's checkmarks). Use dry-run before broad changes.",
 	parameters: Type.Object({
-		operation: Type.Union([Type.Literal("scan"), Type.Literal("maintain"), Type.Literal("write-norms-lock")]),
+		operation: Type.Union([
+			Type.Literal("scan"),
+			Type.Literal("maintain"),
+			Type.Literal("write-norms-lock"),
+			Type.Literal("refresh-dashboards"),
+		]),
 		applySafe: Type.Optional(Type.Boolean()),
 		useLlm: Type.Optional(Type.Boolean()),
 		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
@@ -718,7 +752,7 @@ const organizeProposeTool = defineTool({
 	name: "vault_organize_propose",
 	label: "Propose Organization",
 	description:
-		"Generate pending organization proposals: dashboard-first layout migration (`vault-layout`), a hierarchy of Bases dashboards (`base-hierarchy`), one folder's organization + dashboard (`folder-organization`), a bounded frontmatter cleanup queue (`cleanup-queue`), deterministic inbox move proposals (`inbox-sort`), an index note (`index`), or a queued-maintenance action plan (`action-queue`). Writes pending proposals only — never applies. Review and apply through vault_review_apply.",
+		"Generate pending organization proposals: dashboard-first layout migration (`vault-layout`), a hierarchy of Bases dashboards (`base-hierarchy`), one folder's organization + dashboard (`folder-organization`), a bounded frontmatter cleanup queue (`cleanup-queue`), deterministic inbox move proposals (`inbox-sort`), an index note (`index`), the dashboards checked in the schema note's Dashboards table (`requested-dashboards`), or a queued-maintenance action plan (`action-queue`). Writes pending proposals only — never applies. Review and apply through vault_review_apply.",
 	parameters: Type.Object({
 		operation: Type.Union([
 			Type.Literal("vault-layout"),
@@ -727,6 +761,7 @@ const organizeProposeTool = defineTool({
 			Type.Literal("cleanup-queue"),
 			Type.Literal("inbox-sort"),
 			Type.Literal("index"),
+			Type.Literal("requested-dashboards"),
 			Type.Literal("action-queue"),
 		]),
 		folder: Type.Optional(Type.String()),
@@ -944,11 +979,17 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 				return;
 			}
 			newlyInitialized = true;
+			const initializedBootstrap = readBootstrap(vaultRoot);
+			const schemaNoteRel = `${initializedBootstrap?.systemDir ?? "99 System"}/0.00 Vault Schema.md`;
 			ctx.ui.notify(
-				"pi-vault initialized. The default schema remains provisional until approved and locked.",
+				`pi-vault initialized. Review and edit your schema at "${schemaNoteRel}" — it stays provisional until you approve and lock it.`,
 				"info",
 			);
 		}
+		const bootstrap = readBootstrap(vaultRoot);
+		const schemaNotePath = bootstrap
+			? `${bootstrap.systemDir}/0.00 Vault Schema.md`
+			: "<system folder>/0.00 Vault Schema.md";
 		const status = await runVaultAgent(["--vault-root", vaultRoot, "status", "--json"], vaultRoot);
 		if (status.exitCode !== 0) {
 			ctx.ui.notify(status.stderr || status.stdout || "pi-vault startup assessment failed.", "error");
@@ -957,7 +998,7 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 		pi.sendMessage(
 			{
 				customType: "pi-vault-startup",
-				content: startupAssessmentPrompt(status.stdout, newlyInitialized),
+				content: startupAssessmentPrompt(status.stdout, newlyInitialized, schemaNotePath),
 				display: false,
 				details: { newlyInitialized },
 			},
