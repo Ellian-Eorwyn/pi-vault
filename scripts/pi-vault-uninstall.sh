@@ -2,10 +2,10 @@
 set -euo pipefail
 
 SOURCE_DIR=""
-BIN_DIR="${PI_VAULT_BIN_DIR:-$HOME/.local/bin}"
-INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/pi-vault}"
-RUNTIME_DIR="${PI_VAULT_HOME:-$HOME/.pi-vault/runtime}"
-AGENT_DIR="${PI_VAULT_CODING_AGENT_DIR:-$HOME/.pi-vault/agent}"
+INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-$HOME/.pi-vault}"
+BIN_DIR="${PI_VAULT_BIN_DIR:-$INSTALL_DIR/bin}"
+RUNTIME_DIR="${PI_VAULT_HOME:-$INSTALL_DIR/runtime}"
+AGENT_DIR="${PI_VAULT_CODING_AGENT_DIR:-$INSTALL_DIR/agent}"
 NPM_CACHE_DIR="${PI_VAULT_NPM_CACHE:-$RUNTIME_DIR/npm-cache}"
 KEEP_STATE=false
 DRY_RUN=false
@@ -23,8 +23,8 @@ caches, settings, credentials, and sessions. A development checkout is never
 deleted.
 
 Options:
-  --bin-dir <path>         Launcher directory (default: ~/.local/bin)
-  --install-dir <path>     Managed checkout root (default: ~/.local/share/pi-vault)
+  --bin-dir <path>         Launcher directory (default: ~/.pi-vault/bin)
+  --install-dir <path>     Managed install root (default: ~/.pi-vault)
   --runtime-dir <path>     Runtime directory (default: ~/.pi-vault/runtime)
   --agent-dir <path>       Agent state directory (default: ~/.pi-vault/agent)
   --npm-cache-dir <path>   npm cache directory (default: runtime/npm-cache)
@@ -132,13 +132,13 @@ for index in "${!LAUNCHERS[@]}"; do
 	fi
 done
 
-if [[ -d "$INSTALL_DIR" ]]; then
+if [[ -d "$MANAGED_REPO" ]]; then
 	if [[ ! -f "$MANAGED_REPO/scripts/pi-vault-install.sh" ]]; then
-		note_warn "Skipping $INSTALL_DIR: not a managed pi-vault checkout."
+		note_warn "Skipping $MANAGED_REPO: not a managed pi-vault checkout."
 	elif [[ -n "$SOURCE_DIR" && "$SOURCE_DIR" != "$MANAGED_REPO_CANON" ]] && is_within "$SOURCE_DIR" "$INSTALL_DIR_CANON"; then
 		note_warn "Skipping $INSTALL_DIR: it contains the development checkout $SOURCE_DIR."
 	else
-		queue_path "Remove managed installation" "$INSTALL_DIR"
+		queue_path "Remove managed checkout" "$MANAGED_REPO"
 	fi
 fi
 
@@ -204,8 +204,9 @@ for path in "${PATHS_TO_REMOVE[@]}"; do
 	remove_path "$path" && echo "Removed $path" || true
 done
 
-STATE_ROOT="$HOME/.pi-vault"
+STATE_ROOT="$INSTALL_DIR"
 if [[ "$KEEP_STATE" == false && -d "$STATE_ROOT" ]]; then
+	rmdir "$BIN_DIR" 2>/dev/null || true
 	rmdir "$STATE_ROOT" 2>/dev/null || true
 fi
 

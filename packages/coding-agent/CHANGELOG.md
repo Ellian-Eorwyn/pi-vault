@@ -9,6 +9,7 @@
 ### Changed
 
 - Decomposed the `vault_manage` god-tool into focused, typed vault tools (`vault_readiness`, `vault_search`, `vault_retrieval`, `vault_schema_propose`, `vault_content_propose`, `vault_maintain`, `vault_review_apply`, `vault_recovery`) beside the existing `vault_status`. Each tool carries only its own parameters, the proposal→review→apply boundary is now structural (propose tools cannot apply), and `vault_search` is read-only with no write path. `vault_manage` remains as a deprecated shim that produces identical engine argv.
+- Consolidated fresh machine installs under `~/.pi-vault` by default, including the managed checkout, launchers, runtime, npm cache, agent settings, and per-vault session/debug directories.
 
 ### Added
 

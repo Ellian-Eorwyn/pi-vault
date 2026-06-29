@@ -10,7 +10,7 @@ if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/scripts/pi-vault-uninstall.sh" ]]; the
 	exec "$SCRIPT_DIR/scripts/pi-vault-uninstall.sh" --source-dir "$SCRIPT_DIR" "$@"
 fi
 
-INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/pi-vault}"
+INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-$HOME/.pi-vault}"
 SOURCE_DIR="$INSTALL_DIR/repository"
 
 if [[ -f "$SOURCE_DIR/scripts/pi-vault-uninstall.sh" ]]; then

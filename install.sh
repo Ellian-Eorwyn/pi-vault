@@ -10,7 +10,7 @@ if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/scripts/pi-vault-install.sh" ]]; then
 	exec "$SCRIPT_DIR/scripts/pi-vault-install.sh" --source-dir "$SCRIPT_DIR" "$@"
 fi
 
-INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/pi-vault}"
+INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-$HOME/.pi-vault}"
 REPOSITORY="${PI_VAULT_REPOSITORY:-https://github.com/Ellian-Eorwyn/pi-vault.git}"
 SOURCE_DIR="$INSTALL_DIR/repository"
 

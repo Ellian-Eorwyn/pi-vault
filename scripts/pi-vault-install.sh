@@ -4,18 +4,19 @@ set -euo pipefail
 SOURCE_DIR=""
 OLD_HEAD=""
 UPDATE=false
-BIN_DIR="${PI_VAULT_BIN_DIR:-$HOME/.local/bin}"
-RUNTIME_DIR="${PI_VAULT_HOME:-$HOME/.pi-vault/runtime}"
-NPM_CACHE_DIR="${PI_VAULT_NPM_CACHE:-$RUNTIME_DIR/npm-cache}"
+INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-$HOME/.pi-vault}"
+BIN_DIR="${PI_VAULT_BIN_DIR:-$INSTALL_DIR/bin}"
+RUNTIME_DIR="${PI_VAULT_HOME:-$INSTALL_DIR/runtime}"
 VENV_DIR="$RUNTIME_DIR/venv"
-AGENT_DIR="${PI_VAULT_CODING_AGENT_DIR:-$HOME/.pi-vault/agent}"
+AGENT_DIR="${PI_VAULT_CODING_AGENT_DIR:-$INSTALL_DIR/agent}"
+NPM_CACHE_DIR="${PI_VAULT_NPM_CACHE:-$RUNTIME_DIR/npm-cache}"
 
 usage() {
 	cat <<'EOF'
 Usage: scripts/pi-vault-install.sh --source-dir <path> [options]
 
 Options:
-  --bin-dir <path>       Launcher directory (default: ~/.local/bin)
+  --bin-dir <path>       Launcher directory (default: ~/.pi-vault/bin)
   --runtime-dir <path>   Managed state directory (venv, npm cache)
   --update               Update an existing installation
   --old-head <commit>    Previous revision used to detect changes
@@ -26,7 +27,7 @@ while (($#)); do
 	case "$1" in
 		--source-dir) SOURCE_DIR="${2:-}"; shift ;;
 		--bin-dir) BIN_DIR="${2:-}"; shift ;;
-		--runtime-dir) RUNTIME_DIR="${2:-}"; VENV_DIR="$RUNTIME_DIR/venv"; shift ;;
+		--runtime-dir) RUNTIME_DIR="${2:-}"; shift ;;
 		--old-head) OLD_HEAD="${2:-}"; shift ;;
 		--update) UPDATE=true ;;
 		--help|-h) usage; exit 0 ;;
@@ -34,6 +35,9 @@ while (($#)); do
 	esac
 	shift
 done
+
+VENV_DIR="$RUNTIME_DIR/venv"
+NPM_CACHE_DIR="${PI_VAULT_NPM_CACHE:-$RUNTIME_DIR/npm-cache}"
 
 if [[ -z "$SOURCE_DIR" || ! -f "$SOURCE_DIR/package.json" ]]; then
 	echo "A valid --source-dir is required." >&2
@@ -118,6 +122,7 @@ echo "  CLI: $BIN_DIR/pi-vault"
 echo "  MCP: $BIN_DIR/pi-vault-mcp"
 echo "  Updater: $BIN_DIR/pi-vault-update"
 echo "  Uninstaller: $BIN_DIR/pi-vault-uninstall"
+echo "  Agent: $AGENT_DIR"
 echo "  Runtime: $RUNTIME_DIR"
 echo "Run pi-vault from an Obsidian vault root."
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then

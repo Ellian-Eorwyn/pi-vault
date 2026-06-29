@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
 	existsSync,
 	mkdirSync,
@@ -28,6 +29,21 @@ interface SessionMigration {
 }
 
 const onboardingSessionsDirectory = join(".pi-vault", "onboarding-sessions");
+
+function scopedVaultName(vaultRoot: string): string {
+	const resolvedRoot = existsSync(vaultRoot) ? realpathSync(vaultRoot) : resolve(vaultRoot);
+	const name = basename(resolvedRoot).replaceAll(/[^A-Za-z0-9._-]/g, "-") || "vault";
+	const hash = createHash("sha256").update(resolvedRoot).digest("hex").slice(0, 16);
+	return `${name}-${hash}`;
+}
+
+function vaultSessionDirectory(globalAgentDir: string, vaultRoot: string, state: "onboarding" | "vaults"): string {
+	return join(globalAgentDir, "sessions", state, scopedVaultName(vaultRoot));
+}
+
+function vaultLogDirectory(globalAgentDir: string, vaultRoot: string): string {
+	return join(globalAgentDir, "logs", "vaults", scopedVaultName(vaultRoot));
+}
 
 function hasExplicitSessionSelection(args: string[]): boolean {
 	return args.some((arg) =>
@@ -86,7 +102,7 @@ function collectLegacySessionMigrations(globalAgentDir: string): SessionMigratio
 			const vaultRoot = findVaultRoot(sessionCwd);
 			const bootstrap = vaultRoot ? readBootstrap(vaultRoot) : undefined;
 			if (!vaultRoot || !bootstrap) continue;
-			const sessionDir = join(vaultRoot, bootstrap.systemDir, "0.01 agent", "sessions");
+			const sessionDir = vaultSessionDirectory(globalAgentDir, vaultRoot, "vaults");
 			mkdirSync(sessionDir, { recursive: true });
 			migrations.push({
 				source,
@@ -210,23 +226,25 @@ export function prepareVaultLaunch(
 	const bootstrap = readBootstrap(vaultRoot);
 	const isolatedArgs = [...args, "--no-approve", "--no-context-files"];
 	if (!bootstrap) {
+		const sessionDirectory = vaultSessionDirectory(globalAgentDir, vaultRoot, "onboarding");
+		mkdirSync(sessionDirectory, { recursive: true });
 		return {
-			args: [...isolatedArgs, "--session-dir", join(vaultRoot, onboardingSessionsDirectory)],
+			args: [...isolatedArgs, "--session-dir", sessionDirectory],
 			cwd: vaultRoot,
 			debugLogPath: devNull,
 			initialized: false,
 		};
 	}
-	const vaultAgentDir = join(vaultRoot, bootstrap.systemDir, "0.01 agent");
 	const systemDir = join(vaultRoot, bootstrap.systemDir);
 	if (existsSync(systemDir) && !isWithin(realpathSync(systemDir), realpathSync(vaultRoot))) {
 		throw new Error(`Configured system folder resolves outside the vault: ${systemDir}`);
 	}
-	mkdirSync(vaultAgentDir, { recursive: true });
-	const sessionDirectory = join(vaultAgentDir, "sessions");
+	const sessionDirectory = vaultSessionDirectory(globalAgentDir, vaultRoot, "vaults");
 	mkdirSync(sessionDirectory, { recursive: true });
 	migrateOnboardingSessions(vaultRoot, sessionDirectory);
 	cleanGlobalVaultState(globalAgentDir, vaultRoot);
+	const logDirectory = vaultLogDirectory(globalAgentDir, vaultRoot);
+	mkdirSync(logDirectory, { recursive: true });
 	return {
 		args: [
 			...isolatedArgs,
@@ -235,7 +253,7 @@ export function prepareVaultLaunch(
 			sessionDirectory,
 		],
 		cwd: vaultRoot,
-		debugLogPath: join(vaultAgentDir, `${APP_NAME}-debug.log`),
+		debugLogPath: join(logDirectory, `${APP_NAME}-debug.log`),
 		initialized: true,
 	};
 }

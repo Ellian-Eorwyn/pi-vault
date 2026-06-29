@@ -9,7 +9,8 @@ if (!sourceDir) {
 	throw new Error("source directory is required");
 }
 
-const agentDir = resolve(process.argv[3] ?? process.env.PI_VAULT_CODING_AGENT_DIR ?? join(homedir(), ".pi-vault/agent"));
+const installDir = resolve(process.env.PI_VAULT_INSTALL_DIR ?? join(homedir(), ".pi-vault"));
+const agentDir = resolve(process.argv[3] ?? process.env.PI_VAULT_CODING_AGENT_DIR ?? join(installDir, "agent"));
 const defaultsDir = join(resolve(sourceDir), "defaults/agent");
 const modelsPath = join(agentDir, "models.json");
 const settingsPath = join(agentDir, "settings.json");

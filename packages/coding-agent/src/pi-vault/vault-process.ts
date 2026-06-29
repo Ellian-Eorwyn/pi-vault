@@ -62,7 +62,9 @@ function invocation(args: string[]): VaultAgentInvocation {
 		return { command: explicitAgent, args, env: process.env };
 	}
 
-	const managedPython = join(homedir(), ".pi-vault", "runtime", "venv", "bin", "python");
+	const installRoot = process.env.PI_VAULT_INSTALL_DIR ?? join(homedir(), ".pi-vault");
+	const runtimeRoot = process.env.PI_VAULT_HOME ?? join(installRoot, "runtime");
+	const managedPython = join(runtimeRoot, "venv", "bin", "python");
 	const python = process.env.PI_VAULT_PYTHON ?? (existsSync(managedPython) ? managedPython : "python3");
 	const engineDirectory = bundledEngineDirectory();
 	const env = { ...process.env };

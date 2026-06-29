@@ -1,6 +1,7 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { prepareVaultLaunch } from "../src/pi-vault/vault-runtime.ts";
 
@@ -21,12 +22,27 @@ function initializeVault(root: string, systemDir = "System"): void {
 	);
 }
 
+function scopedVaultName(root: string): string {
+	const resolvedRoot = realpathSync(root);
+	const name = basename(resolvedRoot).replaceAll(/[^A-Za-z0-9._-]/g, "-") || "vault";
+	const hash = createHash("sha256").update(resolvedRoot).digest("hex").slice(0, 16);
+	return `${name}-${hash}`;
+}
+
+function vaultSessions(globalAgentDir: string, root: string): string {
+	return join(globalAgentDir, "sessions", "vaults", scopedVaultName(root));
+}
+
+function onboardingSessions(globalAgentDir: string, root: string): string {
+	return join(globalAgentDir, "sessions", "onboarding", scopedVaultName(root));
+}
+
 afterEach(() => {
 	for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
 describe("pi-vault runtime profile", () => {
-	it("anchors nested launches and runtime state to the configured system folder", () => {
+	it("anchors nested launches to install-scoped runtime state", () => {
 		const root = temporaryDirectory();
 		const nested = join(root, "Projects", "Nested");
 		const globalAgentDir = join(root, "global-agent");
@@ -42,26 +58,27 @@ describe("pi-vault runtime profile", () => {
 				"--no-context-files",
 				"--continue",
 				"--session-dir",
-				join(root, "System", "0.01 agent", "sessions"),
+				vaultSessions(globalAgentDir, root),
 			],
 			cwd: root,
-			debugLogPath: join(root, "System", "0.01 agent", "pi-vault-debug.log"),
+			debugLogPath: join(globalAgentDir, "logs", "vaults", scopedVaultName(root), "pi-vault-debug.log"),
 			initialized: true,
 		});
 	});
 
-	it("uses a vault-local bootstrap session until onboarding selects a system folder", () => {
+	it("uses an install-scoped bootstrap session until onboarding selects a system folder", () => {
 		const root = temporaryDirectory();
+		const globalAgentDir = join(root, "global-agent");
 		mkdirSync(join(root, ".obsidian"), { recursive: true });
 
-		const profile = prepareVaultLaunch([], root, join(root, "global-agent"));
+		const profile = prepareVaultLaunch([], root, globalAgentDir);
 
 		expect(profile?.initialized).toBe(false);
 		expect(profile?.args).toEqual([
 			"--no-approve",
 			"--no-context-files",
 			"--session-dir",
-			join(root, ".pi-vault", "onboarding-sessions"),
+			onboardingSessions(globalAgentDir, root),
 		]);
 	});
 
@@ -75,8 +92,9 @@ describe("pi-vault runtime profile", () => {
 		}
 	});
 
-	it("migrates first-launch sessions into the selected system folder", () => {
+	it("migrates first-launch sessions into the install-scoped vault session folder", () => {
 		const root = temporaryDirectory();
+		const globalAgentDir = join(root, "global-agent");
 		const onboardingSessions = join(root, ".pi-vault", "onboarding-sessions");
 		mkdirSync(join(root, ".obsidian"), { recursive: true });
 		mkdirSync(onboardingSessions, { recursive: true });
@@ -86,10 +104,10 @@ describe("pi-vault runtime profile", () => {
 		);
 		initializeVault(root);
 
-		const profile = prepareVaultLaunch([], root, join(root, "global-agent"));
+		const profile = prepareVaultLaunch([], root, globalAgentDir);
 
 		expect(existsSync(join(onboardingSessions, "first.jsonl"))).toBe(false);
-		expect(existsSync(join(root, "System", "0.01 agent", "sessions", "first.jsonl"))).toBe(true);
+		expect(existsSync(join(vaultSessions(globalAgentDir, root), "first.jsonl"))).toBe(true);
 		expect(profile?.args).toContain("--continue");
 	});
 
@@ -117,7 +135,7 @@ describe("pi-vault runtime profile", () => {
 
 		prepareVaultLaunch([], nested, globalAgentDir);
 
-		const migratedSession = join(root, "System", "0.01 agent", "sessions", "session.jsonl");
+		const migratedSession = join(vaultSessions(globalAgentDir, root), "session.jsonl");
 		expect(existsSync(legacySession)).toBe(false);
 		expect(JSON.parse(readFileSync(migratedSession, "utf8").split("\n")[0]).cwd).toBe(root);
 		expect(JSON.parse(readFileSync(join(globalAgentDir, "trust.json"), "utf8"))).toEqual({
