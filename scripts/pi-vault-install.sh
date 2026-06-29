@@ -13,6 +13,8 @@ VENV_DIR="$RUNTIME_DIR/venv"
 AGENT_DIR="${PI_VAULT_CODING_AGENT_DIR:-$INSTALL_DIR/agent}"
 NPM_CACHE_DIR="${PI_VAULT_NPM_CACHE:-$RUNTIME_DIR/npm-cache}"
 MIGRATED_FROM="${PI_VAULT_MIGRATED_FROM:-}"
+PATH_PROFILE=""
+PATH_PROFILE_UPDATED=false
 
 usage() {
 	cat <<'EOF'
@@ -24,6 +26,69 @@ Options:
   --update               Update an existing installation
   --old-head <commit>    Previous revision used to detect changes
 EOF
+}
+
+shell_quote() {
+	printf "%q" "$1"
+}
+
+profile_contains_bin_dir() {
+	local file="$1"
+	[[ -f "$file" ]] || return 1
+	grep -Fq "$BIN_DIR" "$file"
+}
+
+select_shell_profile() {
+	local shell_name
+	shell_name="$(basename "${SHELL:-}")"
+	case "$shell_name" in
+		zsh) printf '%s\n' "$HOME/.zshrc" ;;
+		bash)
+			if [[ -f "$HOME/.bashrc" ]]; then
+				printf '%s\n' "$HOME/.bashrc"
+			elif [[ -f "$HOME/.bash_profile" ]]; then
+				printf '%s\n' "$HOME/.bash_profile"
+			else
+				printf '%s\n' "$HOME/.bashrc"
+			fi
+			;;
+		sh)
+			if [[ -f "$HOME/.profile" ]]; then
+				printf '%s\n' "$HOME/.profile"
+			else
+				printf '%s\n' "$HOME/.profile"
+			fi
+			;;
+		*)
+			if [[ -f "$HOME/.zshrc" ]]; then
+				printf '%s\n' "$HOME/.zshrc"
+			elif [[ -f "$HOME/.bashrc" ]]; then
+				printf '%s\n' "$HOME/.bashrc"
+			elif [[ -f "$HOME/.profile" ]]; then
+				printf '%s\n' "$HOME/.profile"
+			else
+				printf '%s\n' "$HOME/.zshrc"
+			fi
+			;;
+	esac
+}
+
+ensure_path_profile() {
+	[[ -n "$HOME" ]] || return 1
+	for profile in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile"; do
+		if profile_contains_bin_dir "$profile"; then
+			PATH_PROFILE="$profile"
+			return 0
+		fi
+	done
+	PATH_PROFILE="$(select_shell_profile)"
+	mkdir -p "$(dirname "$PATH_PROFILE")"
+	{
+		printf '\n# pi-vault\n'
+		printf 'export PATH=%s:$PATH\n' "$(shell_quote "$BIN_DIR")"
+	} >>"$PATH_PROFILE"
+	PATH_PROFILE_UPDATED=true
+	return 0
 }
 
 while (($#)); do
@@ -156,6 +221,8 @@ if [[ -n "$MIGRATED_FROM" && "$LEGACY_BIN_DIR" != "$BIN_DIR" ]]; then
 	done
 fi
 
+ensure_path_profile || true
+
 echo "pi-vault is installed."
 echo "  CLI: $BIN_DIR/pi-vault"
 echo "  MCP: $BIN_DIR/pi-vault-mcp"
@@ -165,5 +232,11 @@ echo "  Agent: $AGENT_DIR"
 echo "  Runtime: $RUNTIME_DIR"
 echo "Run pi-vault from an Obsidian vault root."
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-	echo "Add $BIN_DIR to PATH before running pi-vault."
+	if [[ "$PATH_PROFILE_UPDATED" == true ]]; then
+		echo "Added $BIN_DIR to PATH in $PATH_PROFILE. Restart the terminal or run: source $PATH_PROFILE"
+	elif [[ -n "$PATH_PROFILE" ]]; then
+		echo "$BIN_DIR is configured in $PATH_PROFILE. Restart the terminal or run: source $PATH_PROFILE"
+	else
+		echo "Add $BIN_DIR to PATH before running pi-vault."
+	fi
 fi
