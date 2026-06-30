@@ -2,7 +2,25 @@
 
 pi-vault is an Obsidian vault agent built on the [pi agent harness](https://github.com/earendil-works/pi). It combines pi's interactive model session with a deterministic Python engine for vault scanning, schema and norms management, reviewable proposals, bounded inbox maintenance, whole-note analysis and guarded note-body refinement, Obsidian validation, reports, and Git-backed rollback.
 
-## Install
+## Philosophy & Why I Built This
+
+Manual note management eventually fails. As an Obsidian vault grows, the friction of sorting, linking, and maintaining structure often overtakes the value of taking the notes themselves. I built pi-vault to offload that burden to a deterministic agent.
+
+The core philosophy is simple: **one `.md` file to manage**. You maintain a single dashboard, schema, or configuration file, and the agent autonomously organizes all the other notes to comply with your rules. Instead of manually moving files and updating metadata, you drop notes in an inbox, set the norms, and the agent handles the filing, linking, and property extraction on its own.
+
+## Skills
+
+pi-vault operates safely on your files using specialized skills:
+
+- **Inbox Maintenance**: Analyzes notes in your inbox and proposes deterministic destinations based on your defined vault layout.
+- **People & Entity Extraction**: Builds deduplicated Contacts/Authors notes (`propose-people`) grounded in existing mentions, automatically generating backlinks.
+- **Whole-Note Analysis & Refinement**: Guards your exact wording while updating frontmatter and standardizing structures.
+- **Schema Management**: Operates explicitly from a `provisional`, `locked`, or `drifted` state. Broad processing only occurs when schema and norms are met.
+- **Undo & Versioning**: Every write run records changed files and can be fully reverted (`pi-vault vault undo <run-id>`).
+
+## Commands
+
+### Install
 
 macOS and Linux, from a checkout:
 
@@ -10,7 +28,7 @@ macOS and Linux, from a checkout:
 ./install.sh
 ```
 
-Or bootstrap without a checkout (clones into `~/.local/share/pi-vault/repository`):
+Or bootstrap without a checkout (clones into `~/.pi-vault/repository`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Ellian-Eorwyn/pi-vault/main/install.sh | bash
@@ -20,7 +38,7 @@ The installer builds the Node harness, creates a managed Python environment unde
 
 New installations default to the OpenAI-compatible `code` model at `http://llms:8008/v1`, with a 262,144-token context window and 32,768-token maximum output. The defaults are written to `~/.pi-vault/agent/models.json` and `settings.json` only when those files do not already exist. Edit those files to use another backend or model.
 
-## Update
+### Update
 
 ```bash
 pi-vault-update
@@ -28,7 +46,7 @@ pi-vault-update
 
 Updates pull the latest revision and rebuild the CLI or Python engine only when their sources changed.
 
-## Uninstall
+### Uninstall
 
 Preview a complete local uninstall:
 
