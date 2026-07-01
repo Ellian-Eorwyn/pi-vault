@@ -297,6 +297,9 @@ class SyncTests(unittest.TestCase):
             bootstrap = root / ".pi-vault" / "config.yaml"
             self.assertFalse(bootstrap.exists() and "07 Library" in bootstrap.read_text())
 
+            repeated = sync_schema_from_note(cfg)
+            self.assertTrue(repeated.folder_proposal.endswith(f"{FOLDER_PROPOSAL_ID}.json"))
+
     def test_invalid_folder_edit_reports_error_without_proposal(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

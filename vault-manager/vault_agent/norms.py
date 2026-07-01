@@ -9,9 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from .config import AgentConfig
+from .metadata_normalization import metadata_issue_report
 from .paths import AGENT_DIR, paths_for
 from .safety import write_text_safely
 from .schema import default_schema
+from .schema_note import folder_structure_changed, note_changed
 
 
 NORMS_LOCK = AGENT_DIR / "norms-lock.json"
@@ -59,17 +61,31 @@ def current_lock_hash(vault_root: Path) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
-def run_norms_lock(config: AgentConfig, *, write: bool = False) -> tuple[int, str]:
+def run_norms_lock(
+    config: AgentConfig, *, write: bool = False, force: bool = False
+) -> tuple[int, str]:
     lock = build_norms_lock(config)
     path = norms_lock_path(config.vault_root)
+    blockers = norms_lock_blockers(config)
     if config.dry_run or not write:
+        lines = [
+            "vault-agent norms-lock dry run",
+            f"Would write: {path}",
+            f"Lock hash: {lock['lock_hash']}",
+            f"Templates: {len(lock['templates'])}",
+        ]
+        if blockers:
+            lines.append("Lock readiness blockers:")
+            lines.extend(f"- {blocker}" for blocker in blockers)
+        lines.append("No files were changed.")
+        return 0, "\n".join(lines)
+
+    if blockers and not force:
         return (
-            0,
-            "vault-agent norms-lock dry run\n"
-            f"Would write: {path}\n"
-            f"Lock hash: {lock['lock_hash']}\n"
-            f"Templates: {len(lock['templates'])}\n"
-            "No files were changed.",
+            1,
+            "vault-agent norms-lock failed\n"
+            + "\n".join(f"Error: {blocker}" for blocker in blockers)
+            + "\nPass --force to override.",
         )
 
     backup_root = config.vault_root / config.paths.agent_dir / "backups"
@@ -82,8 +98,55 @@ def run_norms_lock(config: AgentConfig, *, write: bool = False) -> tuple[int, st
         0,
         "vault-agent norms-lock complete\n"
         f"Wrote: {path}\n"
-        f"Lock hash: {lock['lock_hash']}",
+        f"Lock hash: {lock['lock_hash']}"
+        + ("\nForced: true" if blockers and force else ""),
     )
+
+
+def norms_lock_blockers(config: AgentConfig) -> list[str]:
+    from .scanner import scan_vault
+    from .validation import validate_entries
+
+    blockers: list[str] = []
+    if note_changed(config):
+        blockers.append("schema note has unapplied edits; run schema-sync first")
+    if folder_structure_changed(config):
+        blockers.append("schema folder table differs from config; run schema-sync and apply the folder proposal")
+    unresolved = _unresolved_proposals(config)
+    if unresolved:
+        blockers.append("unresolved proposals remain: " + ", ".join(unresolved))
+    result = scan_vault(config.vault_root)
+    issues = validate_entries(result.entries, config)
+    if issues:
+        blockers.append(f"validation issues remain: {len(issues)}")
+    metadata = metadata_issue_report(config)
+    if metadata.property_counts:
+        total = sum(metadata.property_counts.values())
+        blockers.append(f"unapproved frontmatter properties remain: {total}")
+    if metadata.body_lines:
+        blockers.append(f"body metadata lines remain: {metadata.body_lines}")
+    return blockers
+
+
+def _unresolved_proposals(config: AgentConfig) -> list[str]:
+    proposal_dir = config.vault_root / config.paths.review_dir / "proposals"
+    if not proposal_dir.exists():
+        return []
+    unresolved: list[str] = []
+    for path in sorted(proposal_dir.glob("*.json")):
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            unresolved.append(path.stem)
+            continue
+        if not isinstance(loaded, dict):
+            unresolved.append(path.stem)
+            continue
+        status = loaded.get("status", "pending")
+        if status in {"pending", "approved"}:
+            proposal_id = loaded.get("id")
+            unresolved.append(proposal_id if isinstance(proposal_id, str) and proposal_id else path.stem)
+    return unresolved
 
 
 def _load_schema(vault_root: Path) -> dict[str, Any]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Any
 
 import yaml
@@ -79,7 +80,15 @@ def _format_scalar(value: Any) -> str:
         any(char in text for char in "[]{}:,#\\")
         or text.strip() != text
         or text[0] in "*&!|>@`'\"%-?"
+        or _yaml_ambiguous_scalar(text)
     ):
         escaped = text.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
     return text
+
+
+def _yaml_ambiguous_scalar(text: str) -> bool:
+    lowered = text.lower()
+    if lowered in {"true", "false", "null", "none", "yes", "no", "on", "off"}:
+        return True
+    return re.fullmatch(r"[+-]?\d+", text) is not None

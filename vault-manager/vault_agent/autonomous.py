@@ -256,7 +256,7 @@ def _build_report(
 def _write_norms_lock(config: AgentConfig) -> tuple[int, str]:
     from .norms import run_norms_lock
 
-    return run_norms_lock(config, write=True)
+    return run_norms_lock(config, write=True, force=True)
 
 
 def _write_report(

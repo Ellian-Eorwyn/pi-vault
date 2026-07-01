@@ -193,7 +193,8 @@ export interface VaultOrganizeProposeParams {
 		| "inbox-sort"
 		| "index"
 		| "requested-dashboards"
-		| "action-queue";
+		| "action-queue"
+		| "metadata-normalization";
 	folder?: string;
 	project?: string;
 	domain?: string;
@@ -211,6 +212,10 @@ export interface VaultOrganizeProposeParams {
 	checkpoint?: boolean;
 	resume?: boolean;
 	massEdit?: boolean;
+	includeAll?: boolean;
+	preserveUnknown?: boolean;
+	skipBodyMetadata?: boolean;
+	overwriteProposal?: boolean;
 	dryRun?: boolean;
 }
 
@@ -251,17 +256,31 @@ export interface VaultMaintainParams {
 	applySafe?: boolean;
 	useLlm?: boolean;
 	maxNotes?: number;
+	force?: boolean;
 	dryRun?: boolean;
 }
 
 export interface VaultReviewApplyParams {
-	operation: "review" | "apply-approved" | "approve-safe" | "review-blocks" | "approve-blocks-safe";
+	operation:
+		| "review"
+		| "apply-approved"
+		| "approve-safe"
+		| "approve-explicit"
+		| "review-blocks"
+		| "approve-blocks-safe";
 	stage?: VaultProcessStage;
 	note?: string;
+	proposalId?: string;
+	approvalNote?: string;
+	expectedOperations?: number;
+	massEdit?: boolean;
 }
 
 export interface VaultRecoveryParams {
+	operation?: "undo-run" | "diff" | "changed-files";
 	runId: string;
+	dryRun?: boolean;
+	force?: boolean;
 }
 
 // Read-only semantic search. Deliberately has no flag that can reach a write path so this
@@ -402,6 +421,14 @@ export function buildOrganizeProposeArgs(vaultRoot: string, params: VaultOrganiz
 			if (params.resume) args.push("--resume");
 			if (params.massEdit) args.push("--mass-edit");
 			break;
+		case "metadata-normalization":
+			args.push("propose-metadata-normalization");
+			if (params.maxItems) args.push("--max-items", String(params.maxItems));
+			if (params.includeAll) args.push("--all");
+			if (params.preserveUnknown) args.push("--preserve-unknown");
+			if (params.skipBodyMetadata) args.push("--skip-body-metadata");
+			if (params.overwriteProposal) args.push("--overwrite-proposal");
+			break;
 	}
 	args.push("--json");
 	return args;
@@ -460,6 +487,7 @@ export function buildMaintainArgs(vaultRoot: string, params: VaultMaintainParams
 		args.push("scan");
 	} else if (params.operation === "write-norms-lock") {
 		args.push("norms-lock", "--write");
+		if (params.force) args.push("--force");
 	} else if (params.operation === "refresh-dashboards") {
 		args.push("refresh-dashboard-table", "--json");
 	} else {
@@ -477,9 +505,28 @@ export function buildReviewApplyArgs(vaultRoot: string, params: VaultReviewApply
 	switch (params.operation) {
 		case "apply-approved":
 			args.push("review-proposals", "--apply-approved");
+			if (params.proposalId) args.push("--proposal-id", params.proposalId);
+			if (params.massEdit) args.push("--mass-edit");
 			break;
 		case "approve-safe":
 			args.push("review-proposals", "--agent-review", "--approve-safe");
+			if (params.proposalId) args.push("--proposal-id", params.proposalId);
+			break;
+		case "approve-explicit":
+			if (!params.proposalId) return { error: "proposalId is required for approve-explicit." };
+			if (!params.approvalNote?.trim()) return { error: "approvalNote is required for approve-explicit." };
+			if (params.expectedOperations === undefined) {
+				return { error: "expectedOperations is required for approve-explicit." };
+			}
+			args.push(
+				"review-proposals",
+				"--approve",
+				params.proposalId,
+				"--approval-note",
+				params.approvalNote,
+				"--expected-operations",
+				String(params.expectedOperations),
+			);
 			break;
 		case "review-blocks":
 			args.push("review-model-blocks", "--dry-run");
@@ -493,14 +540,20 @@ export function buildReviewApplyArgs(vaultRoot: string, params: VaultReviewApply
 			break;
 		default:
 			args.push("review-proposals", "--dry-run");
+			if (params.proposalId) args.push("--proposal-id", params.proposalId);
 			break;
 	}
 	return args;
 }
 
 export function buildRecoveryArgs(vaultRoot: string, params: VaultRecoveryParams): ArgsResult {
-	if (!params.runId) return { error: "runId is required to undo a run." };
-	return ["--vault-root", vaultRoot, "version", "undo-run", params.runId];
+	if (!params.runId) return { error: "runId is required for recovery." };
+	const operation = params.operation ?? "undo-run";
+	const args = ["--vault-root", vaultRoot];
+	if (params.dryRun && operation === "undo-run") args.push("--dry-run");
+	args.push("version", operation, params.runId);
+	if (params.force && operation === "undo-run") args.push("--force");
+	return args;
 }
 
 const NOT_INITIALIZED: VaultToolResult = {
@@ -658,7 +711,7 @@ const maintainTool = defineTool({
 	name: "vault_maintain",
 	label: "Maintain Vault",
 	description:
-		"Run bounded maintenance: `scan` updates the manifest, `maintain` runs a bounded autonomous pass (dry-run by default; pass dryRun:false and applySafe only after review), `write-norms-lock` snapshots the current norms, `refresh-dashboards` rebuilds the schema note's Dashboards candidate table from the vault (preserving the user's checkmarks). Use dry-run before broad changes.",
+		"Run bounded maintenance: `scan` updates the manifest, `maintain` runs a bounded autonomous pass (dry-run by default; pass dryRun:false and applySafe only after review), `write-norms-lock` snapshots the current norms when status reports it is safe (force overrides blockers), `refresh-dashboards` rebuilds the schema note's Dashboards candidate table from the vault (preserving the user's checkmarks). Use dry-run before broad changes.",
 	parameters: Type.Object({
 		operation: Type.Union([
 			Type.Literal("scan"),
@@ -669,6 +722,7 @@ const maintainTool = defineTool({
 		applySafe: Type.Optional(Type.Boolean()),
 		useLlm: Type.Optional(Type.Boolean()),
 		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
+		force: Type.Optional(Type.Boolean()),
 		dryRun: Type.Optional(Type.Boolean()),
 	}),
 	executionMode: "sequential",
@@ -681,12 +735,13 @@ const reviewApplyTool = defineTool({
 	name: "vault_review_apply",
 	label: "Review and Apply Proposals",
 	description:
-		"Inspect or apply pending proposals. `review` is a read-only dry-run that validates the proposal queue; `apply-approved` applies only proposals already marked approved; `approve-safe` marks valid bounded non-schema proposals approved; `review-blocks` previews blocked model-stage proposals and `approve-blocks-safe` converts the safe ones. Dry-run and review before mutations; apply only after explicit approval.",
+		"Inspect, explicitly approve, or apply pending proposals. `review` is read-only; `approve-explicit` marks one proposal approved with a human note and expected operation count; `apply-approved` can apply one approved proposal via proposalId; `approve-safe` remains limited to valid bounded non-schema proposals. Dry-run and review before mutations.",
 	parameters: Type.Object({
 		operation: Type.Union([
 			Type.Literal("review"),
 			Type.Literal("apply-approved"),
 			Type.Literal("approve-safe"),
+			Type.Literal("approve-explicit"),
 			Type.Literal("review-blocks"),
 			Type.Literal("approve-blocks-safe"),
 		]),
@@ -702,6 +757,10 @@ const reviewApplyTool = defineTool({
 			]),
 		),
 		note: Type.Optional(Type.String()),
+		proposalId: Type.Optional(Type.String()),
+		approvalNote: Type.Optional(Type.String()),
+		expectedOperations: Type.Optional(Type.Integer({ minimum: 0, maximum: 10000 })),
+		massEdit: Type.Optional(Type.Boolean()),
 	}),
 	executionMode: "sequential",
 	execute(_toolCallId, params, signal, _onUpdate, ctx) {
@@ -712,9 +771,15 @@ const reviewApplyTool = defineTool({
 const recoveryTool = defineTool({
 	name: "vault_recovery",
 	label: "Recover Vault Run",
-	description: "Undo a previous versioned run, restoring only the files that run touched.",
+	description:
+		"Inspect or undo a previous versioned run. Use `diff` and `changed-files` before restore; `undo-run` restores only touched files and supports dryRun and force.",
 	parameters: Type.Object({
+		operation: Type.Optional(
+			Type.Union([Type.Literal("undo-run"), Type.Literal("diff"), Type.Literal("changed-files")]),
+		),
 		runId: Type.String({ minLength: 1 }),
+		dryRun: Type.Optional(Type.Boolean()),
+		force: Type.Optional(Type.Boolean()),
 	}),
 	executionMode: "sequential",
 	execute(_toolCallId, params, signal, _onUpdate, ctx) {
@@ -736,7 +801,7 @@ const organizeProposeTool = defineTool({
 	name: "vault_organize_propose",
 	label: "Propose Organization",
 	description:
-		"Generate pending organization proposals: dashboard-first layout migration (`vault-layout`), a hierarchy of Bases dashboards (`base-hierarchy`), one folder's organization + dashboard (`folder-organization`), a bounded frontmatter cleanup queue (`cleanup-queue`), deterministic inbox move proposals (`inbox-sort`), an index note (`index`), the dashboards checked in the schema note's Dashboards table (`requested-dashboards`), or a queued-maintenance action plan (`action-queue`). Writes pending proposals only — never applies. Review and apply through vault_review_apply.",
+		"Generate pending organization proposals: dashboard-first layout migration (`vault-layout`), Bases dashboards (`base-hierarchy`), one folder's organization + dashboard (`folder-organization`), bounded cleanup (`cleanup-queue`), deterministic inbox moves (`inbox-sort`), an index note (`index`), requested dashboards, queued maintenance, or deterministic metadata normalization (`metadata-normalization`). Writes pending proposals only — never applies. Review and apply through vault_review_apply.",
 	parameters: Type.Object({
 		operation: Type.Union([
 			Type.Literal("vault-layout"),
@@ -747,6 +812,7 @@ const organizeProposeTool = defineTool({
 			Type.Literal("index"),
 			Type.Literal("requested-dashboards"),
 			Type.Literal("action-queue"),
+			Type.Literal("metadata-normalization"),
 		]),
 		folder: Type.Optional(Type.String()),
 		project: Type.Optional(Type.String()),
@@ -767,6 +833,10 @@ const organizeProposeTool = defineTool({
 		checkpoint: Type.Optional(Type.Boolean()),
 		resume: Type.Optional(Type.Boolean()),
 		massEdit: Type.Optional(Type.Boolean()),
+		includeAll: Type.Optional(Type.Boolean()),
+		preserveUnknown: Type.Optional(Type.Boolean()),
+		skipBodyMetadata: Type.Optional(Type.Boolean()),
+		overwriteProposal: Type.Optional(Type.Boolean()),
 		dryRun: Type.Optional(Type.Boolean()),
 	}),
 	executionMode: "sequential",

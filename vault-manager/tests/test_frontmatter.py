@@ -75,6 +75,13 @@ class FrontmatterTests(unittest.TestCase):
             r"Demand/Market Assessment \[Q6, Q8\]",
         )
 
+    def test_yaml_ambiguous_strings_stay_strings(self):
+        rendered = render_note({"related": ["2013", "yes", "a"]}, "# Note\n")
+        parsed = parse_note(rendered)
+
+        self.assertIn('related: ["2013", "yes", a]', rendered)
+        self.assertEqual(parsed.frontmatter["related"], ["2013", "yes", "a"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -102,6 +102,55 @@ class NormsAndOrganizationTests(unittest.TestCase):
                 (Path(directory) / "99 System" / "0.01 agent" / "norms-lock.json").exists()
             )
 
+    def test_status_reports_metadata_groups_and_lock_readiness(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            note = root / "legacy.md"
+            note.write_text(
+                "---\ntitle: Legacy\n---\n# Legacy\n\nPrivacy: private\nBody.\n",
+                encoding="utf-8",
+            )
+
+            exit_code, output = self.run_cli(
+                ["--vault-root", directory, "status", "--json"]
+            )
+            status = json.loads(output)
+
+        self.assertEqual(exit_code, 0)
+        self.assertFalse(status["can_write_norms_lock"])
+        self.assertIn(
+            {"property": "title", "count": 1},
+            status["unapproved_property_groups"],
+        )
+        self.assertEqual(status["body_metadata_groups"][0]["property"], "privacy")
+        self.assertTrue(
+            any("propose-metadata-normalization" in action for action in status["recommended_next_actions"])
+        )
+
+    def test_norms_lock_write_refuses_metadata_blockers_unless_forced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            note = root / "legacy.md"
+            note.write_text(
+                "---\ntitle: Legacy\n---\n# Legacy\n\nPrivacy: private\nBody.\n",
+                encoding="utf-8",
+            )
+
+            refused_code, refused_output = self.run_cli(
+                ["--vault-root", directory, "norms-lock", "--write"]
+            )
+            lock_path = root / "99 System" / "0.01 agent" / "norms-lock.json"
+            forced_code, forced_output = self.run_cli(
+                ["--vault-root", directory, "norms-lock", "--write", "--force"]
+            )
+            forced_exists = lock_path.exists()
+
+        self.assertEqual(refused_code, 1)
+        self.assertIn("body metadata lines remain", refused_output)
+        self.assertEqual(forced_code, 0)
+        self.assertIn("Forced: true", forced_output)
+        self.assertTrue(forced_exists)
+
     def test_organize_vault_pass_dry_run_does_not_write(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -36,6 +36,7 @@ from .llm import (
     provider_from_config,
 )
 from .model_blocks import run_review_model_blocks
+from .metadata_normalization import run_propose_metadata_normalization
 from .norms import run_norms_lock
 from .obsidian_check import run_obsidian_check
 from .organize_pass import run_organize_vault_pass
@@ -105,6 +106,7 @@ MAIN_COMMANDS = (
     "propose-vault-layout",
     "propose-base-hierarchy",
     "propose-property-remap",
+    "propose-metadata-normalization",
     "propose-requested-dashboards",
     "refresh-dashboard-table",
     "propose-action-queue",
@@ -152,6 +154,7 @@ MAIN_COMMAND_HELP = {
     "propose-vault-layout": "Generate a reviewed dashboard-first layout migration proposal.",
     "propose-base-hierarchy": "Generate hierarchical Bases dashboard proposals.",
     "propose-property-remap": "Propose model-driven mappings from unapproved frontmatter properties to approved ones.",
+    "propose-metadata-normalization": "Generate reviewable deterministic proposals for frontmatter and body metadata cleanup.",
     "propose-requested-dashboards": "Build dashboards for the rows checked in the schema note's Dashboards table.",
     "refresh-dashboard-table": "Refresh the schema note's Dashboards candidate table from the vault (preserves checkmarks).",
     "propose-action-queue": "Generate a pending proposal for queued maintenance actions.",
@@ -229,6 +232,7 @@ JSON_OUTPUT_COMMANDS = frozenset(
         "propose-vault-layout",
         "propose-base-hierarchy",
         "propose-property-remap",
+        "propose-metadata-normalization",
         "propose-requested-dashboards",
         "refresh-dashboard-table",
         "schema-sync",
@@ -362,6 +366,11 @@ def build_parser() -> argparse.ArgumentParser:
                 "--write",
                 action="store_true",
                 help="Write the generated norms lock. Without this, preview only.",
+            )
+            command_parser.add_argument(
+                "--force",
+                action="store_true",
+                help="Write despite lock-readiness blockers.",
             )
             command_parser.set_defaults(handler=_handle_norms_lock)
         elif command == "organize-vault-pass":
@@ -625,6 +634,35 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Replace an existing property-remap proposal with the same id.",
             )
             command_parser.set_defaults(handler=_handle_propose_property_remap)
+        elif command == "propose-metadata-normalization":
+            command_parser.add_argument(
+                "--max-items",
+                type=int,
+                default=200,
+                help="Maximum note operations per generated proposal chunk.",
+            )
+            command_parser.add_argument(
+                "--all",
+                action="store_true",
+                dest="include_all",
+                help="Generate chunked proposals for every detected metadata issue.",
+            )
+            command_parser.add_argument(
+                "--preserve-unknown",
+                action="store_true",
+                help="Do not include unknown frontmatter properties in removal lists.",
+            )
+            command_parser.add_argument(
+                "--skip-body-metadata",
+                action="store_true",
+                help="Do not remove imported property lines from note bodies.",
+            )
+            command_parser.add_argument(
+                "--overwrite-proposal",
+                action="store_true",
+                help="Replace existing metadata-normalization proposal files.",
+            )
+            command_parser.set_defaults(handler=_handle_propose_metadata_normalization)
         elif command == "propose-requested-dashboards":
             command_parser.add_argument(
                 "--overwrite-proposal",
@@ -798,6 +836,24 @@ def build_parser() -> argparse.ArgumentParser:
                 "--apply-approved",
                 action="store_true",
                 help="Apply proposals whose status is approved.",
+            )
+            command_parser.add_argument(
+                "--proposal-id",
+                help="Limit review/apply to one proposal id.",
+            )
+            command_parser.add_argument(
+                "--approve",
+                dest="approve_id",
+                help="Explicitly approve one pending proposal id.",
+            )
+            command_parser.add_argument(
+                "--approval-note",
+                help="Required human approval note for --approve.",
+            )
+            command_parser.add_argument(
+                "--expected-operations",
+                type=int,
+                help="Required operation count guard for --approve.",
             )
             command_parser.add_argument(
                 "--agent-review",
@@ -1281,7 +1337,11 @@ def _handle_reconcile(args: argparse.Namespace, config: AgentConfig) -> int:
 
 def _handle_norms_lock(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
-    exit_code, output = run_norms_lock(config, write=bool(getattr(args, "write", False)))
+    exit_code, output = run_norms_lock(
+        config,
+        write=bool(getattr(args, "write", False)),
+        force=bool(getattr(args, "force", False)),
+    )
     print(output)
     return exit_code
 
@@ -1380,8 +1440,12 @@ def _handle_review_proposals(args: argparse.Namespace, config: AgentConfig) -> i
         apply_approved=bool(getattr(args, "apply_approved", False)),
         agent_review=bool(getattr(args, "agent_review", False)),
         approve_safe=bool(getattr(args, "approve_safe", False)),
+        approve_id=getattr(args, "approve_id", None),
+        approval_note=getattr(args, "approval_note", None),
+        expected_operations=getattr(args, "expected_operations", None),
         max_operations=int(getattr(args, "max_operations", 25)),
         include_schema=bool(getattr(args, "include_schema", False)),
+        proposal_id=getattr(args, "proposal_id", None),
         proposal_dir=getattr(args, "proposal_dir", None),
     )
     print(output)
@@ -1547,6 +1611,20 @@ def _handle_propose_property_remap(args: argparse.Namespace, config: AgentConfig
         config,
         proposal_provider=proposal_provider,
         max_notes=int(getattr(args, "max_notes", 200)),
+        overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
+    )
+    print(output)
+    return exit_code
+
+
+def _handle_propose_metadata_normalization(args: argparse.Namespace, config: AgentConfig) -> int:
+    _print_config_diagnostics(config)
+    exit_code, output = run_propose_metadata_normalization(
+        config,
+        max_items=int(getattr(args, "max_items", 200)),
+        include_all=bool(getattr(args, "include_all", False)),
+        remove_unknown=not bool(getattr(args, "preserve_unknown", False)),
+        clean_body_metadata=not bool(getattr(args, "skip_body_metadata", False)),
         overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
     )
     print(output)
@@ -1926,6 +2004,7 @@ def _should_version_command(args: argparse.Namespace, config: AgentConfig) -> bo
             getattr(args, "apply_approved", False)
             or getattr(args, "agent_review", False)
             or getattr(args, "approve_safe", False)
+            or getattr(args, "approve_id", None)
         )
     if command == "hermes-run":
         return False
@@ -1955,7 +2034,12 @@ def _expected_changed_files(args: argparse.Namespace, config: AgentConfig) -> in
         return sum(
             len(item.data.get("operations", []))
             for item in load_proposals(directory)
-            if item.status == "approved" and not item.errors
+            if item.status == "approved"
+            and not item.errors
+            and (
+                getattr(args, "proposal_id", None) is None
+                or item.proposal_id == getattr(args, "proposal_id", None)
+            )
         )
     if command == "reconcile":
         return len(build_reconcile_plan(config))

@@ -44,6 +44,7 @@ ALLOWED_KINDS = {
     "note-refinement",
     "people-extraction",
     "property-remap",
+    "metadata-normalization",
 }
 ALLOWED_WRITE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".base"}
 
@@ -76,25 +77,40 @@ def run_review_proposals(
     apply_approved: bool = False,
     agent_review: bool = False,
     approve_safe: bool = False,
+    approve_id: str | None = None,
+    approval_note: str | None = None,
+    expected_operations: int | None = None,
     max_operations: int = 25,
     include_schema: bool = False,
+    proposal_id: str | None = None,
     proposal_dir: str | None = None,
 ) -> tuple[int, str]:
     directory = _proposal_directory(config, proposal_dir)
     proposals = load_proposals(directory)
+    selected_id = proposal_id or approve_id
+    selected = _filter_proposals(proposals, selected_id)
     reviewed = 0
     newly_approved = 0
+    explicitly_approved = 0
     review_lines: list[str] = []
+    explicit_errors = _explicit_approval_errors(
+        proposals,
+        approve_id=approve_id,
+        approval_note=approval_note,
+        expected_operations=expected_operations,
+    )
+    if selected_id and not selected and not approve_id:
+        explicit_errors.append(f"proposal not found: {selected_id}")
 
     if agent_review:
         review_lines = render_agent_review(
-            proposals,
+            selected,
             max_operations=max_operations,
             include_schema=include_schema,
         )
-        reviewed = len(proposals)
+        reviewed = len(selected)
         if approve_safe and not config.dry_run:
-            for proposal in proposals:
+            for proposal in selected:
                 if proposal.status != "pending" or proposal.errors:
                     continue
                 decision, _reason = agent_review_decision(
@@ -107,11 +123,24 @@ def run_review_proposals(
                 _mark_approved(proposal)
                 newly_approved += 1
             proposals = load_proposals(directory)
+            selected = _filter_proposals(proposals, selected_id)
 
-    invalid = [proposal for proposal in proposals if proposal.errors]
+    if approve_id and not config.dry_run and not explicit_errors:
+        proposal = _proposal_by_id(proposals, approve_id)
+        if proposal is not None:
+            _mark_explicitly_approved(
+                proposal,
+                approval_note=approval_note or "",
+                expected_operations=expected_operations,
+            )
+            explicitly_approved = 1
+        proposals = load_proposals(directory)
+        selected = _filter_proposals(proposals, selected_id)
+
+    invalid = [proposal for proposal in selected if proposal.errors]
     approved = [
         proposal
-        for proposal in proposals
+        for proposal in selected
         if not proposal.errors and proposal.status == "approved"
     ]
 
@@ -119,10 +148,16 @@ def run_review_proposals(
         lines = [
             "vault-agent review-proposals dry run",
             f"Proposal directory: {directory}",
-            f"Proposals: {len(proposals)}",
+            f"Proposals: {len(selected)}" if selected_id else f"Proposals: {len(proposals)}",
             f"Invalid: {len(invalid)}",
             f"Approved: {len(approved)}",
         ]
+        if selected_id:
+            lines.append(f"Proposal filter: {selected_id}")
+        if approve_id:
+            lines.append(f"Would explicitly approve proposal: {approve_id}")
+        if explicit_errors:
+            lines.extend(f"Error: {error}" for error in explicit_errors)
         if apply_approved:
             lines.append(f"Would apply approved proposals: {len(approved)}")
         if agent_review:
@@ -130,7 +165,7 @@ def run_review_proposals(
             if approve_safe:
                 would_approve = sum(
                     1
-                    for proposal in proposals
+                    for proposal in selected
                     if proposal.status == "pending"
                     and not proposal.errors
                     and agent_review_decision(
@@ -145,13 +180,14 @@ def run_review_proposals(
         if agent_review and review_lines:
             lines.extend(["", "\n".join(review_lines).rstrip()])
         if proposals:
-            lines.extend(["", render_proposed_changes(proposals).rstrip()])
-        return (1 if invalid else 0), "\n".join(lines)
+            displayed = selected if selected_id else proposals
+            lines.extend(["", render_proposed_changes(displayed).rstrip()])
+        return (1 if invalid or explicit_errors else 0), "\n".join(lines)
 
     backup_root = config.vault_root / config.paths.agent_dir / "backups"
 
     applied = 0
-    apply_errors: list[str] = []
+    apply_errors: list[str] = list(explicit_errors)
     if apply_approved and invalid:
         apply_errors.append("invalid proposals must be fixed or removed before applying approved proposals")
     elif apply_approved:
@@ -192,20 +228,24 @@ def run_review_proposals(
             f"approved {len(approved)}",
             f"agent reviewed {reviewed}",
             f"agent approved {newly_approved}",
+            f"explicit approved {explicitly_approved}",
             f"applied {applied}",
             f"errors {len(apply_errors)}",
         ],
     )
     lines = [
         "vault-agent review-proposals complete",
-        f"Proposals: {len(proposals)}",
+        f"Proposals: {len(selected)}" if selected_id else f"Proposals: {len(proposals)}",
         f"Invalid: {len(invalid)}",
         f"Approved: {len(approved)}",
         f"Agent reviewed: {reviewed}",
         f"Agent approved: {newly_approved}",
+        f"Explicit approved: {explicitly_approved}",
         f"Applied: {applied}",
         "Review file updated.",
     ]
+    if selected_id:
+        lines.append(f"Proposal filter: {selected_id}")
     if apply_errors:
         lines.extend(f"Error: {error}" for error in apply_errors)
     return (1 if invalid or apply_errors else 0), "\n".join(lines)
@@ -218,6 +258,53 @@ def load_proposals(directory: Path) -> list[Proposal]:
     for path in sorted(directory.glob("*.json")):
         proposals.append(_load_proposal(path))
     return proposals
+
+
+def _filter_proposals(proposals: list[Proposal], proposal_id: str | None) -> list[Proposal]:
+    if proposal_id is None:
+        return proposals
+    return [proposal for proposal in proposals if proposal.proposal_id == proposal_id]
+
+
+def _proposal_by_id(proposals: list[Proposal], proposal_id: str) -> Proposal | None:
+    for proposal in proposals:
+        if proposal.proposal_id == proposal_id:
+            return proposal
+    return None
+
+
+def _explicit_approval_errors(
+    proposals: list[Proposal],
+    *,
+    approve_id: str | None,
+    approval_note: str | None,
+    expected_operations: int | None,
+) -> list[str]:
+    if approve_id is None:
+        return []
+    errors: list[str] = []
+    note = approval_note.strip() if isinstance(approval_note, str) else ""
+    if not note:
+        errors.append("--approval-note is required with --approve")
+    if expected_operations is None:
+        errors.append("--expected-operations is required with --approve")
+    elif expected_operations < 0:
+        errors.append("--expected-operations must be non-negative")
+    proposal = _proposal_by_id(proposals, approve_id)
+    if proposal is None:
+        errors.append(f"proposal not found: {approve_id}")
+        return errors
+    if proposal.errors:
+        errors.extend(f"{proposal.path.name}: {error}" for error in proposal.errors)
+    if proposal.status != "pending":
+        errors.append(f"proposal {approve_id} status is {proposal.status}, not pending")
+    operations = proposal.data.get("operations")
+    operation_count = len(operations) if isinstance(operations, list) else 0
+    if expected_operations is not None and expected_operations != operation_count:
+        errors.append(
+            f"proposal {approve_id} has {operation_count} operation(s), expected {expected_operations}"
+        )
+    return errors
 
 
 def render_proposed_changes(proposals: list[Proposal]) -> str:
@@ -352,6 +439,8 @@ def apply_proposal(config: AgentConfig, proposal: Proposal) -> list[str]:
             errors.extend(_apply_restructure_body(config, operation))
         elif op == "add_property_aliases":
             errors.extend(_apply_add_property_aliases(config, operation))
+        elif op == "normalize_metadata":
+            errors.extend(_apply_normalize_metadata(config, operation))
         else:
             errors.append(f"operation {index} has unsupported op `{op}`")
     return errors
@@ -427,6 +516,8 @@ def _validate_proposal(proposal: Proposal) -> list[str]:
             errors.extend(_validate_restructure_body(operation, index))
         elif op == "add_property_aliases":
             errors.extend(_validate_add_property_aliases(operation, index))
+        elif op == "normalize_metadata":
+            errors.extend(_validate_normalize_metadata(operation, index))
         else:
             errors.append(f"operation {index} has unsupported op `{op}`")
     return errors
@@ -586,6 +677,14 @@ def _validate_restructure_body(operation: dict[str, Any], index: int) -> list[st
     return errors
 
 
+def _validate_normalize_metadata(operation: dict[str, Any], index: int) -> list[str]:
+    errors = _validate_update_frontmatter(operation, index)
+    body = operation.get("body")
+    if body is not None and not isinstance(body, str):
+        errors.append(f"operation {index} body must be a string")
+    return errors
+
+
 def _apply_write_file(config: AgentConfig, operation: dict[str, Any]) -> list[str]:
     try:
         path = _resolve_vault_path(config.vault_root, operation["path"])
@@ -636,6 +735,36 @@ def _apply_update_frontmatter(config: AgentConfig, operation: dict[str, Any]) ->
     rendered = render_note(
         frontmatter,
         parsed.body,
+        property_order=ordered_properties_for(frontmatter.get("type")),
+    )
+    backup_root = config.vault_root / config.paths.agent_dir / "backups"
+    if rendered != text:
+        write_text_safely(path, rendered, backup_root=backup_root)
+    return []
+
+
+def _apply_normalize_metadata(config: AgentConfig, operation: dict[str, Any]) -> list[str]:
+    try:
+        path = _resolve_vault_path(config.vault_root, operation["path"])
+    except ValueError as exc:
+        return [str(exc)]
+    relative = path.relative_to(config.vault_root)
+    if relative.is_relative_to(config.paths.system_dir):
+        return [f"normalize_metadata cannot target {config.paths.system_dir}"]
+    if not path.exists():
+        return [f"target note does not exist: {operation['path']}"]
+    text = path.read_text(encoding="utf-8")
+    parsed = parse_note(text)
+    if parsed.error:
+        return [parsed.error]
+    frontmatter = dict(parsed.frontmatter)
+    for key in operation.get("remove", []):
+        frontmatter.pop(key, None)
+    frontmatter.update(operation.get("set", {}))
+    body = operation.get("body", parsed.body)
+    rendered = render_note(
+        frontmatter,
+        body,
         property_order=ordered_properties_for(frontmatter.get("type")),
     )
     backup_root = config.vault_root / config.paths.agent_dir / "backups"
@@ -795,6 +924,22 @@ def _mark_approved(proposal: Proposal) -> None:
     atomic_write_text(proposal.path, json.dumps(data, indent=2) + "\n")
 
 
+def _mark_explicitly_approved(
+    proposal: Proposal,
+    *,
+    approval_note: str,
+    expected_operations: int | None,
+) -> None:
+    data = dict(proposal.data)
+    data["status"] = "approved"
+    data["approved_at"] = datetime.now(timezone.utc).isoformat()
+    data["approved_by"] = "vault-agent review-proposals --approve"
+    data["approval_note"] = approval_note
+    if expected_operations is not None:
+        data["expected_operations"] = expected_operations
+    atomic_write_text(proposal.path, json.dumps(data, indent=2) + "\n")
+
+
 def _validate_schema_json_write(content: str) -> list[str]:
     """Deterministic guard on model-authored `schema.json` writes.
 
@@ -850,7 +995,13 @@ def _preflight_operations(
     write_targets: set[Path] = set()
     for index, operation in enumerate(operations, start=1):
         op = operation.get("op")
-        if op in {"write_file", "update_frontmatter", "organize_note", "restructure_body"}:
+        if op in {
+            "write_file",
+            "update_frontmatter",
+            "organize_note",
+            "restructure_body",
+            "normalize_metadata",
+        }:
             relative = Path(operation["path"])
             target = config.vault_root / relative
             allowed_error = _write_allowed(config, relative)
@@ -918,7 +1069,7 @@ def _apply_create_directory(
     config: AgentConfig, operation: dict[str, Any]
 ) -> list[str]:
     path = config.vault_root / operation["path"]
-    path.mkdir(parents=False, exist_ok=operation.get("if_exists", "preserve") == "preserve")
+    path.mkdir(parents=True, exist_ok=operation.get("if_exists", "preserve") == "preserve")
     return []
 
 

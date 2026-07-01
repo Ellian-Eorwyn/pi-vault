@@ -99,7 +99,7 @@ class DashboardLayoutTests(unittest.TestCase):
             unsafe, _warnings = build_inbox_sort_proposal(config, max_notes=1, safe_only=True)
             self.assertEqual(unsafe["operations"], [])
 
-            run_norms_lock(config, write=True)
+            run_norms_lock(config, write=True, force=True)
             lock_hash = current_lock_hash(root)
             mark_stage(
                 root,
@@ -144,6 +144,37 @@ class DashboardLayoutTests(unittest.TestCase):
             self.assertFalse((root / "01 Dashboards").exists())
             self.assertFalse((root / "Legacy System" / "0.01 agent" / "review").exists())
 
+    def test_layout_migration_blocks_pending_folder_proposal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
+            proposals.mkdir(parents=True)
+            (proposals / "vault-folder-structure.json").write_text(
+                json.dumps(
+                    {
+                        "id": "vault-folder-structure",
+                        "kind": "schema-change",
+                        "status": "pending",
+                        "operations": [
+                            {
+                                "op": "write_file",
+                                "path": ".pi-vault/config.yaml",
+                                "if_exists": "overwrite",
+                                "content": "version: 1\nsystem_dir: 99 System\ninbox_dir: 00 Inbox\n",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            code, output = self.run_cli(
+                ["--vault-root", directory, "propose-vault-layout", "--dry-run"]
+            )
+
+        self.assertEqual(code, 1)
+        self.assertIn("pending folder proposal", output)
+
     def test_approved_layout_migration_moves_only_routable_existing_notes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -171,6 +202,13 @@ class DashboardLayoutTests(unittest.TestCase):
             self.assertEqual(code, 0, output)
             self.assertEqual(proposal["status"], "pending")
             self.assertFalse(proposal["automation_safe"])
+            create_directories = [
+                operation.get("path")
+                for operation in proposal["operations"]
+                if operation.get("op") == "create_directory"
+            ]
+            self.assertIn("03 Organizations", create_directories)
+            self.assertIn("07 Sources", create_directories)
             self.assertIn(
                 "03 Organizations/Acme.md",
                 [operation.get("destination") for operation in proposal["operations"]],

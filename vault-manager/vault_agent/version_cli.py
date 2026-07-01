@@ -127,6 +127,14 @@ def run_version_restore(
     created = set(record.get("created_files", [])) if record else set()
     delete_paths = [path for path in normalized if path in created]
     checkout_paths = [path for path in normalized if path not in created]
+    if config.dry_run:
+        return (
+            0,
+            "vault-agent version restore dry run\n"
+            f"Source commit: {commit}\n"
+            f"Would restore paths: {len(normalized)}\n"
+            f"Would delete created paths: {len(delete_paths)}",
+        )
     _delete_created_paths(config, delete_paths, force=force)
     if checkout_paths:
         versioning.restore(
@@ -157,6 +165,14 @@ def run_version_undo_run(config: AgentConfig, run_id: str, *, force: bool = Fals
     created = set(record.get("created_files", []))
     delete_paths = [path for path in paths if path in created]
     checkout_paths = [path for path in paths if path not in created]
+    if config.dry_run:
+        return (
+            0,
+            "vault-agent version undo-run dry run\n"
+            f"Run: {run_id}\n"
+            f"Would restore paths: {len(paths)}\n"
+            f"Would delete created paths: {len(delete_paths)}",
+        )
     _delete_created_paths(config, delete_paths, force=force)
     if checkout_paths:
         versioning.restore(

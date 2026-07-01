@@ -136,6 +136,121 @@ class ReviewProposalTests(unittest.TestCase):
         self.assertIn("Body.", text)
         self.assertEqual(len(backups), 1)
 
+    def test_explicit_approval_requires_note_and_expected_operations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
+            proposals.mkdir(parents=True)
+            proposal_path = proposals / "cleanup.json"
+            proposal_path.write_text(
+                json.dumps(
+                    {
+                        "id": "cleanup-note",
+                        "kind": "cleanup",
+                        "status": "pending",
+                        "operations": [
+                            {
+                                "op": "update_frontmatter",
+                                "path": "note.md",
+                                "set": {"status": "active"},
+                                "remove": [],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            failed_code, failed_output = self.run_cli(
+                [
+                    "--vault-root",
+                    directory,
+                    "review-proposals",
+                    "--approve",
+                    "cleanup-note",
+                    "--approval-note",
+                    "Reviewed",
+                    "--expected-operations",
+                    "2",
+                ]
+            )
+            proposal_after_failure = json.loads(proposal_path.read_text(encoding="utf-8"))
+            exit_code, output = self.run_cli(
+                [
+                    "--vault-root",
+                    directory,
+                    "review-proposals",
+                    "--approve",
+                    "cleanup-note",
+                    "--approval-note",
+                    "Reviewed exact operation.",
+                    "--expected-operations",
+                    "1",
+                ]
+            )
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(failed_code, 1)
+        self.assertIn("expected 2", failed_output)
+        self.assertEqual(proposal_after_failure["status"], "pending")
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Explicit approved: 1", output)
+        self.assertEqual(proposal["status"], "approved")
+        self.assertEqual(proposal["approved_by"], "vault-agent review-proposals --approve")
+        self.assertEqual(proposal["approval_note"], "Reviewed exact operation.")
+        self.assertEqual(proposal["expected_operations"], 1)
+
+    def test_apply_approved_can_target_one_proposal_id(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            proposals = root / "99 System" / "0.01 agent" / "review" / "proposals"
+            proposals.mkdir(parents=True)
+            (proposals / "approved.json").write_text(
+                json.dumps(
+                    {
+                        "id": "approved",
+                        "kind": "index-note",
+                        "status": "approved",
+                        "operations": [
+                            {
+                                "op": "write_file",
+                                "path": "Indexes/Approved.md",
+                                "content": "# Approved\n",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (proposals / "invalid.json").write_text(
+                json.dumps(
+                    {
+                        "id": "invalid",
+                        "kind": "index-note",
+                        "status": "approved",
+                        "operations": [{"op": "delete_file", "path": "note.md"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            exit_code, output = self.run_cli(
+                [
+                    "--vault-root",
+                    directory,
+                    "review-proposals",
+                    "--apply-approved",
+                    "--proposal-id",
+                    "approved",
+                ]
+            )
+            created = (root / "Indexes" / "Approved.md").exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Proposal filter: approved", output)
+        self.assertIn("Applied: 1", output)
+        self.assertTrue(created)
+
     def test_organize_note_can_replace_malformed_frontmatter(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

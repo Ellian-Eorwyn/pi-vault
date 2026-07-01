@@ -670,6 +670,20 @@ def note_changed(config: AgentConfig) -> bool:
     return load_state(config).get("file_hash") != current
 
 
+def folder_structure_changed(config: AgentConfig) -> bool:
+    """Read-only: does the schema note's folder table differ from bootstrap config?"""
+    path = schema_note_path(config)
+    if not path.exists():
+        return False
+    try:
+        parsed = parse_folder_structure(path.read_text(encoding="utf-8"))
+        if not parsed:
+            return False
+        return folder_paths_from_parsed(parsed, config.paths) != config.paths
+    except (OSError, ValueError):
+        return True
+
+
 # ----------------------------------------------------------------------- sync
 
 
@@ -935,7 +949,7 @@ def _folder_change_proposal(new_paths: VaultPaths) -> dict[str, Any]:
             "content": render_bootstrap(new_paths),
         }
     ]
-    for directory in (new_paths.inbox_dir, *dashboard_directories(new_paths)):
+    for directory in _configured_layout_directories(new_paths):
         if not directory.is_relative_to(new_paths.system_dir):
             operations.append(
                 {
@@ -966,6 +980,22 @@ def _folder_change_proposal(new_paths: VaultPaths) -> dict[str, Any]:
         ),
         "operations": operations,
     }
+
+
+def _configured_layout_directories(new_paths: VaultPaths) -> list[Path]:
+    directories = [
+        new_paths.inbox_dir,
+        new_paths.dashboards_dir,
+        *new_paths.content_dirs.values(),
+        *new_paths.domain_folders.values(),
+        *(folder.path for folder in new_paths.custom_folders),
+        *dashboard_directories(new_paths),
+    ]
+    ordered: list[Path] = []
+    for directory in sorted(directories, key=lambda item: (len(item.parts), item.as_posix())):
+        if directory not in ordered:
+            ordered.append(directory)
+    return ordered
 
 
 def _apply_folder_structure(
@@ -1028,7 +1058,13 @@ def sync_schema_from_note(config: AgentConfig, *, write: bool = True) -> SyncRes
     text = path.read_text(encoding="utf-8")
     file_hash = _hash_text(text)
     if load_state(config).get("file_hash") == file_hash:
-        result.summary = "schema note unchanged"
+        _apply_folder_structure(
+            config,
+            parse_folder_structure(text),
+            result,
+            write=write,
+        )
+        result.summary = _summary(result) if result.folder_proposal or result.folder_error else "schema note unchanged"
         return result
 
     parsed = parse_schema_note(text)

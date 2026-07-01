@@ -113,7 +113,7 @@ class PiVaultBootstrapTests(unittest.TestCase):
             state_after = state_path.read_text(encoding="utf-8")
             manifest_after = manifest_path.read_text(encoding="utf-8")
             config = self.load_test_config(root)
-            run_norms_lock(config, write=True)
+            run_norms_lock(config, write=True, force=True)
             locked = build_status(config)
             schema_path = root / "99 System" / "0.01 agent" / "schema.json"
             schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -147,7 +147,10 @@ class PiVaultBootstrapTests(unittest.TestCase):
             status = build_status(self.load_test_config(root))
 
         self.assertEqual(status["previous_scan"], "")
-        self.assertEqual(status["pending_proposals"], {"count": 1, "files": ["pending.json"]})
+        self.assertEqual(
+            status["pending_proposals"],
+            {"count": 1, "files": ["pending.json"], "ids": ["pending"]},
+        )
 
 
 class MoveProposalTests(unittest.TestCase):

@@ -41,6 +41,7 @@ from .schema import (
     property_order_from_schema,
     template_for,
 )
+from .schema_note import FOLDER_PROPOSAL_ID, folder_structure_changed, note_changed
 from .validation import validate_entries
 
 
@@ -230,9 +231,16 @@ def run_propose_inbox_sort(
 def run_propose_vault_layout(
     config: AgentConfig, *, overwrite_proposal: bool = False
 ) -> tuple[int, str]:
+    blockers = _layout_proposal_blockers(config)
+    if blockers:
+        return (
+            1,
+            "vault-agent propose-vault-layout failed\n"
+            + "\n".join(f"Error: {blocker}" for blocker in blockers),
+        )
     operations: list[dict[str, Any]] = []
-    planned_directories = set(dashboard_directories(config.paths))
-    for directory in dashboard_directories(config.paths):
+    planned_directories = set(_configured_layout_directories(config.paths))
+    for directory in _configured_layout_directories(config.paths):
         operations.append(
             {"op": "create_directory", "path": directory.as_posix(), "if_exists": "preserve"}
         )
@@ -303,6 +311,53 @@ def run_propose_vault_layout(
         dry_run=config.dry_run,
         overwrite_existing=overwrite_proposal,
     )
+
+
+def _layout_proposal_blockers(config: AgentConfig) -> list[str]:
+    blockers: list[str] = []
+    if note_changed(config):
+        blockers.append("schema note has unapplied edits; run schema-sync first")
+    if folder_structure_changed(config):
+        blockers.append("schema folder table differs from config; run schema-sync and apply the folder proposal first")
+    pending = _pending_proposal_ids(config)
+    if FOLDER_PROPOSAL_ID in pending:
+        blockers.append(f"pending folder proposal `{FOLDER_PROPOSAL_ID}` must be applied or resolved first")
+    return blockers
+
+
+def _pending_proposal_ids(config: AgentConfig) -> set[str]:
+    proposal_dir = config.vault_root / config.paths.review_dir / "proposals"
+    ids: set[str] = set()
+    if not proposal_dir.exists():
+        return ids
+    for path in proposal_dir.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict) or data.get("status", "pending") == "applied":
+            continue
+        proposal_id = data.get("id")
+        ids.add(proposal_id if isinstance(proposal_id, str) and proposal_id else path.stem)
+    return ids
+
+
+def _configured_layout_directories(paths) -> list[Path]:
+    directories = [
+        paths.inbox_dir,
+        paths.dashboards_dir,
+        *paths.content_dirs.values(),
+        *paths.domain_folders.values(),
+        *(folder.path for folder in paths.custom_folders),
+        *dashboard_directories(paths),
+    ]
+    ordered: list[Path] = []
+    for directory in sorted(directories, key=lambda item: (len(item.parts), item.as_posix())):
+        if directory not in ordered and not directory.is_relative_to(paths.system_dir):
+            ordered.append(directory)
+    return ordered
+
+
 def run_propose_property_remap(
     config: AgentConfig,
     *,

@@ -269,6 +269,13 @@ describe("pi-vault extension", () => {
 				"norms-lock",
 				"--write",
 			]);
+			expect(buildMaintainArgs("/vault", { operation: "write-norms-lock", force: true })).toEqual([
+				"--vault-root",
+				"/vault",
+				"norms-lock",
+				"--write",
+				"--force",
+			]);
 			expect(
 				buildMaintainArgs("/vault", { operation: "maintain", applySafe: true, useLlm: true, maxNotes: 2 }),
 			).toEqual([
@@ -318,24 +325,66 @@ describe("pi-vault extension", () => {
 				"review-proposals",
 				"--dry-run",
 			]);
-			expect(buildReviewApplyArgs("/vault", { operation: "apply-approved" })).toEqual([
+			expect(
+				buildReviewApplyArgs("/vault", { operation: "apply-approved", proposalId: "p1", massEdit: true }),
+			).toEqual([
 				"--vault-root",
 				"/vault",
 				"review-proposals",
 				"--apply-approved",
+				"--proposal-id",
+				"p1",
+				"--mass-edit",
 			]);
-			expect(buildReviewApplyArgs("/vault", { operation: "review" })).not.toContain("--apply-approved");
-		});
-
-		it("vault_recovery builds undo and requires a run id", () => {
-			expect(buildRecoveryArgs("/vault", { runId: "run-123" })).toEqual([
+			expect(
+				buildReviewApplyArgs("/vault", {
+					operation: "approve-explicit",
+					proposalId: "p1",
+					approvalNote: "Reviewed",
+					expectedOperations: 3,
+				}),
+			).toEqual([
 				"--vault-root",
 				"/vault",
+				"review-proposals",
+				"--approve",
+				"p1",
+				"--approval-note",
+				"Reviewed",
+				"--expected-operations",
+				"3",
+			]);
+			expect(buildReviewApplyArgs("/vault", { operation: "review" })).not.toContain("--apply-approved");
+			expect(buildReviewApplyArgs("/vault", { operation: "approve-explicit", proposalId: "p1" })).toEqual({
+				error: "approvalNote is required for approve-explicit.",
+			});
+		});
+
+		it("vault_recovery builds undo/diff/changed-files and requires a run id", () => {
+			expect(buildRecoveryArgs("/vault", { runId: "run-123", dryRun: true, force: true })).toEqual([
+				"--vault-root",
+				"/vault",
+				"--dry-run",
 				"version",
 				"undo-run",
 				"run-123",
+				"--force",
 			]);
-			expect(buildRecoveryArgs("/vault", { runId: "" })).toEqual({ error: "runId is required to undo a run." });
+			expect(buildRecoveryArgs("/vault", { operation: "diff", runId: "run-123", dryRun: true })).toEqual([
+				"--vault-root",
+				"/vault",
+				"version",
+				"diff",
+				"run-123",
+			]);
+			expect(buildRecoveryArgs("/vault", { operation: "changed-files", runId: "run-123" })).toEqual([
+				"--vault-root",
+				"/vault",
+				"version",
+				"changed-files",
+				"run-123",
+			]);
+			expect(buildRecoveryArgs("/vault", { runId: "" })).toEqual({ error: "runId is required for recovery." });
 		});
 	});
 
@@ -399,6 +448,27 @@ describe("pi-vault extension", () => {
 				"work",
 				"--title",
 				"Work",
+				"--json",
+			]);
+			expect(
+				buildOrganizeProposeArgs("/vault", {
+					operation: "metadata-normalization",
+					maxItems: 50,
+					includeAll: true,
+					preserveUnknown: true,
+					skipBodyMetadata: true,
+					overwriteProposal: true,
+				}),
+			).toEqual([
+				"--vault-root",
+				"/vault",
+				"propose-metadata-normalization",
+				"--max-items",
+				"50",
+				"--all",
+				"--preserve-unknown",
+				"--skip-body-metadata",
+				"--overwrite-proposal",
 				"--json",
 			]);
 		});
