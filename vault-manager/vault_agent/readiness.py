@@ -14,7 +14,7 @@ from .norms import current_lock_hash
 from .processing_state import processing_summary
 from .processor import next_needed_stage
 from .scanner import scan_vault
-from .schema import CORE_PROPERTY_ORDER, accepted_properties_for, allowed_note_types
+from .schema import CORE_PROPERTY_ORDER, accepted_properties_for, allowed_note_types, load_schema
 from .validation import issue_groups, validate_entries
 
 
