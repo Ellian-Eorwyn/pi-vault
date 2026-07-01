@@ -57,7 +57,7 @@ describe("pi-vault extension", () => {
 		mkdirSync(join(root, "System", "0.02 templates"), { recursive: true });
 		writeFileSync(join(root, "System", "0.01 agent", "vault-purpose.md"), "# Purpose\n\nResearch.");
 		writeFileSync(join(root, "System", "0.01 agent", "schema.json"), '{"types":["source"]}');
-		writeFileSync(join(root, "System", "0.02 templates", "0.022 folder norms.md"), "# Folder Norms\n\nShallow.");
+		writeFileSync(join(root, "System", "0.00 Vault Schema.md"), "# Vault Schema\n\nShallow.");
 		writeFileSync(join(root, "System", "0.01 agent", "retrieval", "01 vault-map.md"), "# Map\n\n- Notes");
 
 		const context = loadVaultContext(root);
@@ -68,6 +68,7 @@ describe("pi-vault extension", () => {
 		expect(context).toContain("# Map");
 		expect(context).toContain('"source"');
 		expect(context).toContain("Shallow.");
+		expect(context).toContain("System/0.00 Vault Schema.md");
 		expect(context).toContain("System/0.01 agent/schema.json");
 		expect(context).toContain("no norms lock exists");
 	});
@@ -566,6 +567,7 @@ describe("pi-vault extension", () => {
 			"vault_search",
 			"vault_retrieval",
 			"vault_schema_propose",
+			"vault_schema_sync",
 			"vault_content_propose",
 			"vault_organize_propose",
 			"vault_process_notes",

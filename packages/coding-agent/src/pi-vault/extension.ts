@@ -87,8 +87,8 @@ function readContextFile(path: string, limit = 20_000): string | undefined {
 export function loadVaultContext(vaultRoot: string): string | undefined {
 	const bootstrap = readBootstrap(vaultRoot);
 	if (!bootstrap) return undefined;
-	const agentDir = join(vaultRoot, bootstrap.systemDir, "0.01 agent");
-	const templateDir = join(vaultRoot, bootstrap.systemDir, "0.02 templates");
+	const systemRoot = join(vaultRoot, bootstrap.systemDir);
+	const agentDir = join(systemRoot, "0.01 agent");
 	const sections: Array<[string, string]> = [];
 	for (const [label, relativePath, path] of [
 		["Agent configuration", "0.01 agent/config.yaml", join(agentDir, "config.yaml")],
@@ -97,11 +97,8 @@ export function loadVaultContext(vaultRoot: string): string | undefined {
 		["Agent handoff", "0.01 agent/AGENT_HANDOFF.md", join(agentDir, "AGENT_HANDOFF.md")],
 		["Agent contract", "0.01 agent/AGENT_CONTRACT.md", join(agentDir, "AGENT_CONTRACT.md")],
 		["Norms lock", "0.01 agent/norms-lock.json", join(agentDir, "norms-lock.json")],
-		["Canonical schema", "0.01 agent/schema.json", join(agentDir, "schema.json")],
-		["Vault schema", "0.02 templates/0.020 vault schema.md", join(templateDir, "0.020 vault schema.md")],
-		["Property values", "0.02 templates/0.021 property values.md", join(templateDir, "0.021 property values.md")],
-		["Folder norms", "0.02 templates/0.022 folder norms.md", join(templateDir, "0.022 folder norms.md")],
-		["Topic hubs", "0.02 templates/0.023 topic hubs.md", join(templateDir, "0.023 topic hubs.md")],
+		["Vault schema (canonical, human-editable)", "0.00 Vault Schema.md", join(systemRoot, "0.00 Vault Schema.md")],
+		["Canonical schema (machine mirror of the note)", "0.01 agent/schema.json", join(agentDir, "schema.json")],
 		[
 			"Retrieval instructions",
 			"0.01 agent/retrieval/00 retrieval-readme.md",
@@ -172,15 +169,7 @@ export interface VaultRetrievalParams {
 }
 
 export interface VaultSchemaProposeParams {
-	operation:
-		| "property"
-		| "note-type"
-		| "template"
-		| "topic-hubs"
-		| "schema-conversation"
-		| "export-defaults"
-		| "import-defaults"
-		| "remap-properties";
+	operation: "property" | "note-type" | "template" | "topic-hubs" | "schema-conversation" | "remap-properties";
 	property?: string;
 	value?: string;
 	description?: string;
@@ -193,8 +182,6 @@ export interface VaultSchemaProposeParams {
 	maxNotes?: number;
 	conversationFile?: string;
 	includeCurrentSchemaSummary?: boolean;
-	output?: string;
-	schemaFile?: string;
 }
 
 export interface VaultOrganizeProposeParams {
@@ -350,14 +337,6 @@ export function buildSchemaProposeArgs(vaultRoot: string, params: VaultSchemaPro
 			if (!params.conversationFile) return { error: "conversationFile is required for schema-conversation." };
 			args.push("schema-conversation", "--conversation-file", params.conversationFile);
 			if (params.includeCurrentSchemaSummary) args.push("--include-current-schema-summary");
-			break;
-		case "export-defaults":
-			args.push("export-schema-defaults");
-			if (params.output) args.push("--output", params.output);
-			break;
-		case "import-defaults":
-			args.push("import-schema-defaults");
-			if (params.schemaFile) args.push("--schema-file", params.schemaFile);
 			break;
 		case "remap-properties":
 			args.push("propose-property-remap");
@@ -615,7 +594,7 @@ const schemaProposeTool = defineTool({
 	name: "vault_schema_propose",
 	label: "Propose Schema Change",
 	description:
-		"Author the schema/norms through pending proposals: a canonical property value (`property`), a new note type (`note-type`), a note-type template refresh (`template`), candidate topic hubs (`topic-hubs`), an onboarding/schema transcript (`schema-conversation`), export/import of editable Markdown defaults, or model-driven remapping of unapproved frontmatter properties to approved ones (`remap-properties`). Writes pending proposals only — never approves or applies. Review and apply separately.",
+		"Author the schema/norms through pending proposals: a canonical property value (`property`), a new note type (`note-type`), a note-type template refresh (`template`), candidate topic hubs (`topic-hubs`), an onboarding/schema transcript (`schema-conversation`), or model-driven remapping of unapproved frontmatter properties to approved ones (`remap-properties`). Writes pending proposals only — never approves or applies. Review and apply separately.",
 	parameters: Type.Object({
 		operation: Type.Union([
 			Type.Literal("property"),
@@ -623,8 +602,6 @@ const schemaProposeTool = defineTool({
 			Type.Literal("template"),
 			Type.Literal("topic-hubs"),
 			Type.Literal("schema-conversation"),
-			Type.Literal("export-defaults"),
-			Type.Literal("import-defaults"),
 			Type.Literal("remap-properties"),
 		]),
 		property: Type.Optional(Type.String()),
@@ -639,12 +616,22 @@ const schemaProposeTool = defineTool({
 		maxNotes: Type.Optional(Type.Integer({ minimum: 1, maximum: 1000 })),
 		conversationFile: Type.Optional(Type.String()),
 		includeCurrentSchemaSummary: Type.Optional(Type.Boolean()),
-		output: Type.Optional(Type.String()),
-		schemaFile: Type.Optional(Type.String()),
 	}),
 	executionMode: "sequential",
 	execute(_toolCallId, params, signal, _onUpdate, ctx) {
 		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => buildSchemaProposeArgs(vaultRoot, params));
+	},
+});
+
+const schemaSyncTool = defineTool({
+	name: "vault_schema_sync",
+	label: "Sync Schema Note",
+	description:
+		"Ingest the user's edits to the canonical schema note (0.00 Vault Schema.md) into schema.json: controlled values, definitions, properties, and topic hubs sync directly (a value still used by notes is never dropped). If the note's Folder Structure section changed, a pending folder-change proposal is written for review — files are never moved automatically. Run this FIRST whenever vault_status reports schema_note.changed, before other work.",
+	parameters: Type.Object({}),
+	executionMode: "sequential",
+	execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+		return runVaultBuilder(ctx.cwd, signal, (vaultRoot) => ["--vault-root", vaultRoot, "schema-sync", "--json"]);
 	},
 });
 
@@ -896,6 +883,7 @@ export default function piVaultExtension(pi: ExtensionAPI) {
 	pi.registerTool(searchTool);
 	pi.registerTool(retrievalTool);
 	pi.registerTool(schemaProposeTool);
+	pi.registerTool(schemaSyncTool);
 	pi.registerTool(contentProposeTool);
 	pi.registerTool(organizeProposeTool);
 	pi.registerTool(processNotesTool);

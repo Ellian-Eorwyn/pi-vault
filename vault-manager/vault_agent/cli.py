@@ -64,7 +64,7 @@ from .review import load_proposals, run_review_proposals
 from .paths import render_bootstrap
 from .scanner import run_scan, scan_vault
 from .schema_conversation import run_schema_conversation
-from .schema_defaults import run_export_schema_defaults, run_import_schema_defaults
+from .schema_note import sync_schema_from_note
 from .status import run_status
 from .validation import run_validate
 from .version_cli import (
@@ -122,8 +122,7 @@ MAIN_COMMANDS = (
     "hermes-run",
     "obsidian-check",
     "schema-conversation",
-    "export-schema-defaults",
-    "import-schema-defaults",
+    "schema-sync",
     "version",
 )
 
@@ -170,8 +169,7 @@ MAIN_COMMAND_HELP = {
     "hermes-run": "Run scheduled maintenance across vaults in a Hermes directory.",
     "obsidian-check": "Validate frontmatter and embedded Bases for Obsidian compatibility.",
     "schema-conversation": "Turn a schema/onboarding transcript into reviewable proposals.",
-    "export-schema-defaults": "Export editable Markdown vault defaults.",
-    "import-schema-defaults": "Import editable Markdown defaults as pending proposals.",
+    "schema-sync": "Ingest edits to the canonical schema note into schema.json (and propose folder changes).",
     "version": "Inspect, snapshot, diff, and roll back Git-backed agent changes.",
 }
 
@@ -233,6 +231,7 @@ JSON_OUTPUT_COMMANDS = frozenset(
         "propose-property-remap",
         "propose-requested-dashboards",
         "refresh-dashboard-table",
+        "schema-sync",
         "propose-folder-organization",
         "propose-cleanup-queue",
         "propose-inbox-sort",
@@ -933,25 +932,8 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Include current controlled values in the generated summary.",
             )
             command_parser.set_defaults(handler=_handle_schema_conversation)
-        elif command == "export-schema-defaults":
-            command_parser.add_argument(
-                "--output",
-                required=True,
-                help="Markdown output path for the editable vault defaults contract.",
-            )
-            command_parser.set_defaults(handler=_handle_export_schema_defaults)
-        elif command == "import-schema-defaults":
-            command_parser.add_argument(
-                "--schema-file",
-                required=True,
-                help="Edited Markdown defaults file to convert into a pending proposal.",
-            )
-            command_parser.add_argument(
-                "--overwrite-proposal",
-                action="store_true",
-                help="Replace an existing vault-schema-defaults proposal.",
-            )
-            command_parser.set_defaults(handler=_handle_import_schema_defaults)
+        elif command == "schema-sync":
+            command_parser.set_defaults(handler=_handle_schema_sync)
         elif command == "review-model-blocks":
             command_parser.add_argument(
                 "--approve-safe",
@@ -1767,28 +1749,31 @@ def _handle_schema_conversation(args: argparse.Namespace, config: AgentConfig) -
     return exit_code
 
 
-def _handle_export_schema_defaults(args: argparse.Namespace, config: AgentConfig) -> int:
+def _handle_schema_sync(args: argparse.Namespace, config: AgentConfig) -> int:
     _print_config_diagnostics(config)
-    try:
-        exit_code, output = run_export_schema_defaults(config, output=args.output)
-    except ValueError as exc:
-        exit_code, output = 1, f"vault-agent export-schema-defaults failed\nError: {exc}"
-    print(output)
-    return exit_code
-
-
-def _handle_import_schema_defaults(args: argparse.Namespace, config: AgentConfig) -> int:
-    _print_config_diagnostics(config)
-    try:
-        exit_code, output = run_import_schema_defaults(
-            config,
-            schema_file=args.schema_file,
-            overwrite_proposal=bool(getattr(args, "overwrite_proposal", False)),
-        )
-    except ValueError as exc:
-        exit_code, output = 1, f"vault-agent import-schema-defaults failed\nError: {exc}"
-    print(output)
-    return exit_code
+    result = sync_schema_from_note(config, write=not config.dry_run)
+    if bool(getattr(args, "json_output", False)):
+        payload = {
+            "generated_by": "vault-agent",
+            "changed": result.changed,
+            "note_missing": result.note_missing,
+            "summary": result.summary,
+            "added": result.added,
+            "edited": result.edited,
+            "removed": result.removed,
+            "blocked": result.blocked,
+            "folder_proposal": result.folder_proposal,
+            "folder_error": result.folder_error,
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    lines = ["vault-agent schema-sync", result.summary]
+    if result.folder_proposal:
+        lines.append(f"Folder-change proposal: {result.folder_proposal} (review before applying)")
+    if result.folder_error:
+        lines.append(f"Folder edits ignored: {result.folder_error}")
+    print("\n".join(lines))
+    return 0
 
 
 def _handle_version_init(args: argparse.Namespace, config: AgentConfig) -> int:
@@ -1930,8 +1915,6 @@ def _should_version_command(args: argparse.Namespace, config: AgentConfig) -> bo
         "action-plan",
         "obsidian-check",
         "submit-artifact",
-        "export-schema-defaults",
-        "import-schema-defaults",
         "version",
         "memory",
     }:
@@ -1958,8 +1941,6 @@ def _expected_changed_files(args: argparse.Namespace, config: AgentConfig) -> in
         return max_notes + int(getattr(args, "max_proposal_operations", 10)) + 10
     if command == "schema-conversation":
         return 5
-    if command == "import-schema-defaults":
-        return 1
     if command == "propose-cleanup-queue":
         return 1 if (getattr(args, "max_items", 25) or 0) else 0
     if command == "review-proposals" and getattr(args, "apply_approved", False):

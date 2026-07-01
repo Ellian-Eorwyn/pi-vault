@@ -9,6 +9,7 @@ from .config import AgentConfig
 from .dashboard_layout import dashboard_directories
 from .logging_utils import append_log
 from .safety import CreationItem, apply_creation_plan, plan_creation
+from .schema_note import SCHEMA_NOTE_NAME, seed_schema_from_vault
 from .starter_files import starter_file_contents
 from .paths import BOOTSTRAP_DIR, BOOTSTRAP_FILE, render_bootstrap
 
@@ -117,20 +118,8 @@ FILE_SPECS = (
         "retrieval rebuild log",
     ),
     (
-        "99 System/0.02 templates/0.020 vault schema.md",
-        "human-readable vault schema",
-    ),
-    (
-        "99 System/0.02 templates/0.021 property values.md",
-        "human-readable property values",
-    ),
-    (
-        "99 System/0.02 templates/0.022 folder norms.md",
-        "human-readable folder norms",
-    ),
-    (
-        "99 System/0.02 templates/0.024 vault defaults.md",
-        "editable exported vault schema defaults",
+        f"99 System/{SCHEMA_NOTE_NAME}",
+        "canonical human-editable vault schema (single source of truth)",
     ),
 )
 
@@ -152,6 +141,7 @@ def build_init_creation_items(config: AgentConfig) -> list[CreationItem]:
         content_dirs=config.paths.content_dirs,
         domain_folders=config.paths.domain_folders,
         custom_folders=config.paths.custom_folders,
+        seed_schema=seed_schema_from_vault(config.vault_root, config.paths),
     )
     for path, description in _directory_specs(config):
         items.append(CreationItem("directory", config.vault_root / path, description))
@@ -264,6 +254,7 @@ def _file_specs(config: AgentConfig) -> tuple[tuple[str, str], ...]:
         content_dirs=config.paths.content_dirs,
         domain_folders=config.paths.domain_folders,
         custom_folders=config.paths.custom_folders,
+        seed_schema=seed_schema_from_vault(config.vault_root, config.paths),
     )
     descriptions = dict(FILE_SPECS)
     specs: list[tuple[str, str]] = [

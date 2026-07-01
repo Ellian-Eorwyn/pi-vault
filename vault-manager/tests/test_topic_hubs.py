@@ -73,10 +73,11 @@ class TopicHubTests(unittest.TestCase):
         self.assertEqual(proposal["kind"], "schema-change")
         self.assertEqual(approved_hubs_for("personal", {"topic_hubs": registry}), ["Therapy"])
         self.assertTrue(any("Therapy" in label for label in added))
-        # schema.json + topic hubs md + one hub note
+        # schema.json (machine mirror) + one hub note; the retired 0.023 doc is gone.
         paths = [op["path"] for op in proposal["operations"]]
         self.assertIn("99 System/0.01 agent/schema.json", paths)
         self.assertTrue(any(p.endswith("Therapy.md") for p in paths))
+        self.assertFalse(any("0.023 topic hubs.md" in p for p in paths))
 
     def test_assign_hub_validator_gates_on_registry(self):
         ok = validate_stage_proposal(

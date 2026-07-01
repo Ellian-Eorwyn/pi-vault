@@ -22,10 +22,20 @@ from pathlib import Path
 from typing import Any
 
 from .config import AgentConfig
-from .paths import paths_for
-from .safety import write_text_safely
+from .dashboard_layout import dashboard_directories, dashboard_shell_contents
+from .paths import (
+    BOOTSTRAP_FILE,
+    DEFAULT_CONTENT_DIRS,
+    DEFAULT_PATHS,
+    VaultPaths,
+    build_paths,
+    paths_for,
+    render_bootstrap,
+)
+from .safety import atomic_write_text, write_text_safely
 from .scanner import scan_vault
 from .schema import (
+    AGENT_RULES,
     COMMON_PROPERTIES,
     CORE_PROPERTY_ORDER,
     DEFINITION_SCHEMA_KEYS,
@@ -86,6 +96,54 @@ _BULLET_RE = re.compile(r"^\s*[-*]\s+(.*\S)\s*$")
 _SEPARATOR_RE = re.compile(r"\s+[—–]\s+|\s*:\s*|\s+-\s+")
 _HEADING_RE = re.compile(r"^(#{2,3})\s+(.*\S)\s*$")
 
+# The Folder Structure section is an editable Markdown table (paths contain spaces,
+# so a table is more robust than bulleted `value — definition` lines). Its `Role`
+# column is a stable key: `System`/`Inbox`/`Dashboards`, a content-role slug, a
+# `domain:<slug>` entry, or `custom`. Edits here become a reviewed folder proposal.
+FOLDERS_HEADING = "Folder Structure"
+_FOLDERS_TABLE_HEADER = "| Role | Folder | Definition |"
+_FOLDERS_TABLE_DIVIDER = "| --- | --- | --- |"
+
+# Human definitions for the built-in folder roles, shown in the note.
+FOLDER_ROLE_DEFINITIONS: dict[str, str] = {
+    "system_dir": "Vault infrastructure: agent state, templates, schema, and trash. Excluded from processing.",
+    "inbox_dir": "Capture queue for unprocessed notes awaiting classification and filing.",
+    "dashboards_dir": "Navigation dashboards — the primary way to browse the vault.",
+    "people": "People notes overall (contacts and authors live beneath this).",
+    "contacts": "Direct contacts and conversation participants.",
+    "authors": "Authors, thinkers, and others cited as sources.",
+    "organizations": "Institutions, companies, groups, labs, and departments.",
+    "work": "Work and professional projects.",
+    "administrative": "Health, home, finance, travel, and general administration.",
+    "health": "Physical health, fitness, nutrition, and medical records.",
+    "home": "Household, home maintenance, and possessions.",
+    "finance": "Money, taxes, budgeting, and investments.",
+    "travel": "Trips, destinations, and travel logistics.",
+    "administrative_general": "General administrative and bureaucratic notes.",
+    "thoughts": "Reflections, research, ideas, and daily notes.",
+    "sources": "Books, articles, reports, recordings, and other sources.",
+}
+
+# Read-only reference sections. These render in the note as the single place to read
+# the vault's operating rules, but sync never parses or applies edits to them — they
+# are fixed engine policy.
+DASHBOARD_REGENERATION_RULES = [
+    "Dashboards are the primary navigation layer; folders are secondary storage.",
+    "Preserve curated Markdown outside pi-vault generated sections.",
+    "Use embedded Bases for live filtering and sorting.",
+    "Allow notes to appear in multiple dashboards without moving or duplicating notes.",
+    "Use pending proposals for existing-vault layout migration.",
+]
+SCHEMA_CHANGE_POLICY = [
+    "The agent reads this note first on every run and syncs it into schema.json before acting.",
+    "Controlled values, definitions, properties, and topic hubs sync directly into schema.json.",
+    "Folder-structure edits generate a pending proposal you review and apply; files are never moved automatically.",
+    "A value still used by any note is never dropped automatically; its removal is blocked and reported.",
+    "Dashboards are built only from the rows you tick in the Dashboards table.",
+]
+
+FOLDER_PROPOSAL_ID = "vault-folder-structure"
+
 
 # --------------------------------------------------------------------------- IO
 
@@ -96,6 +154,92 @@ def schema_note_path(config: AgentConfig) -> Path:
 
 def state_path(config: AgentConfig) -> Path:
     return config.vault_root / config.paths.agent_dir / STATE_FILENAME
+
+
+# --------------------------------------------------------------------- seeding
+
+
+def _clean_hub_name(value: Any) -> str:
+    """Strip wikilink brackets/quotes from a ``parent`` value to a bare hub name."""
+    if not isinstance(value, str):
+        return ""
+    return value.strip().strip("`").strip('"').strip("'").lstrip("[").rstrip("]").strip()
+
+
+def seed_schema_from_vault(vault_root: Path, paths: VaultPaths) -> dict[str, Any]:
+    """Build a starter schema prefilled with categories found in existing notes.
+
+    Init writes the canonical note from this so a migrated vault starts with its own
+    domains, types, source kinds, capture types, and ``parent`` hubs already present
+    (as suggestions the user can prune), instead of only the built-in defaults.
+    """
+    base_extra = list(paths.domain_folders)
+    schema = default_schema(base_extra)
+    try:
+        entries = scan_vault(vault_root).entries
+    except (OSError, ValueError):
+        return schema
+
+    discovered: dict[str, list[str]] = {}
+    hubs_by_domain: dict[str, list[str]] = {}
+    for entry in entries:
+        fm = entry.get("frontmatter") or {}
+        for prop in ("type", "status", "domain", "source_kind", "capture_type"):
+            value = fm.get(prop)
+            if isinstance(value, str) and value.strip():
+                bucket = discovered.setdefault(prop, [])
+                if value.strip() not in bucket:
+                    bucket.append(value.strip())
+        hub = _clean_hub_name(fm.get("parent"))
+        if hub:
+            domain = fm.get("domain")
+            domain = domain.strip() if isinstance(domain, str) and domain.strip() else "meta"
+            names = hubs_by_domain.setdefault(domain, [])
+            if hub not in names:
+                names.append(hub)
+
+    _seed_note_types(schema, discovered.get("type", []))
+    for prop in ("status", "domain", "source_kind", "capture_type"):
+        _seed_controlled(schema, prop, discovered.get(prop, []))
+    _seed_hubs(schema, hubs_by_domain)
+    return schema
+
+
+def _seed_note_types(schema: dict[str, Any], values: list[str]) -> None:
+    note_types = schema.setdefault("note_types", {})
+    allowed = schema.setdefault("core_properties", {}).setdefault("type", {}).setdefault(
+        "allowed", [""]
+    )
+    for value in values:
+        if value not in note_types:
+            note_types[value] = {"folder": "", "description": ""}
+        if value not in allowed:
+            allowed.append(value)
+
+
+def _seed_controlled(schema: dict[str, Any], prop: str, values: list[str]) -> None:
+    allowed = schema.setdefault("core_properties", {}).setdefault(prop, {}).setdefault(
+        "allowed", [""]
+    )
+    for value in values:
+        if value not in allowed:
+            allowed.append(value)
+    key = DEFINITION_SCHEMA_KEYS.get(prop)
+    if key:
+        defs = schema.setdefault(key, {})
+        for value in values:
+            defs.setdefault(value, "")
+
+
+def _seed_hubs(schema: dict[str, Any], hubs_by_domain: dict[str, list[str]]) -> None:
+    registry = schema.setdefault("topic_hubs", {})
+    for domain, names in hubs_by_domain.items():
+        existing = registry.setdefault(domain, [])
+        seen = {_hub_name for entry in existing if (_hub_name := entry.get("name"))}
+        for name in names:
+            if name not in seen:
+                existing.append({"name": name, "description": ""})
+                seen.add(name)
 
 
 # ------------------------------------------------------------------- rendering
@@ -125,7 +269,9 @@ def _property_line(name: str, ptype: str, definition: str) -> str:
     return f"- {label} — {definition}" if definition else f"- {label}"
 
 
-def render_schema_note(schema: dict[str, Any] | None) -> str:
+def render_schema_note(
+    schema: dict[str, Any] | None, paths: VaultPaths = DEFAULT_PATHS
+) -> str:
     """Render the canonical, human-editable schema note from a schema dict."""
     schema = schema or default_schema()
     lines = [
@@ -193,6 +339,15 @@ def render_schema_note(schema: dict[str, Any] | None) -> str:
         lines.append("")
     del hubs
 
+    lines.append(f"## {FOLDERS_HEADING}")
+    lines.append("")
+    lines.append("The folders notes are filed into. Edit the `Folder` and `Definition` cells to")
+    lines.append("change the layout; the agent turns folder edits into a reviewed proposal and never")
+    lines.append("moves files automatically. The `Role` column is a stable key — don't rename it.")
+    lines.append("")
+    lines.extend(render_folder_table(paths))
+    lines.append("")
+
     lines.append("## Dashboards")
     lines.append("")
     lines.append("Property/value combinations the agent can build a Bases dashboard for. Put an")
@@ -203,7 +358,52 @@ def render_schema_note(schema: dict[str, Any] | None) -> str:
     lines.extend(render_dashboard_table(schema.get("dashboard_requests") or []))
     lines.append("")
 
+    for heading, intro, rules in (
+        (
+            "Dashboard Regeneration Rules",
+            "How the agent maintains dashboards.",
+            DASHBOARD_REGENERATION_RULES,
+        ),
+        (
+            "Agent Rules",
+            "How the agent classifies and organizes notes.",
+            list(AGENT_RULES),
+        ),
+        (
+            "Schema Change Policy",
+            "How your edits to this note take effect.",
+            SCHEMA_CHANGE_POLICY,
+        ),
+    ):
+        lines.append(f"## {heading}")
+        lines.append("")
+        lines.append(f"{intro} _(Reference — edits here are not synced.)_")
+        lines.append("")
+        lines.extend(f"- {rule}" for rule in rules)
+        lines.append("")
+
     return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def render_folder_table(paths: VaultPaths) -> list[str]:
+    """Render the editable Folder Structure table for ``paths``."""
+    out = [_FOLDERS_TABLE_HEADER, _FOLDERS_TABLE_DIVIDER]
+
+    def row(role: str, folder: str, definition: str) -> str:
+        return f"| {role} | {folder} | {(definition or '').strip()} |"
+
+    out.append(row("System", paths.system_dir.as_posix(), FOLDER_ROLE_DEFINITIONS["system_dir"]))
+    out.append(row("Inbox", paths.inbox_dir.as_posix(), FOLDER_ROLE_DEFINITIONS["inbox_dir"]))
+    out.append(
+        row("Dashboards", paths.dashboards_dir.as_posix(), FOLDER_ROLE_DEFINITIONS["dashboards_dir"])
+    )
+    for role, folder in paths.content_dirs.items():
+        out.append(row(role, folder.as_posix(), FOLDER_ROLE_DEFINITIONS.get(role, "")))
+    for domain, folder in paths.domain_folders.items():
+        out.append(row(f"domain:{domain}", folder.as_posix(), f"Domain folder for {domain}."))
+    for folder in paths.custom_folders:
+        out.append(row("custom", folder.path.as_posix(), folder.description))
+    return out
 
 
 def render_dashboard_table(
@@ -299,7 +499,86 @@ def parse_schema_note(text: str) -> dict[str, Any]:
                 result["properties"][name] = (ptype, definition)
         else:
             result[section][value] = definition
+    result["folders"] = parse_folder_structure(text)
     return result
+
+
+def _section_region(text: str, heading: str) -> str:
+    """Return the body of a ``## <heading>`` section, up to the next ``## `` heading."""
+    match = re.search(rf"(?im)^##\s+{re.escape(heading)}\s*$", text)
+    if not match:
+        return ""
+    rest = text[match.end():]
+    nxt = re.search(r"(?m)^##\s+", rest)
+    return rest[: nxt.start()] if nxt else rest
+
+
+def parse_folder_structure(text: str) -> dict[str, Any]:
+    """Parse the editable Folder Structure table into a paths-shaped mapping.
+
+    Returns ``{}`` when the section or its table is absent (a legacy note without
+    a Folder Structure section is never read as "reset the layout"). Otherwise
+    returns keys among ``system_dir``, ``inbox_dir``, ``dashboards_dir``,
+    ``content_dirs`` ({role: path}), ``domain_folders`` ({slug: path}), and
+    ``custom_folders`` ([{path, description}]). The ``Role`` column is the key.
+    """
+    region = _section_region(text, FOLDERS_HEADING)
+    if not region:
+        return {}
+    parsed: dict[str, Any] = {}
+    content_dirs: dict[str, str] = {}
+    domain_folders: dict[str, str] = {}
+    custom_folders: list[dict[str, str]] = []
+    for line in region.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        role, folder = cells[0], cells[1]
+        definition = cells[2] if len(cells) > 2 else ""
+        role_key = role.lower()
+        if role_key == "role" or (role and set(role) <= {"-", ":"}):
+            continue  # header or divider row
+        if not folder:
+            continue
+        if role_key in {"system", "system_dir"}:
+            parsed["system_dir"] = folder
+        elif role_key in {"inbox", "inbox_dir"}:
+            parsed["inbox_dir"] = folder
+        elif role_key in {"dashboards", "dashboards_dir"}:
+            parsed["dashboards_dir"] = folder
+        elif role_key in DEFAULT_CONTENT_DIRS:
+            content_dirs[role_key] = folder
+        elif role_key.startswith("domain:"):
+            slug = role_key.split(":", 1)[1].strip()
+            if slug:
+                domain_folders[slug] = folder
+        elif role_key == "custom":
+            custom_folders.append({"path": folder, "description": definition})
+    if content_dirs:
+        parsed["content_dirs"] = content_dirs
+    if domain_folders:
+        parsed["domain_folders"] = domain_folders
+    if custom_folders:
+        parsed["custom_folders"] = custom_folders
+    return parsed
+
+
+def folder_paths_from_parsed(parsed_folders: dict[str, Any], base: VaultPaths) -> VaultPaths:
+    """Build a ``VaultPaths`` from a parsed folder table, defaulting to ``base``.
+
+    Raises ``ValueError`` (via ``build_paths``) when the edited layout is invalid.
+    """
+    return build_paths(
+        parsed_folders.get("system_dir", base.system_dir.as_posix()),
+        parsed_folders.get("inbox_dir", base.inbox_dir.as_posix()),
+        parsed_folders.get("dashboards_dir", base.dashboards_dir.as_posix()),
+        parsed_folders.get("content_dirs") or None,
+        parsed_folders.get("domain_folders") or None,
+        parsed_folders.get("custom_folders") or None,
+    )
 
 
 def dashboards_region(text: str) -> str:
@@ -404,6 +683,11 @@ class SyncResult:
     blocked: dict[str, list[str]] = field(default_factory=dict)
     summary: str = ""
     schema: dict[str, Any] | None = None
+    # Folder-structure edits never mutate the vault directly: they produce a pending
+    # proposal the user reviews and applies. ``folder_proposal`` is its vault-relative
+    # path when one was written; ``folder_error`` explains an invalid layout edit.
+    folder_proposal: str = ""
+    folder_error: str = ""
 
 
 _FRONTMATTER_KEY = {
@@ -636,6 +920,76 @@ def _apply_dashboards(schema: dict[str, Any], text: str, result: SyncResult) -> 
     result.blocked["dashboards"] = []
 
 
+def _folder_change_proposal(new_paths: VaultPaths) -> dict[str, Any]:
+    """Build a pending proposal that migrates the vault to ``new_paths``.
+
+    Rewrites the bootstrap config, creates any new folders, and refreshes dashboard
+    shells (merging the generated region so curated Markdown is preserved). It is
+    never applied by sync — the user reviews and applies it like any other proposal.
+    """
+    operations: list[dict[str, Any]] = [
+        {
+            "op": "write_file",
+            "path": BOOTSTRAP_FILE.as_posix(),
+            "if_exists": "overwrite",
+            "content": render_bootstrap(new_paths),
+        }
+    ]
+    for directory in (new_paths.inbox_dir, *dashboard_directories(new_paths)):
+        if not directory.is_relative_to(new_paths.system_dir):
+            operations.append(
+                {
+                    "op": "create_directory",
+                    "path": directory.as_posix(),
+                    "if_exists": "preserve",
+                }
+            )
+    for path, content in dashboard_shell_contents(new_paths).items():
+        operations.append(
+            {
+                "op": "write_file",
+                "path": path,
+                "if_exists": "overwrite",
+                "merge_generated": True,
+                "content": content,
+            }
+        )
+    return {
+        "id": FOLDER_PROPOSAL_ID,
+        "title": "Update vault folder structure",
+        "kind": "schema-change",
+        "status": "pending",
+        "automation_safe": False,
+        "summary": (
+            "Update the vault folder layout, bootstrap config, and dashboard shells "
+            "from the schema note's Folder Structure section."
+        ),
+        "operations": operations,
+    }
+
+
+def _apply_folder_structure(
+    config: AgentConfig, parsed_folders: dict[str, Any], result: SyncResult, *, write: bool
+) -> None:
+    """Turn Folder Structure edits into a pending proposal when the layout changed."""
+    if not parsed_folders:
+        return
+    try:
+        new_paths = folder_paths_from_parsed(parsed_folders, config.paths)
+    except ValueError as exc:
+        result.folder_error = str(exc)
+        return
+    if new_paths == config.paths:
+        return
+    proposal = _folder_change_proposal(new_paths)
+    proposal_rel = config.paths.review_dir / "proposals" / f"{proposal['id']}.json"
+    result.folder_proposal = proposal_rel.as_posix()
+    if write and not getattr(config, "dry_run", False):
+        proposal_path = config.vault_root / proposal_rel
+        proposal_path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_text(proposal_path, json.dumps(proposal, indent=2) + "\n")
+
+
 def _summary(result: SyncResult) -> str:
     def total(bucket: dict[str, list[str]]) -> int:
         return sum(len(v) for v in bucket.values())
@@ -647,6 +1001,10 @@ def _summary(result: SyncResult) -> str:
     ]
     if total(result.blocked):
         parts.append(f"{total(result.blocked)} removals blocked (in use)")
+    if result.folder_proposal:
+        parts.append("folder-change proposal written")
+    if result.folder_error:
+        parts.append(f"folder edits ignored ({result.folder_error})")
     return "schema sync: " + ", ".join(parts)
 
 
@@ -688,6 +1046,7 @@ def sync_schema_from_note(config: AgentConfig, *, write: bool = True) -> SyncRes
     if parsed.get("properties"):
         _apply_properties(schema, parsed["properties"], entries, result)
     _apply_dashboards(schema, text, result)
+    _apply_folder_structure(config, parsed.get("folders") or {}, result, write=write)
 
     result.changed = any(
         result.added.get(k) or result.edited.get(k) or result.removed.get(k)

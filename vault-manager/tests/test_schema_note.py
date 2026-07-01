@@ -9,13 +9,18 @@ from argparse import Namespace
 from pathlib import Path
 
 from vault_agent.config import load_config
+from vault_agent.paths import DEFAULT_PATHS
 from vault_agent.schema import default_schema, load_schema
 from vault_agent.schema_note import (
+    FOLDER_PROPOSAL_ID,
     SCHEMA_NOTE_NAME,
+    folder_paths_from_parsed,
     note_changed,
+    parse_folder_structure,
     parse_schema_note,
     render_schema_note,
     schema_note_path,
+    seed_schema_from_vault,
     sync_schema_from_note,
 )
 from vault_agent.starter_files import starter_file_contents
@@ -81,6 +86,62 @@ class InitWritesNoteTests(unittest.TestCase):
         self.assertIn(key, files)
         self.assertIn("# Vault Schema", files[key])
         self.assertIn("## Domains", files[key])
+
+    def test_starter_files_drop_retired_templates(self):
+        files = starter_file_contents()
+        for retired in (
+            "99 System/0.02 templates/0.020 vault schema.md",
+            "99 System/0.02 templates/0.021 property values.md",
+            "99 System/0.02 templates/0.022 folder norms.md",
+            "99 System/0.02 templates/0.023 topic hubs.md",
+            "99 System/0.02 templates/0.024 vault defaults.md",
+        ):
+            self.assertNotIn(retired, files)
+
+    def test_note_carries_every_ground_truth_section(self):
+        note = starter_file_contents()[f"99 System/{SCHEMA_NOTE_NAME}"]
+        for heading in (
+            "## Properties",
+            "## Note types",
+            "## Folder Structure",
+            "## Dashboards",
+            "## Dashboard Regeneration Rules",
+            "## Agent Rules",
+            "## Schema Change Policy",
+        ):
+            self.assertIn(heading, note)
+        self.assertIn("| sources | 07 Sources |", note)
+        self.assertIn("Never invent new type values.", note)
+
+
+class FolderStructureTests(unittest.TestCase):
+    def test_round_trip_defaults(self):
+        parsed = parse_folder_structure(render_schema_note(default_schema(), DEFAULT_PATHS))
+        self.assertEqual(parsed["system_dir"], "99 System")
+        self.assertEqual(parsed["inbox_dir"], "00 Inbox")
+        self.assertEqual(parsed["dashboards_dir"], "01 Dashboards")
+        self.assertEqual(parsed["content_dirs"]["sources"], "07 Sources")
+        # Rebuilding paths from the parsed table reproduces the defaults exactly.
+        self.assertEqual(folder_paths_from_parsed(parsed, DEFAULT_PATHS), DEFAULT_PATHS)
+
+    def test_missing_section_returns_empty(self):
+        self.assertEqual(parse_folder_structure("# Note\n\nNo folder section.\n"), {})
+
+
+class SeedFromVaultTests(unittest.TestCase):
+    def test_discovers_categories_and_hubs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "A.md").write_text(
+                "---\ntype: recipe\ndomain: cooking\nparent: \"[[Kitchen]]\"\n---\n# A\n",
+                encoding="utf-8",
+            )
+            schema = seed_schema_from_vault(root, DEFAULT_PATHS)
+        self.assertIn("cooking", schema["core_properties"]["domain"]["allowed"])
+        self.assertIn("recipe", schema["core_properties"]["type"]["allowed"])
+        self.assertIn("recipe", schema["note_types"])
+        hub_names = [h["name"] for h in schema["topic_hubs"].get("cooking", [])]
+        self.assertIn("Kitchen", hub_names)
 
 
 class SyncTests(unittest.TestCase):
@@ -217,6 +278,51 @@ class SyncTests(unittest.TestCase):
             result = sync_schema_from_note(cfg)
             self.assertTrue(result.note_missing)
             self.assertFalse(result.changed)
+
+    def test_folder_edit_writes_pending_proposal_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cfg, note = self._setup(root)
+            sync_schema_from_note(cfg)  # baseline hash
+            text = note.read_text(encoding="utf-8").replace(
+                "| sources | 07 Sources |", "| sources | 07 Library |"
+            )
+            note.write_text(text, encoding="utf-8")
+            result = sync_schema_from_note(cfg)
+            self.assertTrue(result.folder_proposal.endswith(f"{FOLDER_PROPOSAL_ID}.json"))
+            self.assertEqual(result.folder_error, "")
+            proposal_path = root / result.folder_proposal
+            self.assertTrue(proposal_path.is_file())
+            # The bootstrap is not touched by sync — the proposal must be applied first.
+            bootstrap = root / ".pi-vault" / "config.yaml"
+            self.assertFalse(bootstrap.exists() and "07 Library" in bootstrap.read_text())
+
+    def test_invalid_folder_edit_reports_error_without_proposal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cfg, note = self._setup(root)
+            sync_schema_from_note(cfg)
+            text = note.read_text(encoding="utf-8").replace(
+                "| Inbox | 00 Inbox |", "| Inbox | 99 System/Inbox |"
+            )
+            note.write_text(text, encoding="utf-8")
+            result = sync_schema_from_note(cfg)
+            self.assertTrue(result.folder_error)
+            self.assertEqual(result.folder_proposal, "")
+
+    def test_reference_section_edits_are_ignored(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cfg, note = self._setup(root)
+            sync_schema_from_note(cfg)
+            text = note.read_text(encoding="utf-8").replace(
+                "- Never invent new type values.",
+                "- Invent whatever type values you like.",
+            )
+            note.write_text(text, encoding="utf-8")
+            result = sync_schema_from_note(cfg)
+            self.assertFalse(result.changed)
+            self.assertEqual(result.folder_proposal, "")
 
 
 if __name__ == "__main__":

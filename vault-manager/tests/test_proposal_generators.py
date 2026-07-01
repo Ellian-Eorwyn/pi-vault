@@ -169,24 +169,19 @@ class ProposalGeneratorTests(unittest.TestCase):
         self.assertEqual(proposal["kind"], "schema-change")
         self.assertEqual(proposal["status"], "pending")
         self.assertIn("legal", schema["core_properties"]["domain"]["allowed"])
-        self.assertIn("Legal, compliance, and contracts.", proposal["operations"][1]["content"])
-        self.assertIn("# Obsidian Vault Metadata Schema", proposal["operations"][1]["content"])
-        self.assertIn("## Proposed Additions", proposal["operations"][1]["content"])
+        # The definition is stored in schema.json (rendered by the canonical note),
+        # and the proposal writes only the machine mirror.
+        self.assertEqual(schema["domain_definitions"]["legal"], "Legal, compliance, and contracts.")
+        self.assertEqual(len(proposal["operations"]), 1)
         self.assertEqual(review_exit, 0)
         self.assertIn("Validation: passed", review_output)
 
-    def test_propose_property_preserves_current_property_values_doc(self):
+    def test_propose_property_updates_only_schema_json(self):
+        # The canonical schema note is the human-editable source of truth; a property
+        # proposal updates the machine mirror (schema.json) only and never resurrects
+        # the retired 0.021 property values doc.
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            property_values = (
-                root / "99 System" / "0.02 templates" / "0.021 property values.md"
-            )
-            property_values.parent.mkdir(parents=True)
-            property_values.write_text(
-                "# Property Values\n\nHuman note that should stay.\n",
-                encoding="utf-8",
-            )
-
             exit_code, _output = self.run_cli(
                 [
                     "--vault-root",
@@ -209,8 +204,11 @@ class ProposalGeneratorTests(unittest.TestCase):
             proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("Human note that should stay.", proposal["operations"][1]["content"])
-        self.assertIn("## Proposed Additions", proposal["operations"][1]["content"])
+        paths = [op["path"] for op in proposal["operations"]]
+        self.assertEqual(paths, ["99 System/0.01 agent/schema.json"])
+        self.assertNotIn(
+            "99 System/0.02 templates/0.021 property values.md", paths
+        )
 
     def test_propose_property_rejects_existing_value(self):
         with tempfile.TemporaryDirectory() as directory:

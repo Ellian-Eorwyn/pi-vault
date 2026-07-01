@@ -123,7 +123,11 @@ class CliTests(unittest.TestCase):
             self.assertIn("Scheduled Maintenance Workflow", contract_text)
             self.assertTrue((root / "99 System" / "0.01 agent" / "schema.json").is_file())
             self.assertTrue((root / "99 System" / "0.02 templates" / "note-types" / "note.md").is_file())
-            self.assertTrue((root / "99 System" / "0.02 templates" / "0.024 vault defaults.md").is_file())
+            self.assertTrue((root / "99 System" / "0.00 Vault Schema.md").is_file())
+            templates = root / "99 System" / "0.02 templates"
+            for retired in ("0.020 vault schema.md", "0.021 property values.md",
+                            "0.022 folder norms.md", "0.024 vault defaults.md"):
+                self.assertFalse((templates / retired).exists(), retired)
 
         self.assertEqual(exit_code, 0)
         self.assertIn("vault-agent init complete", output)
@@ -137,14 +141,8 @@ class CliTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            property_values = (
-                root / "99 System" / "0.02 templates" / "0.021 property values.md"
-            ).read_text(encoding="utf-8")
-            folder_norms = (
-                root / "99 System" / "0.02 templates" / "0.022 folder norms.md"
-            ).read_text(encoding="utf-8")
-            vault_defaults = (
-                root / "99 System" / "0.02 templates" / "0.024 vault defaults.md"
+            note = (
+                root / "99 System" / "0.00 Vault Schema.md"
             ).read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 0)
@@ -189,18 +187,81 @@ class CliTests(unittest.TestCase):
                 "manual",
             ],
         )
-        self.assertIn("Recommended Topic Hubs", folder_norms)
-        self.assertIn("- Agents", folder_norms)
-        self.assertIn("Never invent new type values.", folder_norms)
-        self.assertIn("## source_kind", property_values)
-        self.assertIn("- `manual`", property_values)
-        self.assertIn("## capture_type", property_values)
-        self.assertIn("- `imported`", property_values)
-        self.assertIn("## parent", property_values)
-        self.assertIn("cover: https://example.com/image.jpg", property_values)
-        self.assertIn("# Editable Vault Defaults", vault_defaults)
-        self.assertIn("core_property_order:", vault_defaults)
-        self.assertIn("dashboard_structure:", vault_defaults)
+        # The single canonical note carries every ground-truth section.
+        self.assertIn("# Vault Schema", note)
+        self.assertIn("## Properties", note)
+        self.assertIn("## Note types", note)
+        self.assertIn("## Domains", note)
+        self.assertIn("## Source kinds", note)
+        self.assertIn("manual", note)
+        self.assertIn("## Capture types", note)
+        self.assertIn("## Folder Structure", note)
+        self.assertIn("| sources | 07 Sources |", note)
+        self.assertIn("## Agent Rules", note)
+        self.assertIn("Never invent new type values.", note)
+        self.assertIn("## Schema Change Policy", note)
+
+    def test_schema_sync_ingests_note_edits_and_reports_in_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.run_cli(["--vault-root", directory, "init"])
+            self.run_cli(["--vault-root", directory, "scan"])
+            note = root / "99 System" / "0.00 Vault Schema.md"
+
+            # Before sync, status reports the note as changed.
+            _, status_before = self.run_cli(["--vault-root", directory, "status", "--json"])
+            self.assertTrue(json.loads(status_before)["schema_note"]["changed"])
+
+            note.write_text(
+                note.read_text(encoding="utf-8").replace(
+                    "## Domains\n", "## Domains\n- robotics — Robots and automation\n"
+                ),
+                encoding="utf-8",
+            )
+            exit_code, output = self.run_cli(
+                ["--vault-root", directory, "schema-sync", "--json"]
+            )
+            payload = json.loads(output)
+
+            schema = json.loads(
+                (root / "99 System" / "0.01 agent" / "schema.json").read_text(encoding="utf-8")
+            )
+            _, status_after = self.run_cli(["--vault-root", directory, "status", "--json"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload["changed"])
+        self.assertIn("robotics", payload["added"]["domain"])
+        self.assertIn("robotics", schema["core_properties"]["domain"]["allowed"])
+        self.assertFalse(json.loads(status_after)["schema_note"]["changed"])
+
+    def test_schema_sync_folder_edit_writes_pending_proposal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.run_cli(["--vault-root", directory, "init"])
+            self.run_cli(["--vault-root", directory, "scan"])
+            self.run_cli(["--vault-root", directory, "schema-sync"])  # baseline
+            note = root / "99 System" / "0.00 Vault Schema.md"
+            note.write_text(
+                note.read_text(encoding="utf-8").replace(
+                    "| sources | 07 Sources |", "| sources | 07 Library |"
+                ),
+                encoding="utf-8",
+            )
+            exit_code, output = self.run_cli(
+                ["--vault-root", directory, "schema-sync", "--json"]
+            )
+            payload = json.loads(output)
+            proposal = (
+                root / "99 System" / "0.01 agent" / "review" / "proposals"
+                / "vault-folder-structure.json"
+            )
+            proposal_exists = proposal.is_file()
+            bootstrap = (root / ".pi-vault" / "config.yaml").read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload["folder_proposal"])
+        self.assertTrue(proposal_exists)
+        self.assertIn("07 Sources", bootstrap)  # not applied by sync
 
     def test_verbose_command_prints_config_diagnostics(self):
         with tempfile.TemporaryDirectory() as directory:

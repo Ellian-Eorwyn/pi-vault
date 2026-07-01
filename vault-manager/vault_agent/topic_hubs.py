@@ -21,7 +21,6 @@ from .schema import (
     DOMAIN_DEFINITIONS,
     approved_hubs_for,
     default_topic_hubs,
-    topic_hubs_markdown,
 )
 
 _NUMERIC_PREFIX = re.compile(r"^[0-9]+(?:\.[0-9]+)*[\s_-]*")
@@ -165,12 +164,6 @@ def build_topic_hubs_proposal(
             "path": (system_dir / "0.01 agent/schema.json").as_posix(),
             "if_exists": "overwrite",
             "content": json.dumps(schema_out, indent=2) + "\n",
-        },
-        {
-            "op": "write_file",
-            "path": (system_dir / "0.02 templates/0.023 topic hubs.md").as_posix(),
-            "if_exists": "overwrite",
-            "content": topic_hubs_markdown(registry),
         },
     ]
     for domain, name in added:

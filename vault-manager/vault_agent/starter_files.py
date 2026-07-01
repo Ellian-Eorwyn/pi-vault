@@ -8,15 +8,12 @@ from pathlib import Path
 from .dashboard_layout import dashboard_shell_contents
 from .paths import DEFAULT_CONTENT_DIRS, DEFAULT_DASHBOARDS_DIR, VaultPaths
 from .schema import (
+    default_schema,
     default_schema_json,
-    folder_norms_markdown,
     index_base_templates,
-    property_values_markdown,
-    schema_markdown,
     starter_templates,
-    topic_hubs_markdown,
 )
-from .schema_defaults import vault_defaults_markdown
+from .schema_note import SCHEMA_NOTE_NAME, render_schema_note
 
 # Bundled Dashboard++ CSS snippet (TfTHacker, https://tfthacker.com), extended with
 # callout and Bases card polish. Generated dashboards set `cssclasses: [dashboard]`,
@@ -128,8 +125,18 @@ def starter_file_contents(
     content_dirs: dict[str, Path] | None = None,
     domain_folders: dict[str, Path] | None = None,
     custom_folders: tuple | list | None = None,
+    seed_schema: dict | None = None,
 ) -> dict[str, str]:
     extra_domains = list(domain_folders or {})
+    paths = VaultPaths(
+        system_dir=system_dir,
+        inbox_dir=inbox_dir,
+        dashboards_dir=dashboards_dir,
+        content_dirs=dict(content_dirs or DEFAULT_CONTENT_DIRS),
+        domain_folders=dict(domain_folders or {}),
+        custom_folders=tuple(custom_folders or ()),
+    )
+    schema = seed_schema or default_schema(extra_domains)
     contents = {
         "99 System/0.01 agent/config.yaml": """# vault-agent configuration
 version: 1
@@ -564,38 +571,13 @@ Open full notes only after selecting likely candidates. Do not edit notes during
         "99 System/0.01 agent/retrieval/04 summary-brief.md": "# Summary Brief\n\nNot scanned yet.\n",
         "99 System/0.01 agent/retrieval/stale-summaries.md": "# Stale Summaries\n\n",
         "99 System/0.01 agent/retrieval/retrieval-log.md": "# Retrieval Log\n\n",
-        "99 System/0.02 templates/0.020 vault schema.md": schema_markdown(extra_domains),
-        "99 System/0.02 templates/0.021 property values.md": property_values_markdown(extra_domains),
-        "99 System/0.02 templates/0.022 folder norms.md": folder_norms_markdown(),
-        "99 System/0.02 templates/0.023 topic hubs.md": topic_hubs_markdown(),
-        "99 System/0.02 templates/0.024 vault defaults.md": vault_defaults_markdown(
-            paths=VaultPaths(
-                system_dir=system_dir,
-                inbox_dir=inbox_dir,
-                dashboards_dir=dashboards_dir,
-                content_dirs=dict(content_dirs or DEFAULT_CONTENT_DIRS),
-                domain_folders=dict(domain_folders or {}),
-                custom_folders=tuple(custom_folders or ()),
-            ),
-            extra_domains=extra_domains,
-        ),
+        f"99 System/{SCHEMA_NOTE_NAME}": render_schema_note(schema, paths),
         ".obsidian/snippets/dashboard.css": DASHBOARD_SNIPPET_CSS,
         ".obsidian/appearance.json": DASHBOARD_APPEARANCE_JSON,
     }
     contents.update(starter_templates())
     contents.update(index_base_templates())
-    contents.update(
-        dashboard_shell_contents(
-            VaultPaths(
-                system_dir=system_dir,
-                inbox_dir=inbox_dir,
-                dashboards_dir=dashboards_dir,
-                content_dirs=dict(content_dirs or DEFAULT_CONTENT_DIRS),
-                domain_folders=dict(domain_folders or {}),
-                custom_folders=tuple(custom_folders or ()),
-            )
-        )
-    )
+    contents.update(dashboard_shell_contents(paths))
     system_text = system_dir.as_posix()
     inbox_text = inbox_dir.as_posix()
     remapped: dict[str, str] = {}

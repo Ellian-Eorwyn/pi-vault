@@ -5,7 +5,9 @@ description: Discuss, plan, or revise a pi-vault schema and organization norms, 
 
 # Vault Schema
 
-1. Read the vault purpose, current conventions, schema, templates, and norms-lock status.
+The canonical schema note `<system folder>/0.00 Vault Schema.md` is the single, human-editable source of truth for the vault's structure: properties, controlled values, definitions, topic hubs, folder structure, and the read-only reference rules. The user edits it directly. `vault_schema_sync` ingests their edits into `schema.json` (the machine mirror): controlled values, definitions, properties, and hubs sync directly (a value still used by notes is never dropped); Folder Structure edits become a pending folder-change proposal. Run `vault_schema_sync` first whenever `vault_status` reports `schema_note.changed`. Use `vault_schema_propose` (below) only for agent-authored deltas the user asked you to compose, not to bypass their note.
+
+1. Read the vault purpose, current conventions, schema (canonical note + `schema.json`), templates, and norms-lock status.
    - `provisional`: defaults are discussion aids only; infer recommendations from the vault and ask before canonicalizing them.
    - `locked`: follow the locked schema and norms exactly.
    - `drifted`: treat the lock snapshot as authoritative and block broad processing until changes are reviewed and re-locked.
@@ -29,7 +31,7 @@ Note types are data-driven: once a type is in `schema.json` (with its on-disk te
 
 ## Topic hubs (organizational scheme)
 
-Specific topics (e.g. Therapy, Journaling, a project) are not property values — they are approved **topic hubs**: navigation notes that other notes point to through `parent`. The hub registry lives in the schema (`schema.json` `topic_hubs`, mirrored in `0.02 templates/0.023 topic hubs.md`) and is the controlled vocabulary for `parent`.
+Specific topics (e.g. Therapy, Journaling, a project) are not property values — they are approved **topic hubs**: navigation notes that other notes point to through `parent`. The hub registry lives in the schema (`schema.json` `topic_hubs`, rendered in the canonical schema note `<system folder>/0.00 Vault Schema.md`) and is the controlled vocabulary for `parent`.
 
 - Surface candidate hubs from the vault's own content with `vault_schema_propose` `operation: "topic-hubs"` (one domain at a time), review them with the user, approve only the useful ones, then re-lock norms.
 - Treat folders as a categorization signal, not a dependency: dashboards filter on `parent`, so notes can be re-foldered freely.
