@@ -3,6 +3,8 @@ set -euo pipefail
 
 SOURCE_DIR=""
 OLD_HEAD=""
+NEW_HEAD=""
+CHANGED_FILES_FILE=""
 UPDATE=false
 INSTALL_DIR="${PI_VAULT_INSTALL_DIR:-$HOME/.pi-vault}"
 LEGACY_INSTALL_DIR="${PI_VAULT_LEGACY_INSTALL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/pi-vault}"
@@ -25,6 +27,8 @@ Options:
   --runtime-dir <path>   Managed state directory (venv, npm cache)
   --update               Update an existing installation
   --old-head <commit>    Previous revision used to detect changes
+  --new-head <commit>    Revision being installed (recorded for updates)
+  --changed-files <path> File listing changed paths (tarball updates)
 EOF
 }
 
@@ -97,6 +101,8 @@ while (($#)); do
 		--bin-dir) BIN_DIR="${2:-}"; shift ;;
 		--runtime-dir) RUNTIME_DIR="${2:-}"; shift ;;
 		--old-head) OLD_HEAD="${2:-}"; shift ;;
+		--new-head) NEW_HEAD="${2:-}"; shift ;;
+		--changed-files) CHANGED_FILES_FILE="${2:-}"; shift ;;
 		--update) UPDATE=true ;;
 		--help|-h) usage; exit 0 ;;
 		*) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -150,13 +156,29 @@ NEEDS_BUILD=true
 NEEDS_INSTALL=true
 NEEDS_PYTHON=true
 BUILD_REVISION_FILE="$RUNTIME_DIR/.pi-vault-build-revision"
-COMPARE_REVISION="$OLD_HEAD"
-if [[ -f "$BUILD_REVISION_FILE" ]]; then
-	COMPARE_REVISION="$(<"$BUILD_REVISION_FILE")"
+
+# Determine which files changed so we only rebuild the affected components.
+# Tarball updates pass the list via --changed-files; a development checkout
+# (with .git) computes it locally instead.
+CHANGED_FILES=""
+HAVE_CHANGED_LIST=false
+if [[ "$UPDATE" == true ]]; then
+	if [[ -n "$CHANGED_FILES_FILE" && -f "$CHANGED_FILES_FILE" ]]; then
+		CHANGED_FILES="$(<"$CHANGED_FILES_FILE")"
+		HAVE_CHANGED_LIST=true
+	elif [[ -d "$SOURCE_DIR/.git" ]]; then
+		COMPARE_REVISION="$OLD_HEAD"
+		if [[ -f "$BUILD_REVISION_FILE" ]]; then
+			COMPARE_REVISION="$(<"$BUILD_REVISION_FILE")"
+		fi
+		if [[ -n "$COMPARE_REVISION" ]]; then
+			CHANGED_FILES="$(git -C "$SOURCE_DIR" diff --name-only "$COMPARE_REVISION" HEAD)"
+			HAVE_CHANGED_LIST=true
+		fi
+	fi
 fi
 
-if [[ "$UPDATE" == true && -n "$COMPARE_REVISION" && -d "$SOURCE_DIR/.git" ]]; then
-	CHANGED_FILES="$(git -C "$SOURCE_DIR" diff --name-only "$COMPARE_REVISION" HEAD)"
+if [[ "$HAVE_CHANGED_LIST" == true ]]; then
 	CORE_FILES="$(grep -E '^(packages/|package(-lock)?\.json$|tsconfig)' <<<"$CHANGED_FILES" || true)"
 	if [[ -z "$CORE_FILES" ]]; then
 		NEEDS_BUILD=false
@@ -199,8 +221,13 @@ if [[ "$NEEDS_PYTHON" == true ]]; then
 	"$VENV_DIR/bin/python" -m pip install --disable-pip-version-check "$SOURCE_DIR/vault-manager"
 fi
 
-if [[ -d "$SOURCE_DIR/.git" ]]; then
-	git -C "$SOURCE_DIR" rev-parse HEAD >"$BUILD_REVISION_FILE"
+# Record the installed revision so the next update knows the base for its diff.
+NEW_REVISION="$NEW_HEAD"
+if [[ -z "$NEW_REVISION" && -d "$SOURCE_DIR/.git" ]]; then
+	NEW_REVISION="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+fi
+if [[ -n "$NEW_REVISION" ]]; then
+	printf '%s\n' "$NEW_REVISION" >"$BUILD_REVISION_FILE"
 fi
 
 ln -sfn "$SOURCE_DIR/scripts/pi-vault-run.sh" "$BIN_DIR/pi-vault"

@@ -28,13 +28,13 @@ macOS and Linux, from a checkout:
 ./install.sh
 ```
 
-Or bootstrap without a checkout (clones into `~/.pi-vault/repository`):
+Or bootstrap without a checkout (downloads the source into `~/.pi-vault/repository`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Ellian-Eorwyn/pi-vault/main/install.sh | bash
 ```
 
-The installer builds the Node harness, creates a managed Python environment under `~/.pi-vault/runtime/venv`, and symlinks `pi-vault`, `pi-vault-mcp`, and `pi-vault-update` into `~/.local/bin`. Add that directory to `PATH` if it is not already present.
+The bootstrap fetches the source as a tarball, so the installed copy is a plain directory and is **not** a Git repository — it behaves like any other `pi` install you invoke by running `pi-vault`. The installer builds the Node harness, creates a managed Python environment under `~/.pi-vault/runtime/venv`, and symlinks `pi-vault`, `pi-vault-mcp`, and `pi-vault-update` into `~/.pi-vault/bin`. Add that directory to `PATH` if it is not already present (the installer offers to do this for you). Set `PI_VAULT_REF` to install a branch or tag other than `main`.
 
 New installations default to the OpenAI-compatible `code` model at `http://llms:8008/v1`, with a 262,144-token context window and 32,768-token maximum output. The defaults are written to `~/.pi-vault/agent/models.json` and `settings.json` only when those files do not already exist. Edit those files to use another backend or model.
 
@@ -44,7 +44,7 @@ New installations default to the OpenAI-compatible `code` model at `http://llms:
 pi-vault-update
 ```
 
-Updates pull the latest revision and rebuild the CLI or Python engine only when their sources changed.
+Updates re-fetch the latest source tarball and rebuild the CLI or Python engine only when their sources changed. An installation created by an older Git-clone build is converted to a plain directory (its `.git` is removed) the first time you update.
 
 ### Uninstall
 
